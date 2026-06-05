@@ -1,0 +1,184 @@
+import { Database, Gauge, Pause, Play, RotateCcw, Waves } from "lucide-react";
+import type { PaleoTimeSlice, PaleoTimeSliceId } from "../types";
+
+interface PaleoCoastlineControlsProps {
+  slices: PaleoTimeSlice[];
+  activeSliceId: PaleoTimeSliceId;
+  showUncertainty: boolean;
+  waterLevelMeters: number | null;
+  isPlaying: boolean;
+  onSliceChange: (id: PaleoTimeSliceId) => void;
+  onToggleUncertainty: () => void;
+  onWaterLevelChange: (level: number) => void;
+  onTogglePlayback: () => void;
+  onResetWaterLevel: () => void;
+}
+
+const FALLBACK_SLICES: PaleoTimeSlice[] = [
+  {
+    id: "present",
+    label: "Present",
+    yearsBeforePresent: 0,
+    seaLevelMeters: 0,
+    uncertaintyMeters: 1,
+    summary: "Modern shoreline contour around present mean sea level.",
+    sourceModel: "NOAA CRM / USGS topobathymetry",
+    datumNote: "Approximate relative sea-level contour.",
+    uncertaintyNote: "Uncertainty bands show sea-level range only.",
+    coastline: { type: "FeatureCollection", features: [] },
+    uncertainty: { type: "FeatureCollection", features: [] },
+  },
+];
+
+function compactLabel(label: string): string {
+  return label.replace(" years ago", "");
+}
+
+function nearestProbeLevel(level: number): number {
+  return Math.round(level / 5) * 5;
+}
+
+function waterlineStage(level: number): string {
+  if (level >= -5) return "Near modern shoreline";
+  if (level >= -35) return "Bay margins exposed";
+  if (level >= -75) return "Valley and shelf emerging";
+  if (level >= -105) return "Outer shelf emerging";
+  return "Glacial lowstand range";
+}
+
+export function PaleoCoastlineControls({
+  slices,
+  activeSliceId,
+  showUncertainty,
+  waterLevelMeters,
+  isPlaying,
+  onSliceChange,
+  onToggleUncertainty,
+  onWaterLevelChange,
+  onTogglePlayback,
+  onResetWaterLevel,
+}: PaleoCoastlineControlsProps) {
+  const options = slices.length ? slices : FALLBACK_SLICES;
+  const activeSlice = options.find((slice) => slice.id === activeSliceId) ?? options[0];
+  const activeWaterLevel = waterLevelMeters ?? activeSlice.seaLevelMeters;
+  const probeLevel = Math.max(-120, Math.min(0, nearestProbeLevel(activeWaterLevel)));
+  const terrainNotes = activeSlice.terrains?.length
+    ? activeSlice.terrains.map((terrain) => terrain.note)
+    : activeSlice.terrain?.note
+      ? [activeSlice.terrain.note]
+      : [];
+
+  return (
+    <section className="pointer-events-auto w-full rounded-lg border border-cyan-400/20 bg-gray-950/92 p-3 shadow-2xl backdrop-blur-md">
+      <div className="mb-3 flex items-start gap-2">
+        <div className="mt-0.5 rounded-md border border-cyan-400/25 bg-cyan-400/10 p-1.5 text-cyan-200">
+          <Waves size={16} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold leading-5 text-white">SF Paleo Coastline</h2>
+          <p className="text-xs leading-4 text-gray-400">{activeSlice.summary}</p>
+        </div>
+      </div>
+
+      <div className="mb-3 grid grid-cols-4 gap-1 rounded-lg border border-gray-700/50 bg-gray-900/70 p-1">
+        {options.map((slice) => {
+          const active = slice.id === activeSlice.id;
+          return (
+            <button
+              key={slice.id}
+              type="button"
+              onClick={() => onSliceChange(slice.id)}
+              className={`min-h-9 rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                active
+                  ? "bg-cyan-300 text-gray-950"
+                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
+              }`}
+              aria-pressed={active}
+            >
+              {compactLabel(slice.label)}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
+          <div className="flex items-center gap-1.5 text-[11px] uppercase leading-4 text-gray-500">
+            <Gauge size={12} />
+            Slice sea level
+          </div>
+          <div className="pt-1 font-mono text-sm text-cyan-100">
+            {activeSlice.seaLevelMeters} m
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onToggleUncertainty}
+          className={`rounded-lg border p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+            showUncertainty
+              ? "border-cyan-400/30 bg-cyan-400/10"
+              : "border-gray-700/50 bg-gray-900/60 hover:bg-gray-800/70"
+          }`}
+          aria-pressed={showUncertainty}
+        >
+          <div className="text-[11px] uppercase leading-4 text-gray-500">Uncertainty</div>
+          <div className="pt-1 font-mono text-sm text-cyan-100">
+            {showUncertainty ? `+/- ${activeSlice.uncertaintyMeters} m` : "hidden"}
+          </div>
+        </button>
+      </div>
+
+      <label className="mb-3 block rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-[11px] uppercase leading-4 text-gray-500">Waterline</span>
+          <span className="font-mono text-sm text-cyan-100">{activeWaterLevel} m</span>
+        </div>
+        <input
+          type="range"
+          min="-120"
+          max="2"
+          step="1"
+          value={activeWaterLevel}
+          onChange={(event) => onWaterLevelChange(Number(event.currentTarget.value))}
+          className="w-full accent-cyan-300"
+        />
+        <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
+          <div className="min-w-0">
+            <div className="truncate text-xs text-gray-300">{waterlineStage(activeWaterLevel)}</div>
+            <div className="font-mono text-[11px] leading-4 text-gray-500">probe contour {probeLevel} m</div>
+          </div>
+          <div className="flex shrink-0 gap-1">
+            <button
+              type="button"
+              onClick={onTogglePlayback}
+              className="grid h-8 w-8 place-items-center rounded-md border border-cyan-400/25 bg-cyan-400/10 text-cyan-100 transition-colors hover:bg-cyan-300 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              aria-label={isPlaying ? "Pause waterline playback" : "Play waterline playback"}
+              title={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? <Pause size={15} /> : <Play size={15} />}
+            </button>
+            <button
+              type="button"
+              onClick={onResetWaterLevel}
+              className="grid h-8 w-8 place-items-center rounded-md border border-gray-700/70 bg-gray-950/60 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              aria-label="Reset waterline to high water"
+              title="Reset"
+            >
+              <RotateCcw size={14} />
+            </button>
+          </div>
+        </div>
+      </label>
+
+      <div className="space-y-2 border-t border-gray-800/70 pt-3 text-xs leading-4 text-gray-400">
+        <div className="flex gap-2">
+          <Database size={13} className="mt-0.5 shrink-0 text-cyan-300" />
+          <span>{activeSlice.sourceModel}</span>
+        </div>
+        {terrainNotes.length ? <p>{terrainNotes.join(" ")}</p> : null}
+        <p>{activeSlice.datumNote}</p>
+        {showUncertainty ? <p>{activeSlice.uncertaintyNote}</p> : null}
+      </div>
+    </section>
+  );
+}
