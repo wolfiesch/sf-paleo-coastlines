@@ -69,7 +69,7 @@ function terrainSummary(slice: PaleoTimeSlice): string | null {
   const terrains = slice.terrains?.length ? slice.terrains : slice.terrain ? [slice.terrain] : [];
   if (!terrains.length) return null;
   if (terrains.length === 1) return terrains[0].note;
-  return `${terrains.length} terrain surfaces: NOAA CRM/CUDEM broad Bay-to-coast coverage, USGS/CSMP 2 m coastal bathymetry blocks, Farallon Escarpment/Rittenburg Bank offshore multibeam patches, and DS684 Golden Gate detail.`;
+  return `${terrains.length} terrain surfaces: NOAA CRM/CUDEM broad Bay-to-coast coverage, NOAA BAG Golden Gate survey patches, USGS/CSMP 2 m coastal bathymetry blocks, Farallon Escarpment/Rittenburg Bank offshore multibeam patches, and DS684 Golden Gate detail.`;
 }
 
 export function PaleoCoastlineControls({

@@ -50,6 +50,7 @@ CUDEM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_elev
 CUDEM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_color.png"
 CUDEM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_relief.png"
 CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_composite.png"
+NOS_BAG_DIR = RAW_DIR / "noaa-nos-h12109"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
 DS684_TIF = DS684_DIR / "DEM_4_GeoTIFF" / "DEM_4_GeoTIFF.tif"
@@ -145,6 +146,47 @@ CUDEM_TILE_NAMES = [
 ]
 CUDEM_TILE_URLS = [f"{CUDEM_BASE_URL}/{name}" for name in CUDEM_TILE_NAMES]
 CUDEM_GDAL_INPUTS = [f"/vsicurl/{url}" for url in CUDEM_TILE_URLS]
+
+NOS_BAG_BLOCKS: list[dict[str, Any]] = [
+    {
+        "sourceId": "noaa_nos_h12109_1m_bag",
+        "sourceLabel": "NOAA NOS H12109, 1 m BAG Golden Gate approach bathymetry",
+        "sourceName": "NOAA/NOS H12109 Bathymetric Attributed Grid, 1 m, MLLW, Gulf of the Farallones / Golden Gate approach",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12109.html",
+        "role": "High-resolution NOAA BAG survey inset for the shallow part of the Golden Gate approach.",
+        "fileName": "H12109_MB_1m_MLLW_1of2.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/BAG/H12109_MB_1m_MLLW_1of2.bag",
+        "terrainStem": "noaa_nos_h12109_1m",
+        "terrainSize": 1536,
+        "terrainMinimum": -32.0,
+        "terrainMaximum": -10.0,
+        "contourMinimum": -30.0,
+        "contourMaximum": -10.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12109 1 m BAG survey patch in MLLW, adding detailed shallow Golden Gate approach bathymetry.",
+    },
+    {
+        "sourceId": "noaa_nos_h12109_2m_bag",
+        "sourceLabel": "NOAA NOS H12109, 2 m BAG Golden Gate approach bathymetry",
+        "sourceName": "NOAA/NOS H12109 Bathymetric Attributed Grid, 2 m, MLLW, Gulf of the Farallones / Golden Gate approach",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12109.html",
+        "role": "High-resolution NOAA BAG survey inset for the deeper part of the Golden Gate approach.",
+        "fileName": "H12109_MB_2m_MLLW_2of2.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/BAG/H12109_MB_2m_MLLW_2of2.bag",
+        "terrainStem": "noaa_nos_h12109_2m",
+        "terrainSize": 1536,
+        "terrainMinimum": -60.0,
+        "terrainMaximum": -15.0,
+        "contourMinimum": -60.0,
+        "contourMaximum": -15.0,
+        "contourSimplify": 5,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12109 2 m BAG survey patch in MLLW, adding detailed deeper Golden Gate approach bathymetry.",
+    },
+]
 
 BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
     {
@@ -458,6 +500,14 @@ SOURCES = [
             "url": block["sourceUrl"],
             "role": block["role"],
         }
+        for block in NOS_BAG_BLOCKS
+    ],
+    *[
+        {
+            "name": block["sourceName"],
+            "url": block["sourceUrl"],
+            "role": block["role"],
+        }
         for block in BATHYMETRY_BLOCKS
     ],
     {
@@ -585,6 +635,43 @@ def download_usgs_ds684_dem4() -> None:
 
 def bathymetry_block_dir(block: dict[str, Any]) -> Path:
     return RAW_DIR / str(block["folder"])
+
+
+def nos_bag_dataset(block: dict[str, Any]) -> Path:
+    return NOS_BAG_DIR / str(block["fileName"])
+
+
+def nos_bag_contours_raw(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_contours_raw.geojson"
+
+
+def nos_bag_contours_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_contours_wgs84.geojson"
+
+
+def nos_bag_terrain_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_terrain_wgs84.tif"
+
+
+def nos_bag_elevation_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_elevation.png"
+
+
+def nos_bag_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_color.png"
+
+
+def nos_bag_relief_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_relief.png"
+
+
+def nos_bag_composite_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_composite.png"
+
+
+def download_nos_bag_blocks() -> None:
+    for block in NOS_BAG_BLOCKS:
+        download_url(str(block["url"]), nos_bag_dataset(block))
 
 
 def bathymetry_block_zip(block: dict[str, Any]) -> Path:
@@ -742,6 +829,40 @@ def generate_contours() -> None:
         str(CUDEM_CONTOURS_BROWSER),
         str(CUDEM_CONTOURS_RAW),
     ])
+
+    for block in NOS_BAG_BLOCKS:
+        block_levels = [
+            str(level)
+            for level in contour_levels()
+            if float(block["contourMinimum"]) <= level <= float(block["contourMaximum"])
+        ]
+        if not block_levels:
+            continue
+        run([
+            "gdal_contour",
+            "-q",
+            "-b",
+            "1",
+            "-a",
+            "elevation_m",
+            "-snodata",
+            str(block["sourceNoData"]),
+            "-fl",
+            *block_levels,
+            str(nos_bag_dataset(block)),
+            str(nos_bag_contours_raw(block)),
+        ])
+        run([
+            "ogr2ogr",
+            "-f",
+            "GeoJSON",
+            "-t_srs",
+            "EPSG:4326",
+            "-simplify",
+            str(block["contourSimplify"]),
+            str(nos_bag_contours_wgs84(block)),
+            str(nos_bag_contours_raw(block)),
+        ])
 
     # These bathymetry blocks are sharper than the broad CRM grid, but each
     # covers only a patch. Generate all matching contours and merge them later.
@@ -1386,6 +1507,55 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
     )
 
 
+def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-b",
+        "1",
+        "-t_srs",
+        "EPSG:4326",
+        "-ts",
+        str(block["terrainSize"]),
+        "0",
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-srcnodata",
+        str(block["sourceNoData"]),
+        "-dstnodata",
+        "-9999",
+        str(nos_bag_dataset(block)),
+        str(nos_bag_terrain_wgs84(block)),
+    ])
+    write_terrain_pngs_from_wgs84(
+        nos_bag_terrain_wgs84(block),
+        nos_bag_elevation_png(block),
+        nos_bag_texture_png(block),
+        nos_bag_relief_texture_png(block),
+        nos_bag_composite_texture_png(block),
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+    )
+    return terrain_metadata(
+        str(block["sourceId"]),
+        source_label(str(block["sourceId"])),
+        nos_bag_terrain_wgs84(block),
+        nos_bag_elevation_png(block),
+        nos_bag_texture_png(block),
+        nos_bag_relief_texture_png(block),
+        nos_bag_composite_texture_png(block),
+        None,
+        None,
+        None,
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        str(block["note"]),
+    )
+
+
 def generate_etopo_terrain_asset() -> dict[str, Any]:
     west = 236.0020833333333 - 360.0
     east = 238.5020833333333 - 360.0
@@ -1538,6 +1708,12 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG,
     ):
         target.unlink(missing_ok=True)
+    for block in NOS_BAG_BLOCKS:
+        nos_bag_terrain_wgs84(block).unlink(missing_ok=True)
+        nos_bag_elevation_png(block).unlink(missing_ok=True)
+        nos_bag_texture_png(block).unlink(missing_ok=True)
+        nos_bag_relief_texture_png(block).unlink(missing_ok=True)
+        nos_bag_composite_texture_png(block).unlink(missing_ok=True)
     for block in BATHYMETRY_BLOCKS:
         bathymetry_block_terrain_wgs84(block).unlink(missing_ok=True)
         bathymetry_block_elevation_png(block).unlink(missing_ok=True)
@@ -1554,6 +1730,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
     return [
         generate_crm_terrain_asset(),
         generate_cudem_terrain_asset(),
+        *[generate_nos_bag_terrain_asset(block) for block in NOS_BAG_BLOCKS],
         *[generate_bathymetry_block_terrain_asset(block) for block in BATHYMETRY_BLOCKS],
         generate_usgs_terrain_asset(),
     ]
@@ -1653,6 +1830,7 @@ def features_for_level(
     level: float,
     crm_by_level: dict[float, list[dict[str, Any]]],
     cudem_by_level: dict[float, list[dict[str, Any]]],
+    nos_bag_by_level: dict[float, list[dict[str, Any]]],
     bathymetry_by_level: dict[float, list[dict[str, Any]]],
     usgs_by_level: dict[float, list[dict[str, Any]]],
     preferred_source_id: str | None = None,
@@ -1660,6 +1838,10 @@ def features_for_level(
     level_key = rounded_level(level)
     if preferred_source_id == "usgs_ds684_dem4" and usgs_by_level.get(level_key):
         return "usgs_ds684_dem4", usgs_by_level[level_key]
+    if preferred_source_id in NOS_BAG_SOURCE_IDS:
+        preferred_features = features_for_source(nos_bag_by_level, level_key, preferred_source_id)
+        if preferred_features:
+            return preferred_source_id, preferred_features
     if preferred_source_id in BATHYMETRY_SOURCE_IDS:
         preferred_features = features_for_source(bathymetry_by_level, level_key, preferred_source_id)
         if preferred_features:
@@ -1672,17 +1854,19 @@ def features_for_level(
     if preferred_source_id == "noaa_crm_vol7_3as" and crm_by_level.get(level_key):
         return "noaa_crm_vol7_3as", crm_by_level[level_key]
     if preferred_source_id == "composite_high_resolution_local" and (
-        cudem_by_level.get(level_key) or usgs_by_level.get(level_key) or bathymetry_by_level.get(level_key)
+        cudem_by_level.get(level_key) or nos_bag_by_level.get(level_key) or usgs_by_level.get(level_key) or bathymetry_by_level.get(level_key)
     ):
         return "composite_high_resolution_local", [
             *crm_by_level.get(level_key, []),
             *cudem_by_level.get(level_key, []),
+            *nos_bag_by_level.get(level_key, []),
             *bathymetry_by_level.get(level_key, []),
             *usgs_by_level.get(level_key, []),
         ]
 
     local_features = [
         *cudem_by_level.get(level_key, []),
+        *nos_bag_by_level.get(level_key, []),
         *bathymetry_by_level.get(level_key, []),
         *usgs_by_level.get(level_key, []),
     ]
@@ -1698,6 +1882,7 @@ def probe_features_for_level(
     level: float,
     crm_by_level: dict[float, list[dict[str, Any]]],
     cudem_by_level: dict[float, list[dict[str, Any]]],
+    nos_bag_by_level: dict[float, list[dict[str, Any]]],
     bathymetry_by_level: dict[float, list[dict[str, Any]]],
     usgs_by_level: dict[float, list[dict[str, Any]]],
 ) -> list[dict[str, Any]]:
@@ -1705,13 +1890,18 @@ def probe_features_for_level(
     features: list[dict[str, Any]] = []
     features.extend(crm_by_level.get(level_key, []))
     features.extend(cudem_by_level.get(level_key, []))
+    features.extend(nos_bag_by_level.get(level_key, []))
     features.extend(bathymetry_by_level.get(level_key, []))
     features.extend(usgs_by_level.get(level_key, []))
     return features
 
 
 BATHYMETRY_SOURCE_IDS = {str(block["sourceId"]) for block in BATHYMETRY_BLOCKS}
-SOURCE_LABELS = {str(block["sourceId"]): str(block["sourceLabel"]) for block in BATHYMETRY_BLOCKS}
+NOS_BAG_SOURCE_IDS = {str(block["sourceId"]) for block in NOS_BAG_BLOCKS}
+SOURCE_LABELS = {
+    **{str(block["sourceId"]): str(block["sourceLabel"]) for block in NOS_BAG_BLOCKS},
+    **{str(block["sourceId"]): str(block["sourceLabel"]) for block in BATHYMETRY_BLOCKS},
+}
 
 
 def source_label(source_id: str) -> str:
@@ -1720,7 +1910,7 @@ def source_label(source_id: str) -> str:
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
     if source_id == "composite_high_resolution_local":
-        return "Composite high-resolution CUDEM, local bathymetry, and topobathymetry"
+        return "Composite high-resolution CUDEM, NOAA BAG, local bathymetry, and topobathymetry"
     if source_id == "noaa_cudem_1_9as":
         return "NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry"
     if source_id == "noaa_crm_vol7_3as":
@@ -1731,6 +1921,15 @@ def source_label(source_id: str) -> str:
 def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     crm_by_level = build_level_index(CRM_CONTOURS_BROWSER, "noaa_crm_vol7_3as", 0.004, False)
     cudem_by_level = build_level_index(CUDEM_CONTOURS_BROWSER, "noaa_cudem_1_9as", 0.004, False)
+    nos_bag_by_level = merge_level_indexes([
+        build_level_index(
+            nos_bag_contours_wgs84(block),
+            str(block["sourceId"]),
+            float(block["minDegreesLength"]),
+            False,
+        )
+        for block in NOS_BAG_BLOCKS
+    ])
     bathymetry_by_level = merge_level_indexes([
         build_level_index(
             bathymetry_block_contours_wgs84(block),
@@ -1748,7 +1947,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     waterline_probe_features: list[dict[str, Any]] = []
 
     for level in WATERLINE_PROBE_LEVELS:
-        for feature in probe_features_for_level(level, crm_by_level, cudem_by_level, bathymetry_by_level, usgs_by_level):
+        for feature in probe_features_for_level(level, crm_by_level, cudem_by_level, nos_bag_by_level, bathymetry_by_level, usgs_by_level):
             source_id = feature["properties"]["source_id"]
             waterline_probe_features.append(
                 clone_feature(
@@ -1779,7 +1978,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         low = rounded_level(center - spread)
         high = rounded_level(center + spread)
 
-        estimate_source_id, estimate_source_features = features_for_level(center, crm_by_level, cudem_by_level, bathymetry_by_level, usgs_by_level)
+        estimate_source_id, estimate_source_features = features_for_level(center, crm_by_level, cudem_by_level, nos_bag_by_level, bathymetry_by_level, usgs_by_level)
         coastline_features = [
             clone_feature(
                 feature,
@@ -1802,6 +2001,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 level,
                 crm_by_level,
                 cudem_by_level,
+                nos_bag_by_level,
                 bathymetry_by_level,
                 usgs_by_level,
                 estimate_source_id,
@@ -1827,7 +2027,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             **item,
             "generatedAt": generated_at,
             "sourceModel": source_label(estimate_source_id),
-            "datumNote": "NOAA CUDEM, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
+            "datumNote": "NOAA BAG H12109 uses MLLW; NOAA CUDEM, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
             "uncertaintyNote": "Lines show only sea-level uncertainty. They do not model erosion, sediment, marsh growth, tectonic motion, or river-channel migration.",
             "terrain": terrain[0],
             "terrains": terrain,
@@ -1839,11 +2039,12 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added NOAA/NOS H12109 BAG survey patches at 1 m and 2 m resolution, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
             *CUDEM_TILE_URLS,
+            *[str(nos_bag_dataset(block).relative_to(ROOT)) for block in NOS_BAG_BLOCKS],
             str(RAW_NETCDF.relative_to(ROOT)),
             *[
                 str(bathymetry_block_dataset(block).relative_to(ROOT))
@@ -1872,6 +2073,17 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(CUDEM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(CUDEM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
             str(CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            *[
+                str(path.relative_to(ROOT))
+                for block in NOS_BAG_BLOCKS
+                for path in (
+                    nos_bag_elevation_png(block),
+                    nos_bag_texture_png(block),
+                    nos_bag_relief_texture_png(block),
+                    nos_bag_composite_texture_png(block),
+                )
+                if path.exists()
+            ],
             *[
                 str(path.relative_to(ROOT))
                 for block in BATHYMETRY_BLOCKS
@@ -2001,6 +2213,7 @@ def main() -> int:
     download_raw_netcdf()
     download_noaa_crm_vol7_subset()
     prepare_noaa_cudem_subset()
+    download_nos_bag_blocks()
     download_bathymetry_blocks()
     download_usgs_ds684_dem4()
     generate_contours()

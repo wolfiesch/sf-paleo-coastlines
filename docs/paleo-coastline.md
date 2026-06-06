@@ -18,6 +18,7 @@ The checked-in browser data now uses two broad elevation sources plus several sh
 |---|---|
 | NOAA CRM Vol. 7, 3 arc-second grid | Broad Bay/offshore coverage toward the Farallones. This keeps the full map continuous when detailed survey patches have gaps. |
 | NOAA CUDEM 1/9 arc-second topobathymetry | Sharper broad Bay/coast inset built from California topobathymetry tiles. It improves the wide-area terrain texture where tiles exist, but does not fully replace CRM farther offshore. |
+| NOAA/NOS H12109 BAG survey, 1 m and 2 m grids | Very high-resolution Golden Gate approach survey patches. These add sharper local bathymetry from NOAA's hydrographic survey archive, but use MLLW rather than the NAVD88-style references used by many other local sources. |
 | USGS/CSMP DS 781, 2 m coastal bathymetry blocks | Sharper nearshore ocean-floor detail from Tomales Point and Point Reyes down through Bolinas, San Francisco, Pacifica, Half Moon Bay, and San Gregorio. These blocks improve the coastal shelf, but they do not cover the full offshore region. |
 | USGS/CSMP DS 781 acoustic backscatter and seafloor-character blocks | Sonar intensity and interpreted bottom-type textures for the same coastal bathymetry blocks. This makes rocky bottom, sediment patterns, and smoother versus more rugose bottom easier to see on top of the 3D surface. These are visual/context textures, not elevation. |
 | USGS OFR 2014-1234 Farallon Escarpment / Rittenburg Bank bathymetry, backscatter, and seafloor character | Sharper offshore multibeam patches west of San Francisco, including a 10 m Farallon Escarpment grid and a 2 m Rittenburg Bank grid. Backscatter adds measured acoustic texture, and seafloor-character maps add interpreted bottom classes for those offshore patches. |
@@ -38,6 +39,7 @@ Local source/work files:
 - `data/paleo-coastlines/raw/etopo_2022_sf_bay_coast_15s.nc`
 - `data/paleo-coastlines/raw/noaa-crm/crm_vol7_sf_farallones_3as.tif`
 - `data/paleo-coastlines/raw/noaa-cudem/cudem_sf_bay_farallones_1_9as_subset.tif`
+- `data/paleo-coastlines/raw/noaa-nos-h12109/H12109_MB_*_MLLW_*.bag`
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-*/Bathymetry_*.zip`
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-*/Bathymetry_*.tif`
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-*/Backscatter*.zip`
@@ -54,12 +56,15 @@ Local source/work files:
 - `data/paleo-coastlines/work/noaa_crm_vol7_contours_browser.geojson`
 - `data/paleo-coastlines/work/noaa_cudem_1_9as_contours_raw.geojson`
 - `data/paleo-coastlines/work/noaa_cudem_1_9as_contours_browser.geojson`
+- `data/paleo-coastlines/work/noaa_nos_h12109_*_bag_contours_raw.geojson`
+- `data/paleo-coastlines/work/noaa_nos_h12109_*_bag_contours_wgs84.geojson`
 - `data/paleo-coastlines/work/*_contours_raw.geojson`
 - `data/paleo-coastlines/work/*_contours_wgs84.geojson`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_contours_raw.geojson`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_contours_wgs84.geojson`
 - `data/paleo-coastlines/work/noaa_crm_vol7_sf_farallones_terrain_wgs84.tif`
 - `data/paleo-coastlines/work/noaa_cudem_1_9as_terrain_wgs84.tif`
+- `data/paleo-coastlines/work/noaa_nos_h12109_*_bag_terrain_wgs84.tif`
 - `data/paleo-coastlines/work/*_terrain_wgs84.tif`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_terrain_wgs84.tif`
 
@@ -96,6 +101,10 @@ NOAA CRM broad surface
         v
 NOAA CUDEM 1/9 arc-second inset
         sharper broad Bay/coast topobathymetry where tiles exist
+        |
+        v
+NOAA/NOS H12109 BAG patches
+        1 m and 2 m Golden Gate approach hydrographic survey detail
         |
         v
 USGS/CSMP coastal seafloor patches
@@ -170,15 +179,16 @@ The uncertainty toggle shows extra contour lines around each estimate. These ban
 - USGS/CSMP DS 781 is high resolution, but the blocks are mostly nearshore and state-water focused. The app now uses a longer chain of those blocks, but they still do not form one seamless full-ocean DEM.
 - USGS OFR 2014-1234 improves the Farallon Escarpment and Rittenburg Bank areas with bathymetry, backscatter, and seafloor character, but it is still patch coverage, not full Farallones-region coverage.
 - USGS DS684 DEM 4 is high resolution, but it is only one tile. It improves the Golden Gate and nearby coast; it is not full Bay-plus-Farallones coverage.
+- NOAA/NOS H12109 BAG adds very detailed Golden Gate approach bathymetry, but it uses MLLW. In plain English: it is excellent shape data, but we should not overclaim exact sea-level alignment until we do a proper local datum conversion.
 - NOAA CUDEM is much sharper than CRM where California 1/9 arc-second tiles exist, but the clipped source still has tile limits and should be treated as a broad inset, not a complete far-offshore survey.
 - NOAA CRM is much coarser than the USGS tile, but it covers the offshore shelf and Farallones at about 3 arc-second resolution.
 - NOAA ETOPO is coarser still, but remains a fallback global relief source if CRM access changes.
 - The script now keeps the broad NOAA contour for continuity and adds high-resolution USGS contour pieces where available. This avoids losing the full shoreline just because a detailed patch is incomplete.
-- The vertical datums differ: NOAA CUDEM, USGS/CSMP DS 781, USGS OFR 2014-1234, and USGS DS684 are NAVD88-style sources; NOAA CRM and ETOPO use broader sea-level/EGM-style references. This first pass treats the sea-level values as approximate relative heights, not as a full local tidal-datum correction.
+- The vertical datums differ: NOAA/NOS H12109 BAG uses MLLW; NOAA CUDEM, USGS/CSMP DS 781, USGS OFR 2014-1234, and USGS DS684 are NAVD88-style sources; NOAA CRM and ETOPO use broader sea-level/EGM-style references. This first pass treats the sea-level values as approximate relative heights, not as a full local tidal-datum correction.
 
 ## Higher-Resolution Next Step
 
-The best next science upgrade is to selectively mosaic NOAA NOS BAG hydrographic surveys into the Bay, Golden Gate, Gulf of the Farallones, and other priority water areas. In plain English: CUDEM is now the broad-detail upgrade; BAG surveys are the highest-detail route but require more careful stitching.
+The best next science upgrade is to expand the NOAA NOS BAG mosaic beyond H12109 into more Bay, Golden Gate, Gulf of the Farallones, and priority offshore survey areas. In plain English: one BAG survey patch is now included; the next leap is a larger BAG survey mosaic plus local vertical datum correction.
 
 ## Rendering Backend
 
@@ -190,6 +200,7 @@ Primary references:
 - NOAA Coastal Relief Model: https://www.ncei.noaa.gov/products/coastal-relief-model
 - NOAA CUDEM 1/9 arc-second topobathymetry bulk tiles: https://coast.noaa.gov/htdata/raster2/elevation/NCEI_ninth_Topobathy_2014_8483/
 - NOAA NOS hydrographic survey products: https://www.ncei.noaa.gov/products/nos-hydrographic-survey
+- NOAA NOS H12109 hydrographic survey report and BAG downloads: https://www.ngdc.noaa.gov/nos/H12001-H14000/H12109.html
 - USGS DS 781 California State Waters data catalog: https://pubs.usgs.gov/ds/781/
 - USGS Data Series 781 Offshore Tomales Point catalog: https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data_catalog_OffshoreTomalesPoint.html
 - USGS Data Series 781 Offshore Point Reyes catalog: https://pubs.usgs.gov/ds/781/OffshorePointReyes/data_catalog_OffshorePointReyes.html
