@@ -211,6 +211,10 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
         "zipName": "USGS_escarpment_bathy_10m.zip",
         "zipUrl": "https://pubs.usgs.gov/of/2014/1234/data/USGS_escarpment_bathy_10m.zip",
         "datasetName": "USGS_escarpment_bathy_10m.asc",
+        "backscatterZipNames": [
+            "USGS_escarpment_back_10m.zip",
+        ],
+        "backscatterSourceSrs": "EPSG:26910",
         "terrainStem": "usgs_farallon_escarpment",
         "terrainSize": 1024,
         "terrainMinimum": -950.0,
@@ -231,6 +235,13 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
         "zipName": "USGS_rittenburgbank_bathy_2m.zip",
         "zipUrl": "https://pubs.usgs.gov/of/2014/1234/data/USGS_rittenburgbank_bathy_2m.zip",
         "datasetName": "usgs_rittenburgbank_bathy_2m.asc",
+        "backscatterZipNames": [
+            "USGS_rittenburg_back_2m.zip",
+        ],
+        "backscatterDatasetNames": {
+            "USGS_rittenburg_back_2m.zip": "USGS_rittenburg_back.tif",
+        },
+        "backscatterSourceSrs": "EPSG:26910",
         "terrainStem": "usgs_rittenburg_bank",
         "terrainSize": 1024,
         "terrainMinimum": -130.0,
@@ -441,7 +452,8 @@ def bathymetry_block_backscatter_zip(block: dict[str, Any], zip_name: str) -> Pa
 
 
 def bathymetry_block_backscatter_dataset(block: dict[str, Any], zip_name: str) -> Path:
-    return bathymetry_block_dir(block) / zip_name.replace(".zip", ".tif")
+    dataset_name = block.get("backscatterDatasetNames", {}).get(zip_name, zip_name.replace(".zip", ".tif"))
+    return bathymetry_block_dir(block) / str(dataset_name)
 
 
 def bathymetry_block_backscatter_url(block: dict[str, Any], zip_name: str) -> str:
@@ -967,10 +979,12 @@ def generate_bathymetry_block_sonar_texture(block: dict[str, Any]) -> tuple[Path
     east = west + transform[1] * width
     south = north + transform[5] * height
 
+    source_srs_args = ["-s_srs", str(block["backscatterSourceSrs"])] if block.get("backscatterSourceSrs") else []
     run([
         "gdalwarp",
         "-q",
         "-overwrite",
+        *source_srs_args,
         "-t_srs",
         "EPSG:4326",
         "-te",

@@ -19,7 +19,7 @@ The checked-in browser data now uses one broad elevation source plus several sha
 | NOAA CRM Vol. 7, 3 arc-second grid | Broad Bay/offshore coverage toward the Farallones. This keeps the full map continuous when detailed survey patches have gaps. |
 | USGS/CSMP DS 781, 2 m coastal bathymetry blocks | Sharper nearshore ocean-floor detail for Bolinas, San Francisco, Pacifica, and Half Moon Bay. These blocks improve the coastal shelf, but they do not cover the full offshore region. |
 | USGS/CSMP DS 781 acoustic backscatter blocks | Sonar intensity texture for the same coastal bathymetry blocks. This makes rocky bottom, sediment patterns, and survey texture visible on top of the 3D surface. It is used as a visual texture, not as elevation. |
-| USGS OFR 2014-1234 Farallon Escarpment / Rittenburg Bank bathymetry | Sharper offshore multibeam patches west of San Francisco, including a 10 m Farallon Escarpment grid and a 2 m Rittenburg Bank grid. These are the current best detail improvements farther out toward the Farallon region. |
+| USGS OFR 2014-1234 Farallon Escarpment / Rittenburg Bank bathymetry and backscatter | Sharper offshore multibeam patches west of San Francisco, including a 10 m Farallon Escarpment grid and a 2 m Rittenburg Bank grid. Backscatter now adds measured acoustic texture to those offshore patches, not just nearshore CSMP areas. |
 | USGS DS684 DEM 4, 2 m San Francisco Bar tile | Better local detail around Ocean Beach, the Golden Gate, Marin Headlands, and the San Francisco Bar. This drives the present, 5k, and 10k slices where it has enough depth coverage. |
 | NOAA ETOPO 2022, 15 arc-second grid | Fallback broad source kept in the raw data references. CRM is now preferred for the app because it is about 5x finer for this region. |
 
@@ -144,10 +144,14 @@ Generated terrain files:
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_color.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_relief.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_composite.png`
+- `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_sonar.png`
+- `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_hybrid.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_elevation.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_color.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_relief.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_composite.png`
+- `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_sonar.png`
+- `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_hybrid.png`
 - `public/data/paleo-coastlines/terrain/dem4_elevation.png`
 - `public/data/paleo-coastlines/terrain/dem4_color.png`
 - `public/data/paleo-coastlines/terrain/dem4_relief.png`
@@ -185,7 +189,7 @@ The uncertainty toggle shows extra contour lines around each estimate. These ban
 ## Data Limits
 
 - USGS/CSMP DS 781 is high resolution, but the blocks are mostly nearshore and state-water focused. They do not form one seamless full-ocean DEM.
-- USGS OFR 2014-1234 improves the Farallon Escarpment and Rittenburg Bank areas, but it is still patch coverage, not full Farallones-region coverage.
+- USGS OFR 2014-1234 improves the Farallon Escarpment and Rittenburg Bank areas with bathymetry and backscatter, but it is still patch coverage, not full Farallones-region coverage.
 - USGS DS684 DEM 4 is high resolution, but it is only one tile. It improves the Golden Gate and nearby coast; it is not full Bay-plus-Farallones coverage.
 - NOAA CRM is much coarser than the USGS tile, but it covers the offshore shelf and Farallones at about 3 arc-second resolution.
 - NOAA ETOPO is coarser still, but remains a fallback global relief source if CRM access changes.
