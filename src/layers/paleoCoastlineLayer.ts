@@ -1,4 +1,4 @@
-import { GeoJsonLayer, PolygonLayer, ScatterplotLayer, TextLayer } from "deck.gl";
+import { GeoJsonLayer, LineLayer, PolygonLayer, ScatterplotLayer, TextLayer } from "deck.gl";
 import { TerrainLayer } from "@deck.gl/geo-layers";
 import type {
   PaleoCoastlineFeature,
@@ -16,6 +16,13 @@ interface WaterPlaneFeature {
   label: string;
   seaLevelMeters: number;
   polygon: [number, number, number][];
+}
+
+interface WaterSheenLine {
+  source: [number, number, number];
+  target: [number, number, number];
+  alpha: number;
+  width: number;
 }
 
 interface PickedPaleoFeature {
@@ -53,7 +60,9 @@ const DEPTH_CONTOUR_BAND_METERS = 30;
 interface SceneProfileConfig {
   verticalScale: number;
   waterAlpha: number;
+  waterDepthFogStrength: number;
   waterLineAlpha: number;
+  waterSheenAlpha: number;
   terrainAmbient: number;
   terrainDiffuse: number;
   terrainShininess: number;
@@ -70,7 +79,9 @@ const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
   study: {
     verticalScale: 0.95,
     waterAlpha: 84,
+    waterDepthFogStrength: 0.08,
     waterLineAlpha: 155,
+    waterSheenAlpha: 42,
     terrainAmbient: 0.5,
     terrainDiffuse: 0.55,
     terrainShininess: 12,
@@ -85,7 +96,9 @@ const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
   relief: {
     verticalScale: 1.22,
     waterAlpha: 58,
+    waterDepthFogStrength: 0.14,
     waterLineAlpha: 205,
+    waterSheenAlpha: 54,
     terrainAmbient: 0.34,
     terrainDiffuse: 0.86,
     terrainShininess: 26,
@@ -100,7 +113,9 @@ const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
   emergence: {
     verticalScale: 1.12,
     waterAlpha: 42,
+    waterDepthFogStrength: 0.11,
     waterLineAlpha: 235,
+    waterSheenAlpha: 66,
     terrainAmbient: 0.38,
     terrainDiffuse: 0.78,
     terrainShininess: 22,
@@ -241,6 +256,38 @@ function waterPlaneForSlice(slice: PaleoTimeSlice, profile: SceneProfileConfig):
       [west, south, elevation],
     ],
   }];
+}
+
+function waterSheenLinesForSlice(slice: PaleoTimeSlice, profile: SceneProfileConfig): WaterSheenLine[] {
+  const terrain = primaryTerrainForSlice(slice);
+  if (!terrain) return [];
+
+  const [west, south, east, north] = terrain.bounds;
+  const zMeters = terrainZ(terrain, slice.seaLevelMeters, profile, 2.5);
+  const width = east - west;
+  const height = north - south;
+  const lineCount = 26;
+  const lines: WaterSheenLine[] = [];
+
+  for (let index = 0; index < lineCount; index += 1) {
+    const ratio = index / Math.max(1, lineCount - 1);
+    const jitter = Math.sin(index * 12.9898) * 0.022;
+    const y = south + height * ratio + jitter;
+    const segmentStart = 0.06 + ((index * 13) % 47) / 100;
+    const segmentLength = 0.24 + ((index * 7) % 19) / 100;
+    const xStart = west + width * Math.min(segmentStart, 0.72);
+    const xEnd = west + width * Math.min(segmentStart + segmentLength, 0.96);
+    const diagonal = height * (0.035 + ((index * 5) % 9) / 420);
+
+    lines.push({
+      source: [xStart, Math.max(south, Math.min(north, y - diagonal)), zMeters],
+      target: [xEnd, Math.max(south, Math.min(north, y + diagonal)), zMeters],
+      alpha: Math.round(profile.waterSheenAlpha * (0.24 + (index % 5) * 0.1)),
+      width: index % 6 === 0 ? 1.25 : 0.8,
+    });
+  }
+
+  return lines;
 }
 
 function nearestProbeLevel(level: number, levels: number[]): number | null {
@@ -560,6 +607,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
         mesh: {
           extensions: [terrainRevealExtension],
           terrainRevealBandMeters: isBroadTerrain(terrain) ? 28 : 44,
+          terrainRevealDepthFogStrength: (isBroadTerrain(terrain) ? 1.12 : 0.92) * profile.waterDepthFogStrength,
           terrainRevealEnabled: true,
           terrainRevealReliefStrength: (isBroadTerrain(terrain) ? 0.7 : 1) * profile.terrainReliefStrength,
           terrainRevealStrength: (isBroadTerrain(terrain) ? 0.24 : 0.42) * profile.revealStrengthScale,
@@ -581,6 +629,21 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     getLineColor: [188, 248, 255, profile.waterLineAlpha],
     getLineWidth: 2,
     lineWidthUnits: "pixels",
+  });
+
+  const waterSheenLayer = new LineLayer<WaterSheenLine>({
+    id: "paleo-water-sheen",
+    data: waterSheenLinesForSlice(waterSlice, profile),
+    pickable: false,
+    getSourcePosition: (item) => item.source,
+    getTargetPosition: (item) => item.target,
+    getColor: (item) => [190, 245, 255, item.alpha],
+    getWidth: (item) => item.width,
+    widthUnits: "pixels",
+    parameters: {
+      depthCompare: "always",
+      depthWriteEnabled: false,
+    },
   });
 
   const terrainFootprintFillLayer = new PolygonLayer<TerrainFootprint>({
@@ -731,6 +794,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
   return [
     ...terrainLayers,
     waterLayer,
+    waterSheenLayer,
     terrainFootprintFillLayer,
     terrainFootprintLabelLayer,
     depthContourLayer,

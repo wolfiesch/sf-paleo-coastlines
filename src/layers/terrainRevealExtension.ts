@@ -2,6 +2,7 @@ import { LayerExtension, type Layer } from "deck.gl";
 
 interface TerrainRevealProps {
   terrainRevealBandMeters?: number;
+  terrainRevealDepthFogStrength?: number;
   terrainRevealEnabled?: boolean;
   terrainRevealReliefStrength?: number;
   terrainRevealStrength?: number;
@@ -16,6 +17,7 @@ layout(std140) uniform terrainRevealUniforms {
   float enabled;
   float waterLevelZ;
   float bandMeters;
+  float depthFogStrength;
   float reliefStrength;
   float strength;
   float submergedStrength;
@@ -28,6 +30,7 @@ layout(std140) uniform terrainRevealUniforms {
   float enabled;
   float waterLevelZ;
   float bandMeters;
+  float depthFogStrength;
   float reliefStrength;
   float strength;
   float submergedStrength;
@@ -73,6 +76,11 @@ in float terrainReveal_heightZ;
         float submerged = clamp(belowWater * nearSubmerged * terrainReveal.submergedStrength, 0.0, 0.48);
         vec3 submergedTint = vec3(0.08, 0.58, 0.72);
         color.rgb = mix(color.rgb, submergedTint, submerged);
+
+        float depthBelowWater = max(terrainReveal.waterLevelZ - terrainReveal_heightZ, 0.0);
+        float depthFog = smoothstep(20.0, 190.0, depthBelowWater);
+        vec3 deepWaterTint = vec3(0.015, 0.16, 0.27);
+        color.rgb = mix(color.rgb, deepWaterTint, clamp(depthFog * terrainReveal.depthFogStrength, 0.0, 0.34));
       }
     `,
   },
@@ -80,6 +88,7 @@ in float terrainReveal_heightZ;
     enabled: props?.terrainRevealEnabled ? 1 : 0,
     waterLevelZ: props?.terrainRevealWaterLevelZ ?? -480,
     bandMeters: props?.terrainRevealBandMeters ?? 40,
+    depthFogStrength: props?.terrainRevealDepthFogStrength ?? 0.12,
     reliefStrength: props?.terrainRevealReliefStrength ?? 0.22,
     strength: props?.terrainRevealStrength ?? 0.34,
     submergedStrength: props?.terrainRevealSubmergedStrength ?? 0.18,
@@ -88,6 +97,7 @@ in float terrainReveal_heightZ;
     enabled: "f32",
     waterLevelZ: "f32",
     bandMeters: "f32",
+    depthFogStrength: "f32",
     reliefStrength: "f32",
     strength: "f32",
     submergedStrength: "f32",
@@ -98,6 +108,7 @@ export class TerrainRevealExtension extends LayerExtension {
   static extensionName = "TerrainRevealExtension";
   static defaultProps = {
     terrainRevealBandMeters: 40,
+    terrainRevealDepthFogStrength: 0.12,
     terrainRevealEnabled: true,
     terrainRevealReliefStrength: 0.22,
     terrainRevealStrength: 0.34,
@@ -116,6 +127,7 @@ export class TerrainRevealExtension extends LayerExtension {
     this.setShaderModuleProps({
       terrainReveal: {
         terrainRevealBandMeters: props.terrainRevealBandMeters,
+        terrainRevealDepthFogStrength: props.terrainRevealDepthFogStrength,
         terrainRevealEnabled: props.terrainRevealEnabled,
         terrainRevealReliefStrength: props.terrainRevealReliefStrength,
         terrainRevealStrength: props.terrainRevealStrength,
