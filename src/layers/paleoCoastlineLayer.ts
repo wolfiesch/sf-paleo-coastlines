@@ -38,6 +38,14 @@ interface TerrainFootprint {
   position: [number, number, number];
 }
 
+interface ContourLabel {
+  position: [number, number, number];
+  text: string;
+  elevationMeters: number;
+  offsetMeters: number;
+  kind: "waterline" | "exposed" | "submerged";
+}
+
 type GeoJsonCoordinates = number[] | GeoJsonCoordinates[];
 
 const DEPTH_CONTOUR_BAND_METERS = 30;
@@ -156,6 +164,28 @@ function depthContourWidth(feature: PickedPaleoFeature, activeWaterLevel: number
   const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
   if (distance <= 2.5) return 2.8 * profile.contourWidthScale;
   return (Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.25 : 0.7) * profile.contourWidthScale;
+}
+
+function contourLabelColor(label: ContourLabel, profile: SceneProfileConfig): [number, number, number, number] {
+  if (label.kind === "waterline") return [255, 255, 255, scaleAlpha(245, profile.contourAlphaScale)];
+  if (label.kind === "exposed") return [255, 222, 96, scaleAlpha(215, profile.contourAlphaScale)];
+  return [78, 221, 255, scaleAlpha(195, profile.contourAlphaScale)];
+}
+
+function contourLabelSize(label: ContourLabel): number {
+  return label.kind === "waterline" ? 11 : 10;
+}
+
+function contourLabelText(elevationMeters: number, offsetMeters: number): string {
+  if (Math.abs(offsetMeters) <= 2.5) return `${elevationMeters} m WL`;
+  if (offsetMeters > 0) return `+${Math.round(offsetMeters)} m`;
+  return `${Math.round(offsetMeters)} m`;
+}
+
+function contourLabelQuota(kind: ContourLabel["kind"]): number {
+  if (kind === "waterline") return 8;
+  if (kind === "exposed") return 5;
+  return 4;
 }
 
 function shorelineGlowColor(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner", profile: SceneProfileConfig): [number, number, number, number] {
@@ -419,6 +449,69 @@ function emergencePointsForWaterLevel(
   return points;
 }
 
+function contourLabelsForWaterLevel(
+  features: PaleoCoastlineFeature[],
+  terrain: PaleoTerrainConfig | null,
+  activeWaterLevel: number,
+  profile: SceneProfileConfig,
+): ContourLabel[] {
+  if (!terrain) return [];
+
+  const candidates: ContourLabel[] = [];
+
+  for (const feature of features) {
+    if (feature.properties.line_role !== "waterline_probe") continue;
+
+    const elevationMeters = feature.properties.elevation_m;
+    const offsetMeters = elevationMeters - activeWaterLevel;
+    const distance = Math.abs(offsetMeters);
+    const isWaterline = distance <= 2.5;
+    const isNearestTenMeterStep = Math.abs(distance - 10) <= 2.5;
+    if (!isWaterline && !isNearestTenMeterStep) continue;
+
+    const positions = extractPositions(feature.geometry.coordinates);
+    if (positions.length < 12) continue;
+
+    const midpoint = positions[Math.floor(positions.length / 2)];
+    if (typeof midpoint?.[0] !== "number" || typeof midpoint?.[1] !== "number") continue;
+
+    const kind: ContourLabel["kind"] = isWaterline ? "waterline" : offsetMeters > 0 ? "exposed" : "submerged";
+    candidates.push({
+      position: [midpoint[0], midpoint[1], terrainZ(terrain, elevationMeters, profile, isWaterline ? 12 : 9)],
+      text: contourLabelText(elevationMeters, offsetMeters),
+      elevationMeters,
+      offsetMeters,
+      kind,
+    });
+  }
+
+  const quotas: Record<ContourLabel["kind"], number> = {
+    waterline: 0,
+    exposed: 0,
+    submerged: 0,
+  };
+  const occupiedCells = new Set<string>();
+
+  return candidates
+    .sort((a, b) => {
+      if (a.kind === "waterline" && b.kind !== "waterline") return -1;
+      if (a.kind !== "waterline" && b.kind === "waterline") return 1;
+      return Math.abs(a.offsetMeters) - Math.abs(b.offsetMeters);
+    })
+    .filter((label) => {
+      if (quotas[label.kind] >= contourLabelQuota(label.kind)) return false;
+
+      const cellX = Math.round(label.position[0] / 0.11);
+      const cellY = Math.round(label.position[1] / 0.08);
+      const cellKey = `${cellX}:${cellY}`;
+      if (occupiedCells.has(cellKey)) return false;
+
+      occupiedCells.add(cellKey);
+      quotas[label.kind] += 1;
+      return true;
+    });
+}
+
 export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: PaleoRenderContext) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
@@ -434,6 +527,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
   const rawProbeFeatures = probeFeaturesForWaterLevel(data, slice, activeWaterLevel);
   const activeProbeFeatures = rawProbeFeatures.filter((feature) => Math.abs(feature.properties.elevation_m - activeWaterLevel) <= 2.5);
   const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
+  const contourLabels = contourLabelsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
   const terrainFootprints = context.showTerrainFootprints ? terrainFootprintsForSlice(slice, activeWaterLevel, profile) : [];
   const features = [
     ...slice.coastline.features,
@@ -538,6 +632,30 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     getLineWidth: (feature) => depthContourWidth(feature, activeWaterLevel, profile),
   });
 
+  const contourLabelLayer = new TextLayer<ContourLabel>({
+    id: "paleo-contour-labels",
+    data: contourLabels,
+    pickable: false,
+    getPosition: (item) => item.position,
+    getText: (item) => item.text,
+    getSize: contourLabelSize,
+    getColor: (item) => contourLabelColor(item, profile),
+    getTextAnchor: "middle",
+    getAlignmentBaseline: "center",
+    sizeUnits: "pixels",
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    fontWeight: 800,
+    outlineWidth: 2,
+    outlineColor: [2, 8, 23, 235],
+    background: true,
+    getBackgroundColor: (item) => item.kind === "waterline" ? [2, 8, 23, 168] : [2, 8, 23, 120],
+    backgroundPadding: [2, 1],
+    parameters: {
+      depthCompare: "always",
+      depthWriteEnabled: false,
+    },
+  });
+
   const shorelineGlowOuterLayer = new GeoJsonLayer<PaleoCoastlineProperties>({
     id: "paleo-waterline-glow-outer",
     data: {
@@ -611,6 +729,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     terrainFootprintFillLayer,
     terrainFootprintLabelLayer,
     depthContourLayer,
+    contourLabelLayer,
     shorelineGlowOuterLayer,
     shorelineGlowInnerLayer,
     coastlineLayer,
