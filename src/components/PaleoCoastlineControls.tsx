@@ -13,6 +13,7 @@ interface PaleoCoastlineControlsProps {
   activeSliceId: PaleoTimeSliceId;
   showUncertainty: boolean;
   showTerrainFootprints: boolean;
+  showBaySourceFootprints: boolean;
   waterLevelMeters: number | null;
   isPlaying: boolean;
   terrainDetail: TerrainDetailLevel;
@@ -22,6 +23,7 @@ interface PaleoCoastlineControlsProps {
   onSliceChange: (id: PaleoTimeSliceId) => void;
   onToggleUncertainty: () => void;
   onToggleTerrainFootprints: () => void;
+  onToggleBaySourceFootprints: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
   onResetWaterLevel: () => void;
@@ -103,6 +105,7 @@ export function PaleoCoastlineControls({
   activeSliceId,
   showUncertainty,
   showTerrainFootprints,
+  showBaySourceFootprints,
   waterLevelMeters,
   isPlaying,
   terrainDetail,
@@ -112,6 +115,7 @@ export function PaleoCoastlineControls({
   onSliceChange,
   onToggleUncertainty,
   onToggleTerrainFootprints,
+  onToggleBaySourceFootprints,
   onWaterLevelChange,
   onTogglePlayback,
   onResetWaterLevel,
@@ -195,20 +199,36 @@ export function PaleoCoastlineControls({
             <MapPinned size={12} />
             View
           </span>
-          <button
-            type="button"
-            onClick={onToggleTerrainFootprints}
-            className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-              showTerrainFootprints
-                ? "border-cyan-300/40 bg-cyan-300 text-gray-950"
-                : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
-            }`}
-            aria-pressed={showTerrainFootprints}
-            title="Show high-detail survey coverage"
-          >
-            <Layers3 size={13} />
-            Coverage
-          </button>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={onToggleTerrainFootprints}
+              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                showTerrainFootprints
+                  ? "border-cyan-300/40 bg-cyan-300 text-gray-950"
+                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
+              }`}
+              aria-pressed={showTerrainFootprints}
+              title="Show rendered high-detail terrain coverage"
+            >
+              <Layers3 size={13} />
+              Coverage
+            </button>
+            <button
+              type="button"
+              onClick={onToggleBaySourceFootprints}
+              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                showBaySourceFootprints
+                  ? "border-emerald-300/40 bg-emerald-300 text-gray-950"
+                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
+              }`}
+              aria-pressed={showBaySourceFootprints}
+              title="Show source surveys used by the USGS 1 m Bay DEM"
+            >
+              <Database size={13} />
+              Bay sources
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
           {viewPresets.map((preset) => (
@@ -231,6 +251,26 @@ export function PaleoCoastlineControls({
                 {item.label}
               </span>
             ))}
+          </div>
+        ) : null}
+        {showBaySourceFootprints ? (
+          <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-emerald-300" />
+              Direct 1 m
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-violet-300" />
+              Interp.
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-amber-300" />
+              Single beam
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-cyan-300" />
+              Multibeam
+            </span>
           </div>
         ) : null}
       </div>

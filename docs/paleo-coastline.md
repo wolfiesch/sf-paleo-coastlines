@@ -14,7 +14,7 @@ estimated coastline
 
 The checked-in browser data now uses two broad elevation sources plus several sharper NOAA and USGS patches:
 
-For the source-by-source quality audit, resolution notes, datum cautions, and next data chases, see `docs/survey-inventory.md`. The browser-readable JSON version is `public/data/paleo-coastlines/survey_inventory.json`. For the high-detail Bay DEM acquisition path, see `docs/usgs-sf-bay-1m-dem.md` and `public/data/paleo-coastlines/usgs_sf_bay_1m_dem_manifest.json`.
+For the source-by-source quality audit, resolution notes, datum cautions, and next data chases, see `docs/survey-inventory.md`. The browser-readable JSON version is `public/data/paleo-coastlines/survey_inventory.json`. For the high-detail Bay DEM acquisition path, see `docs/usgs-sf-bay-1m-dem.md` and `public/data/paleo-coastlines/usgs_sf_bay_1m_dem_manifest.json`. For the Bay DEM source-survey polygons, see `docs/usgs-sf-bay-source-footprints.md`.
 
 | Source | Why it is used |
 |---|---|
@@ -31,6 +31,8 @@ For the source-by-source quality audit, resolution notes, datum cautions, and ne
 Generated app files:
 
 - `public/data/paleo-coastlines/paleo_manifest.json`
+- `public/data/paleo-coastlines/usgs_sf_bay_source_footprints.geojson`
+- `public/data/paleo-coastlines/usgs_sf_bay_source_footprints_manifest.json`
 - `public/data/paleo-coastlines/slices/*.json`
 - `public/data/paleo-coastlines/waterline-probe/*.json`
 - `public/data/paleo-coastlines/waterline_probe.json`
@@ -88,6 +90,14 @@ To rebuild the lightweight source-quality audit without regenerating terrain:
 ```sh
 pnpm paleo-coastlines:inventory
 ```
+
+To rebuild the USGS 1 m Bay DEM source-survey overlay:
+
+```bash
+pnpm paleo-coastlines:bay-source-footprints
+```
+
+This layer is a data-quality overlay, not a new terrain surface. In plain English: it shows which source surveys fed the USGS 1 m Bay DEM, including survey year, source agency, sensor type, resolution, datum, and whether interpolation was needed.
 
 The script downloads missing source files, runs `gdal_contour`, simplifies the broad NOAA contour lines for browser use, reprojects the USGS output to WGS84, converts NOAA's 0-360 longitude values into normal west-longitude values, filters tiny contour fragments, and writes browser-ready GeoJSON plus browser-ready terrain PNGs.
 

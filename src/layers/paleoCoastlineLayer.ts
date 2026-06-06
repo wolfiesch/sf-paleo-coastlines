@@ -1,6 +1,9 @@
 import { GeoJsonLayer, LineLayer, PolygonLayer, ScatterplotLayer, TextLayer } from "deck.gl";
 import { TerrainLayer } from "@deck.gl/geo-layers";
 import type {
+  BaySourceFootprintCollection,
+  BaySourceFootprintFeature,
+  BaySourceFootprintProperties,
   PaleoCoastlineFeature,
   PaleoCoastlineProperties,
   PaleoRenderContext,
@@ -27,6 +30,10 @@ interface WaterSheenLine {
 
 interface PickedPaleoFeature {
   properties: PaleoCoastlineProperties;
+}
+
+interface PickedBaySourceFeature {
+  properties: BaySourceFootprintProperties;
 }
 
 interface EmergencePoint {
@@ -389,6 +396,36 @@ function terrainFootprintsForSlice(
     });
 }
 
+function baySourceFillColor(feature: PickedBaySourceFeature): [number, number, number, number] {
+  const sensor = feature.properties.sensor_type.toLowerCase();
+  const interpolation = feature.properties.interpolation.toLowerCase();
+  const quality = feature.properties.quality_class.toLowerCase();
+
+  if (quality.includes("direct") && quality.includes("1m")) return [92, 255, 178, 46];
+  if (sensor.includes("multi")) return [75, 210, 255, 38];
+  if (sensor.includes("interferometric")) return [190, 124, 255, interpolation === "yes" ? 36 : 44];
+  if (sensor.includes("single")) return [255, 198, 92, 36];
+  return [235, 244, 255, 30];
+}
+
+function baySourceLineColor(feature: PickedBaySourceFeature): [number, number, number, number] {
+  const sensor = feature.properties.sensor_type.toLowerCase();
+  const interpolation = feature.properties.interpolation.toLowerCase();
+  const quality = feature.properties.quality_class.toLowerCase();
+
+  if (quality.includes("direct") && quality.includes("1m")) return [118, 255, 190, 218];
+  if (sensor.includes("multi")) return [88, 225, 255, 205];
+  if (sensor.includes("interferometric")) return [205, 155, 255, interpolation === "yes" ? 175 : 210];
+  if (sensor.includes("single")) return [255, 206, 110, 182];
+  return [235, 244, 255, 160];
+}
+
+function baySourceLineWidth(feature: PickedBaySourceFeature): number {
+  const quality = feature.properties.quality_class.toLowerCase();
+  if (quality.includes("direct") && quality.includes("1m")) return 1.8;
+  return 1.15;
+}
+
 function meshMaxErrorForTerrain(
   terrain: PaleoTerrainConfig,
   terrainIndex: number,
@@ -425,6 +462,22 @@ function elevationDecoderForTerrain(terrain: PaleoTerrainConfig, profile: SceneP
 
 function terrainZ(terrain: PaleoTerrainConfig, elevationMeters: number, profile: SceneProfileConfig, zOffsetMeters = 0): number {
   return (elevationMeters * terrain.verticalExaggeration * profile.verticalScale) + zOffsetMeters;
+}
+
+function elevatedBaySourceFeature(
+  feature: BaySourceFootprintFeature,
+  terrain: PaleoTerrainConfig | null,
+  activeWaterLevel: number,
+  profile: SceneProfileConfig,
+): BaySourceFootprintFeature {
+  const zMeters = terrain ? terrainZ(terrain, activeWaterLevel, profile, 42) : 0;
+  return {
+    ...feature,
+    geometry: {
+      ...feature.geometry,
+      coordinates: addZToCoordinates(feature.geometry.coordinates, zMeters),
+    },
+  };
 }
 
 function addZToCoordinates(coordinates: unknown, zMeters: number): unknown {
@@ -567,7 +620,11 @@ function contourLabelsForWaterLevel(
     });
 }
 
-export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: PaleoRenderContext) {
+export function createPaleoCoastlineLayers(
+  data: PaleoTimeSlice[],
+  context: PaleoRenderContext,
+  baySourceFootprints?: BaySourceFootprintCollection | null,
+) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
 
@@ -584,6 +641,9 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
   const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
   const contourLabels = contourLabelsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
   const terrainFootprints = context.showTerrainFootprints ? terrainFootprintsForSlice(slice, activeWaterLevel, profile) : [];
+  const baySourceFeatures = context.showBaySourceFootprints && baySourceFootprints
+    ? baySourceFootprints.features.map((feature) => elevatedBaySourceFeature(feature, terrain, activeWaterLevel, profile))
+    : [];
   const features = [
     ...slice.coastline.features,
     ...activeProbeFeatures,
@@ -683,6 +743,28 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     fontWeight: 700,
     outlineWidth: 2,
     outlineColor: [2, 8, 23, 230],
+    parameters: {
+      depthCompare: "always",
+      depthWriteEnabled: false,
+    },
+  });
+
+  const baySourceFootprintLayer = new GeoJsonLayer<BaySourceFootprintProperties>({
+    id: "paleo-bay-source-footprints",
+    data: {
+      type: "FeatureCollection",
+      features: baySourceFeatures,
+    } as never,
+    pickable: true,
+    stroked: true,
+    filled: true,
+    lineWidthUnits: "pixels",
+    lineWidthMinPixels: 0.9,
+    getFillColor: baySourceFillColor,
+    getLineColor: baySourceLineColor,
+    getLineWidth: baySourceLineWidth,
+    autoHighlight: true,
+    highlightColor: [255, 255, 255, 92],
     parameters: {
       depthCompare: "always",
       depthWriteEnabled: false,
@@ -801,6 +883,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     waterSheenLayer,
     terrainFootprintFillLayer,
     terrainFootprintLabelLayer,
+    baySourceFootprintLayer,
     depthContourLayer,
     contourLabelLayer,
     shorelineGlowOuterLayer,
@@ -829,6 +912,24 @@ export function getPaleoTooltip(object: unknown) {
   }
 
   if (!("properties" in object)) return null;
+
+  const maybeBaySource = object as Partial<PickedBaySourceFeature>;
+  if (maybeBaySource.properties?.survey && "sensor_type" in maybeBaySource.properties) {
+    const props = maybeBaySource.properties;
+    const year = props.year == null ? "unknown year" : String(props.year);
+    const interpolation = props.interpolation.toLowerCase() === "yes" ? "interpolated" : "direct";
+    return {
+      text: `${props.source_section}: ${props.survey}\n${props.agency}, ${year}\n${props.sensor_type}, ${props.resolution}, ${props.datum}\n${interpolation} source area`,
+      style: {
+        backgroundColor: "rgba(4, 20, 28, 0.94)",
+        color: "#d8fff4",
+        fontSize: "13px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        border: "1px solid rgba(110, 255, 190, 0.35)",
+      },
+    };
+  }
 
   const feature = object as PickedPaleoFeature;
   return {

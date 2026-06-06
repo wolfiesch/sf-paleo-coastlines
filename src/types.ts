@@ -52,6 +52,39 @@ export interface PaleoFeatureCollection {
   features: PaleoCoastlineFeature[];
 }
 
+export interface BaySourceFootprintProperties {
+  source_section: string;
+  section_id: string;
+  agency: string;
+  survey: string;
+  year: number | null;
+  resolution: string;
+  datum: string;
+  interpolation: string;
+  sensor_type: string;
+  source_location: string;
+  area_sq_m: number | null;
+  quality_class: string;
+  sciencebase_item_id: string;
+  sciencebase_item_url: string;
+}
+
+export interface BaySourceFootprintFeature {
+  type: "Feature";
+  id?: string;
+  properties: BaySourceFootprintProperties;
+  geometry: {
+    type: string;
+    coordinates: unknown;
+  };
+}
+
+export interface BaySourceFootprintCollection {
+  type: "FeatureCollection";
+  name?: string;
+  features: BaySourceFootprintFeature[];
+}
+
 export interface PaleoTimeSlice {
   id: PaleoTimeSliceId;
   label: string;
@@ -105,6 +138,7 @@ export interface PaleoRenderContext {
   paleoTimeSliceId: PaleoTimeSliceId;
   showPaleoUncertainty: boolean;
   showTerrainFootprints: boolean;
+  showBaySourceFootprints: boolean;
   paleoWaterLevelMeters: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;

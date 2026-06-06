@@ -8,6 +8,7 @@ import { PaleoCoastlineControls } from "./components/PaleoCoastlineControls";
 import { createPaleoCoastlineLayers, getPaleoTooltip } from "./layers/paleoCoastlineLayer";
 import { DARK_MAP_STYLE } from "./lib/mapStyles";
 import type {
+  BaySourceFootprintCollection,
   PaleoManifest,
   PaleoFeatureCollection,
   PaleoTimeSlice,
@@ -63,6 +64,8 @@ const VIEW_PRESETS = [
   },
 ] satisfies { id: string; label: string; viewState: MapViewState }[];
 
+const BAY_SOURCE_FOOTPRINTS_URL = "/data/paleo-coastlines/usgs_sf_bay_source_footprints.geojson";
+
 function nearestProbeLevel(level: number, levels: number[]): number | null {
   if (!levels.length) return null;
 
@@ -98,6 +101,9 @@ function App() {
   const [waterLevelMeters, setWaterLevelMeters] = useState<number | null>(-120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTerrainFootprints, setShowTerrainFootprints] = useState(false);
+  const [showBaySourceFootprints, setShowBaySourceFootprints] = useState(false);
+  const [baySourceFootprints, setBaySourceFootprints] = useState<BaySourceFootprintCollection | null>(null);
+  const [loadingBaySourceFootprints, setLoadingBaySourceFootprints] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("bottom");
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");
@@ -246,6 +252,41 @@ function App() {
     };
   }, [activeProbeLevel, activeProbeLevels, loadedProbeLevels, waterlineProbeIndex]);
 
+  useEffect(() => {
+    if (!showBaySourceFootprints || baySourceFootprints) return;
+
+    let cancelled = false;
+
+    async function loadBaySourceFootprints() {
+      setLoadingBaySourceFootprints(true);
+      try {
+        const response = await fetch(BAY_SOURCE_FOOTPRINTS_URL);
+        if (!response.ok) {
+          throw new Error(`Failed to load Bay source footprints: ${response.status}`);
+        }
+        const payload = await response.json() as BaySourceFootprintCollection;
+        if (!cancelled) {
+          setBaySourceFootprints(payload);
+          setError(null);
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : "Failed to load Bay source footprints.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingBaySourceFootprints(false);
+        }
+      }
+    }
+
+    void loadBaySourceFootprints();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [baySourceFootprints, showBaySourceFootprints]);
+
   const activeSlice = useMemo(
     () => {
       const slice = loadedSlices[activeSliceId]
@@ -282,11 +323,12 @@ function App() {
     paleoTimeSliceId: activeSliceId,
     showPaleoUncertainty: showUncertainty,
     showTerrainFootprints,
+    showBaySourceFootprints,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
     terrainTextureMode,
     sceneProfile,
-  }), [activeSliceId, renderSlices, sceneProfile, showTerrainFootprints, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters]);
+  }, baySourceFootprints), [activeSliceId, baySourceFootprints, renderSlices, sceneProfile, showBaySourceFootprints, showTerrainFootprints, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -332,10 +374,12 @@ function App() {
           terrainTextureMode={terrainTextureMode}
           sceneProfile={sceneProfile}
           showTerrainFootprints={showTerrainFootprints}
+          showBaySourceFootprints={showBaySourceFootprints}
           viewPresets={VIEW_PRESETS}
           onSliceChange={handleSliceChange}
           onToggleUncertainty={() => setShowUncertainty((shown) => !shown)}
           onToggleTerrainFootprints={() => setShowTerrainFootprints((shown) => !shown)}
+          onToggleBaySourceFootprints={() => setShowBaySourceFootprints((shown) => !shown)}
           onWaterLevelChange={(level) => {
             setIsPlaying(false);
             setWaterLevelMeters(level);
@@ -355,6 +399,7 @@ function App() {
       <aside className="pointer-events-none absolute bottom-4 right-4 z-20 w-[20rem] max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-gray-950/88 p-3 text-xs leading-4 text-gray-400 shadow-2xl backdrop-blur-md">
         {isLoadingData ? <p>Loading terrain and coastline data...</p> : null}
         {!isLoadingData && probeLoading ? <p>Loading waterline probe...</p> : null}
+        {!isLoadingData && loadingBaySourceFootprints ? <p>Loading Bay source footprints...</p> : null}
         {error ? <p className="text-red-200">{error}</p> : null}
         {!isLoadingData && !error && activeSlice ? (
           <div className="space-y-2">
