@@ -9,6 +9,7 @@ import type {
   TerrainDetailLevel,
   TerrainTextureMode,
 } from "../types";
+import { terrainRevealExtension } from "./terrainRevealExtension";
 
 interface WaterPlaneFeature {
   label: string;
@@ -247,6 +248,15 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
         diffuse: 0.65,
         shininess: 18,
         specularColor: [60, 70, 78],
+      },
+      _subLayerProps: {
+        mesh: {
+          extensions: [terrainRevealExtension],
+          terrainRevealBandMeters: isBroadTerrain(terrain) ? 28 : 44,
+          terrainRevealEnabled: true,
+          terrainRevealStrength: isBroadTerrain(terrain) ? 0.24 : 0.42,
+          terrainRevealWaterLevelZ: activeWaterLevel * terrain.verticalExaggeration,
+        },
       },
     }),
   );

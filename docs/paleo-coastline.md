@@ -151,6 +151,8 @@ The terrain mesh control changes deck.gl's `meshMaxError` setting. In plain Engl
 
 The slider also draws the nearest 5 m contour as a bright probe line. This probe is not a dated coastline reconstruction. It is a visual helper for the question: "if the water were at this height, which terrain edge would meet the water?" The probe interval is deliberately 5 m for the first pass so the single browser JSON stays manageable.
 
+The terrain surface also uses a small shader-based reveal tint near the active waterline. In plain English: terrain just above the current scrubbed water level gets a warm exposed-land tint, while the source terrain texture stays underneath. This is a visual reading aid, not an added erosion, sediment, or vegetation model.
+
 ## Time Slices
 
 | Slice | Sea level used | Purpose |
