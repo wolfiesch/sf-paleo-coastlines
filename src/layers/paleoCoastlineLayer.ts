@@ -57,6 +57,7 @@ interface SceneProfileConfig {
   terrainAmbient: number;
   terrainDiffuse: number;
   terrainShininess: number;
+  terrainReliefStrength: number;
   revealStrengthScale: number;
   submergedStrengthScale: number;
   contourAlphaScale: number;
@@ -73,6 +74,7 @@ const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
     terrainAmbient: 0.5,
     terrainDiffuse: 0.55,
     terrainShininess: 12,
+    terrainReliefStrength: 0.11,
     revealStrengthScale: 0.78,
     submergedStrengthScale: 0.82,
     contourAlphaScale: 0.78,
@@ -87,6 +89,7 @@ const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
     terrainAmbient: 0.34,
     terrainDiffuse: 0.86,
     terrainShininess: 26,
+    terrainReliefStrength: 0.34,
     revealStrengthScale: 1.04,
     submergedStrengthScale: 0.95,
     contourAlphaScale: 1.08,
@@ -101,6 +104,7 @@ const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
     terrainAmbient: 0.38,
     terrainDiffuse: 0.78,
     terrainShininess: 22,
+    terrainReliefStrength: 0.24,
     revealStrengthScale: 1.28,
     submergedStrengthScale: 1.18,
     contourAlphaScale: 1.22,
@@ -557,6 +561,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
           extensions: [terrainRevealExtension],
           terrainRevealBandMeters: isBroadTerrain(terrain) ? 28 : 44,
           terrainRevealEnabled: true,
+          terrainRevealReliefStrength: (isBroadTerrain(terrain) ? 0.7 : 1) * profile.terrainReliefStrength,
           terrainRevealStrength: (isBroadTerrain(terrain) ? 0.24 : 0.42) * profile.revealStrengthScale,
           terrainRevealSubmergedStrength: (isBroadTerrain(terrain) ? 0.14 : 0.26) * profile.submergedStrengthScale,
           terrainRevealWaterLevelZ: terrainZ(terrain, activeWaterLevel, profile),
