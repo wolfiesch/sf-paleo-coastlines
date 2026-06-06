@@ -174,6 +174,8 @@ The slider also draws the nearest 5 m contour as a bright waterline and nearby 5
 
 The terrain surface also uses a shader-based reveal tint near the active waterline. In plain English: terrain just above the current scrubbed water level gets a warm exposed-land tint, terrain just below the level gets a cool submerged tint, and the source terrain texture stays underneath. The active waterline also gets a soft glow so the exact wet/dry edge remains readable over busy survey textures. These are visual reading aids, not added erosion, sediment, vegetation, or hydrodynamic models.
 
+High-resolution survey insets now fade slightly at their outer bounds. In plain English: this softens the visible edge where a detailed NOAA or USGS survey patch meets the broader background DEM. It does not invent new seafloor data outside the survey footprint; it only makes the transition easier to read.
+
 ## Time Slices
 
 | Slice | Sea level used | Purpose |

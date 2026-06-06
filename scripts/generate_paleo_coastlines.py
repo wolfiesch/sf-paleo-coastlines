@@ -1421,6 +1421,7 @@ def write_terrain_pngs_from_wgs84(
     composite_texture_path: Path,
     minimum: float,
     maximum: float,
+    edge_fade_pixels: int = 0,
 ) -> None:
     source = Image.open(source_path)
     elevation = Image.new("RGB", source.size)
@@ -1436,7 +1437,14 @@ def write_terrain_pngs_from_wgs84(
     heights: list[float | None] = []
     base_colors: list[tuple[int, int, int] | None] = []
 
-    for raw in source.getdata():
+    def alpha_for_pixel(x: int, y: int) -> int:
+        if edge_fade_pixels <= 0:
+            return 255
+        edge_distance = min(x, y, width - 1 - x, image_height - 1 - y)
+        amount = max(0.0, min(1.0, edge_distance / edge_fade_pixels))
+        return clamp_byte(255 * amount)
+
+    for index, raw in enumerate(source.getdata()):
         elevation_m = float(raw)
         if not is_valid_height(elevation_m):
             elevation_pixels.append((0, 0, 0))
@@ -1445,9 +1453,12 @@ def write_terrain_pngs_from_wgs84(
             base_colors.append(None)
             continue
 
+        x = index % width
+        y = index // width
+        alpha = alpha_for_pixel(x, y)
         base_color = terrain_color(elevation_m)
         elevation_pixels.append(encode_height_rgb(elevation_m, minimum, maximum))
-        texture_pixels.append((*base_color, 255))
+        texture_pixels.append((*base_color, alpha))
         heights.append(elevation_m)
         base_colors.append(base_color)
 
@@ -1462,10 +1473,11 @@ def write_terrain_pngs_from_wgs84(
         shade, slope = relief_shade(heights, width, image_height, x, y)
         roughness, curvature = terrain_surface_metrics(heights, width, image_height, x, y)
         relief_color = shaded_relief_color(base_color, shade, slope, height_value)
-        relief_pixels.append((*relief_color, 255))
+        alpha = alpha_for_pixel(x, y)
+        relief_pixels.append((*relief_color, alpha))
         composite_pixels.append((
             *survey_composite_color(base_color, relief_color, shade, slope, roughness, curvature, height_value),
-            255,
+            alpha,
         ))
 
     elevation.putdata(elevation_pixels)
@@ -1561,6 +1573,7 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_COMPOSITE_TEXTURE_PNG,
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
+        18,
     )
     return terrain_metadata(
         "usgs_ds684_dem4",
@@ -1712,6 +1725,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         bathymetry_block_composite_texture_png(block),
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
+        24,
     )
     sonar_texture, hybrid_texture = generate_bathymetry_block_sonar_texture(block)
     character_base = hybrid_texture if hybrid_texture is not None and hybrid_texture.exists() else bathymetry_block_composite_texture_png(block)
@@ -1764,6 +1778,7 @@ def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
         nos_bag_composite_texture_png(block),
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
+        24,
     )
     return terrain_metadata(
         str(block["sourceId"]),
