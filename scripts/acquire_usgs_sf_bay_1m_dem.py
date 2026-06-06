@@ -28,42 +28,66 @@ OUT_MD = ROOT / "docs" / "usgs-sf-bay-1m-dem.md"
 
 SCIENCEBASE_ITEM_URL = "https://www.sciencebase.gov/catalog/item/{item_id}?format=json"
 
-USGS_SF_BAY_1M_ITEMS: list[dict[str, str]] = [
+USGS_SF_BAY_1M_ITEMS: list[dict[str, Any]] = [
     {
         "section": "north",
         "datum": "NAVD88",
         "itemId": "5e1cb737e4b0ecf25c5f0bf6",
         "metadataUrl": "https://cmgds.marine.usgs.gov/catalog/pcmsc/DataReleases/ScienceBase/DR_P9TJTS8M/NorthSFBay_DEM_Mosaic_NAVD88_1m_metadata.html",
+        "fileName": "NorthSFBay_DEM_Mosaic_NAVD88_1m.tif",
+        "sizeBytes": 4_390_436_473,
+        "downloadUrl": "https://www.sciencebase.gov/catalog/file/get/5e1cb737e4b0ecf25c5f0bf6?f=__disk__1a%2F72%2F37%2F1a723772343e6b17b31de1fdb5a3adc3943491a5",
+        "bounds": {"minX": -122.494946625, "maxX": -121.863425774, "minY": 37.954045436, "maxY": 38.136493633},
     },
     {
         "section": "central",
         "datum": "NAVD88",
         "itemId": "607df15ad34e8564d67e3ae9",
         "metadataUrl": "https://cmgds.marine.usgs.gov/catalog/pcmsc/DataReleases/ScienceBase/DR_P9TJTS8M/CentralSFBay_DEM_Mosaic_NAVD88_1m_metadata.html",
+        "fileName": "CentralSFBay_DEM_Mosaic_NAVD88_1M.zip",
+        "sizeBytes": 962_525_101,
+        "downloadUrl": "https://www.sciencebase.gov/catalog/file/get/607df15ad34e8564d67e3ae9?name=CentralSFBay_DEM_Mosaic_NAVD88_1M.zip",
+        "bounds": {"minX": -122.516735, "maxX": -122.235097, "minY": 37.725137, "maxY": 37.994263},
     },
     {
         "section": "south",
         "datum": "NAVD88",
         "itemId": "607df17bd34e8564d67e3af0",
         "metadataUrl": "https://cmgds.marine.usgs.gov/catalog/pcmsc/DataReleases/ScienceBase/DR_P9TJTS8M/SouthSFBay_DEM_Mosaic_NAVD88_1m_metadata.html",
+        "fileName": "SouthSFBay_DEM_Mosaic_NAVD88_1m.zip",
+        "sizeBytes": 1_051_095_550,
+        "downloadUrl": "https://www.sciencebase.gov/catalog/file/get/607df17bd34e8564d67e3af0?f=__disk__fb%2Fe0%2F85%2Ffbe085c476effe78fe49486c657844f95ac47a24",
+        "bounds": {"minX": -122.563558, "maxX": -121.779581, "minY": 37.40643, "maxY": 37.781613},
     },
     {
         "section": "north",
         "datum": "MLLW",
         "itemId": "5e16baa2e4b0ecf25c57fc3a",
         "metadataUrl": "https://cmgds.marine.usgs.gov/catalog/pcmsc/DataReleases/ScienceBase/DR_P9TJTS8M/NorthSFBay_DEM_Mosaic_MLLW_1m_metadata.html",
+        "fileName": "NorthSFBay_DEM_Mosaic_MLLW_1m.tif",
+        "sizeBytes": 4_390_436_649,
+        "downloadUrl": "https://www.sciencebase.gov/catalog/file/get/5e16baa2e4b0ecf25c57fc3a?f=__disk__c8%2F83%2Fa2%2Fc883a2d9ad177aac7bc240710b1e7d6cfb5ea84b",
+        "bounds": {"minX": -122.494946625, "maxX": -121.863425774, "minY": 37.954045436, "maxY": 38.136493633},
     },
     {
         "section": "central",
         "datum": "MLLW",
         "itemId": "606b73efd34e3d0429b204d3",
         "metadataUrl": "https://cmgds.marine.usgs.gov/catalog/pcmsc/DataReleases/ScienceBase/DR_P9TJTS8M/CentralSFBay_DEM_Mosaic_MLLW_1m_metadata.html",
+        "fileName": "CentralSFBay_DEM_Mosaic_MLLW_1M.zip",
+        "sizeBytes": 964_530_175,
+        "downloadUrl": "https://www.sciencebase.gov/catalog/file/get/606b73efd34e3d0429b204d3?name=CentralSFBay_DEM_Mosaic_MLLW_1M.zip",
+        "bounds": {"minX": -122.516735, "maxX": -122.235097, "minY": 37.725137, "maxY": 37.994263},
     },
     {
         "section": "south",
         "datum": "MLLW",
         "itemId": "607df116d34e8564d67e3ae6",
         "metadataUrl": "https://cmgds.marine.usgs.gov/catalog/pcmsc/DataReleases/ScienceBase/DR_P9TJTS8M/SouthSFBay_DEM_Mosaic_MLLW_1m_metadata.html",
+        "fileName": "SouthSFBay_DEM_Mosaic_MLLW_1m.zip",
+        "sizeBytes": 1_050_702_742,
+        "downloadUrl": "https://www.sciencebase.gov/catalog/file/get/607df116d34e8564d67e3ae6?name=SouthSFBay_DEM_Mosaic_MLLW_1m.zip",
+        "bounds": {"minX": -122.563558, "maxX": -121.779581, "minY": 37.40643, "maxY": 37.781613},
     },
 ]
 
@@ -153,7 +177,7 @@ def item_record(seed: dict[str, str]) -> dict[str, Any]:
             ]
             cached["metadataRefreshError"] = str(cause)
             return cached
-        raise
+        return fallback_item_record(seed, cause)
     files = [
         {
             "name": file.get("name"),
@@ -193,7 +217,37 @@ def item_record(seed: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def selected_records(datum: str, section: str) -> list[dict[str, str]]:
+def fallback_item_record(seed: dict[str, Any], cause: Exception) -> dict[str, Any]:
+    file = {
+        "name": seed["fileName"],
+        "sizeBytes": seed["sizeBytes"],
+        "sizeHuman": human_size(seed["sizeBytes"]),
+        "url": seed["downloadUrl"],
+        "originalUrl": seed["downloadUrl"],
+        "primaryDemFile": True,
+    }
+    local_path = str(local_download_path(seed, file).relative_to(ROOT))
+    return {
+        "section": seed["section"],
+        "datum": seed["datum"],
+        "itemId": seed["itemId"],
+        "title": f"USGS SF Bay 1 m DEM {seed['section']} ({seed['datum']})",
+        "scienceBaseUrl": f"https://www.sciencebase.gov/catalog/item/{seed['itemId']}",
+        "metadataUrl": seed["metadataUrl"],
+        "doi": "https://doi.org/10.5066/P9TJTS8M",
+        "dates": [],
+        "bounds": seed.get("bounds"),
+        "lastUpdated": None,
+        "files": [file],
+        "primaryDemFiles": [file],
+        "localPrimaryPaths": [local_path],
+        "localPrimaryPresent": [existing_file_is_usable(ROOT / local_path, seed["sizeBytes"])],
+        "metadataRefreshError": str(cause),
+        "metadataSource": "built-in last-known ScienceBase metadata",
+    }
+
+
+def selected_records(datum: str, section: str) -> list[dict[str, Any]]:
     records = USGS_SF_BAY_1M_ITEMS
     if datum != "all":
         records = [record for record in records if record["datum"].lower() == datum]
@@ -223,6 +277,7 @@ def write_markdown(payload: dict[str, Any]) -> None:
         "2. Download central and south first. They are large but manageable zipped GeoTIFF packages.",
         "3. Treat north carefully: the NAVD88 primary GeoTIFF is about 4.4 GB before any local overviews or processed outputs.",
         "4. After import, compare overlaps against CUDEM, DS684, and NOAA BAG patches before trusting exact contour positions.",
+        "5. Regenerate `pnpm paleo-coastlines:generate` after a full zip/tif is present; the generator auto-detects local NAVD88 Bay DEM sections and adds them as optional terrain/contour sources.",
         "",
         "## Discovered Files",
         "",
@@ -275,6 +330,7 @@ def write_markdown(payload: dict[str, Any]) -> None:
         "- The DEM is very detailed, but it is still an interpreted continuous surface. Gaps between survey swaths were interpolated.",
         "- These files describe modern Bay bathymetry, not paleo erosion, sediment, marsh growth, or river-channel migration.",
         "- MLLW is useful for nautical/bathymetric comparison. NAVD88 is the better first fit for our land-plus-waterline simulation.",
+        "- ScienceBase may stream these large files slowly or fail mid-transfer. The acquisition script validates file size and rejects HTML/error responses before treating a download as complete.",
         "",
     ])
     OUT_MD.parent.mkdir(parents=True, exist_ok=True)
@@ -300,8 +356,9 @@ def download_file(url: str, target: Path, force: bool, expected_size: int | None
     part_path = target.with_name(f"{target.name}.part")
 
     if shutil.which("curl") is not None:
-        if force:
-            part_path.unlink(missing_ok=True)
+        # ScienceBase S3-backed files may ignore byte-range requests. A normal
+        # one-piece transfer has proven more reliable than curl resume here.
+        part_path.unlink(missing_ok=True)
         print(f"Downloading {url}")
         print(f"to {target.relative_to(ROOT)}")
         subprocess.run(
@@ -313,16 +370,15 @@ def download_file(url: str, target: Path, force: bool, expected_size: int | None
                 "5",
                 "--retry-delay",
                 "5",
+                "--retry-all-errors",
                 "--connect-timeout",
                 "30",
                 "--speed-limit",
                 "1",
                 "--speed-time",
-                "60",
+                "120",
                 "--max-time",
                 "7200",
-                "--continue-at",
-                "-",
                 "--output",
                 str(part_path),
                 url,

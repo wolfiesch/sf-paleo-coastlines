@@ -318,6 +318,7 @@ function isBroadTerrain(terrain: PaleoTerrainConfig): boolean {
 
 function terrainFootprintCategory(terrain: PaleoTerrainConfig): TerrainFootprint["category"] {
   if (terrain.sourceId.includes("noaa_nos")) return "noaaBag";
+  if (terrain.sourceId.includes("sf_bay_1m")) return "usgsGoldenGate";
   if (terrain.sourceId.includes("csmp")) return "usgsCsmp";
   if (terrain.sourceId.includes("farallon") || terrain.sourceId.includes("rittenburg")) return "usgsOffshore";
   if (terrain.sourceId.includes("ds684")) return "usgsGoldenGate";
@@ -350,6 +351,9 @@ function shortTerrainLabel(terrain: TerrainFootprint): string {
   if (terrain.sourceId.includes("farallon_escarpment")) return "Escarpment";
   if (terrain.sourceId.includes("rittenburg")) return "Rittenburg";
   if (terrain.sourceId.includes("ds684")) return "SF Bar";
+  if (terrain.sourceId.includes("sf_bay_1m_north")) return "North Bay";
+  if (terrain.sourceId.includes("sf_bay_1m_central")) return "Central Bay";
+  if (terrain.sourceId.includes("sf_bay_1m_south")) return "South Bay";
   return terrain.sourceLabel.split(",")[0];
 }
 

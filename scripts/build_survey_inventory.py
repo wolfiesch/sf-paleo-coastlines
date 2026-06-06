@@ -100,6 +100,8 @@ def source_family(source_id: str) -> str:
         return "NOAA NOS BAG"
     if source_id.startswith("usgs_csmp"):
         return "USGS/CSMP DS 781"
+    if source_id.startswith("usgs_sf_bay_1m"):
+        return "USGS SF Bay 1 m DEM"
     if source_id.startswith("usgs_farallon") or source_id.startswith("usgs_rittenburg"):
         return "USGS OFR 2014-1234"
     if source_id.startswith("usgs_ds684"):
@@ -120,6 +122,8 @@ def datum_note(source_id: str) -> str:
         return "Broad sea-level/geoid-style reference; useful for continuity, not local datum precision."
     if source_id.startswith("noaa_cudem"):
         return "NOAA topobathy product; verify local vertical reference against CoNED/NAVD88 before exact contours."
+    if source_id.startswith("usgs_sf_bay_1m"):
+        return "NAVD88; best first-fit datum among the candidate Bay DEM files, but still compare overlap against CUDEM, DS684, and MLLW BAG patches."
     return "NAVD88-style or source-projected DEM; verify against local datum before exact contours."
 
 
@@ -200,6 +204,14 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
                 paths.append(folder / block["characterZipName"])
             return paths
 
+    for block in module.USGS_SF_BAY_1M_BLOCKS:
+        if block["sourceId"] == source_id:
+            folder = module.RAW_DIR / block["folder"]
+            paths.append(folder / block["datasetName"])
+            if block.get("zipName"):
+                paths.append(folder / block["zipName"])
+            return paths
+
     if source_id == "noaa_crm_vol7_3as":
         paths.append(module.CRM_TIF)
     elif source_id == "noaa_cudem_1_9as":
@@ -212,7 +224,7 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
 
 
 def source_url(module: Any, source_id: str) -> str | None:
-    for block in [*module.NOS_BAG_BLOCKS, *module.BATHYMETRY_BLOCKS]:
+    for block in [*module.NOS_BAG_BLOCKS, *module.BATHYMETRY_BLOCKS, *module.USGS_SF_BAY_1M_BLOCKS]:
         if block["sourceId"] == source_id:
             return str(block["sourceUrl"])
     if source_id == "noaa_crm_vol7_3as":
@@ -286,6 +298,8 @@ def source_record(module: Any, terrain: dict[str, Any], with_gdalinfo: bool) -> 
         limitations.append("MLLW vertical datum; exact paleo contour alignment needs conversion")
     if source_id.startswith("usgs_csmp"):
         limitations.append("nearshore/state-water patch, not seamless offshore coverage")
+    if source_id.startswith("usgs_sf_bay_1m"):
+        limitations.append("modern interpreted Bay DEM; does not model paleo sediment, marsh, erosion, or river-channel change")
     if source_id.startswith("usgs_farallon") or source_id.startswith("usgs_rittenburg"):
         limitations.append("excellent multibeam patch, but geographically small")
 
@@ -330,6 +344,8 @@ def next_action_for_source(source_id: str, score: int) -> str:
         return "Add VDatum/tidal-datum conversion before using as exact sea-level contour authority."
     if source_id.startswith("usgs_csmp"):
         return "Keep bathymetry plus backscatter/character; add geology/habitat polygons from CSMP web services."
+    if source_id.startswith("usgs_sf_bay_1m"):
+        return "Use as the preferred Bay-interior terrain and contour source after overlap/datum checks against CUDEM, DS684, and NOAA BAG patches."
     if source_id.startswith("usgs_farallon") or source_id.startswith("usgs_rittenburg"):
         return "Search NOAA/NCEI for neighboring multibeam/BAG surveys to reduce patch-edge gaps."
     if source_id.startswith("usgs_ds684"):

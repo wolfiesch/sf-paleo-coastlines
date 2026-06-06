@@ -661,6 +661,66 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
     },
 ]
 
+USGS_SF_BAY_1M_BLOCKS: list[dict[str, Any]] = [
+    {
+        "sourceId": "usgs_sf_bay_1m_north_navd88",
+        "sourceLabel": "USGS SF Bay 1 m DEM, north Bay NAVD88",
+        "sourceName": "USGS high-resolution 1 m DEM of northern San Francisco Bay, NAVD88",
+        "sourceUrl": "https://www.sciencebase.gov/catalog/item/5e1cb737e4b0ecf25c5f0bf6",
+        "role": "High-resolution Bay-interior DEM for northern San Francisco Bay.",
+        "folder": "usgs-sf-bay-1m-dem/navd88/north",
+        "zipName": None,
+        "datasetName": "NorthSFBay_DEM_Mosaic_NAVD88_1m.tif",
+        "terrainStem": "usgs_sf_bay_1m_north_navd88",
+        "terrainSize": 2048,
+        "terrainMinimum": -45.0,
+        "terrainMaximum": 8.0,
+        "contourMinimum": -40.0,
+        "contourMaximum": 5.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "note": "USGS 1 m NAVD88 DEM inset for northern San Francisco Bay. This is intended to sharpen Bay-floor relief and near-modern waterline behavior once the large source file is present locally.",
+    },
+    {
+        "sourceId": "usgs_sf_bay_1m_central_navd88",
+        "sourceLabel": "USGS SF Bay 1 m DEM, central Bay NAVD88",
+        "sourceName": "USGS high-resolution 1 m DEM of central San Francisco Bay, NAVD88",
+        "sourceUrl": "https://www.sciencebase.gov/catalog/item/607df15ad34e8564d67e3ae9",
+        "role": "High-resolution Bay-interior DEM for central San Francisco Bay.",
+        "folder": "usgs-sf-bay-1m-dem/navd88/central",
+        "zipName": "CentralSFBay_DEM_Mosaic_NAVD88_1M.zip",
+        "datasetName": "CentralSFBay_DEM_Mosaic_NAVD88_1M.tif",
+        "terrainStem": "usgs_sf_bay_1m_central_navd88",
+        "terrainSize": 2048,
+        "terrainMinimum": -45.0,
+        "terrainMaximum": 8.0,
+        "contourMinimum": -40.0,
+        "contourMaximum": 5.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "note": "USGS 1 m NAVD88 DEM inset for central San Francisco Bay. This is intended to sharpen Bay-floor relief and near-modern waterline behavior once the large source file is present locally.",
+    },
+    {
+        "sourceId": "usgs_sf_bay_1m_south_navd88",
+        "sourceLabel": "USGS SF Bay 1 m DEM, south Bay NAVD88",
+        "sourceName": "USGS high-resolution 1 m DEM of south San Francisco Bay, NAVD88",
+        "sourceUrl": "https://www.sciencebase.gov/catalog/item/607df17bd34e8564d67e3af0",
+        "role": "High-resolution Bay-interior DEM for south San Francisco Bay.",
+        "folder": "usgs-sf-bay-1m-dem/navd88/south",
+        "zipName": "SouthSFBay_DEM_Mosaic_NAVD88_1m.zip",
+        "datasetName": "SouthSFBay_DEM_Mosaic_NAVD88_1m.tif",
+        "terrainStem": "usgs_sf_bay_1m_south_navd88",
+        "terrainSize": 2048,
+        "terrainMinimum": -35.0,
+        "terrainMaximum": 8.0,
+        "contourMinimum": -30.0,
+        "contourMaximum": 5.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "note": "USGS 1 m NAVD88 DEM inset for south San Francisco Bay. This is intended to sharpen Bay-floor relief and near-modern waterline behavior once the large source file is present locally.",
+    },
+]
+
 TIME_SLICES = [
     {
         "id": "present",
@@ -732,6 +792,14 @@ SOURCES = [
             "role": block["role"],
         }
         for block in BATHYMETRY_BLOCKS
+    ],
+    *[
+        {
+            "name": block["sourceName"],
+            "url": block["sourceUrl"],
+            "role": block["role"],
+        }
+        for block in USGS_SF_BAY_1M_BLOCKS
     ],
     {
         "name": "USGS Data Series 684 DEM 4, San Francisco Bar 2 m GeoTIFF",
@@ -1003,6 +1071,66 @@ def download_bathymetry_blocks() -> None:
         download_bathymetry_block(block)
 
 
+def usgs_sf_bay_1m_block_dir(block: dict[str, Any]) -> Path:
+    return RAW_DIR / str(block["folder"])
+
+
+def usgs_sf_bay_1m_zip(block: dict[str, Any]) -> Path | None:
+    if not block.get("zipName"):
+        return None
+    return usgs_sf_bay_1m_block_dir(block) / str(block["zipName"])
+
+
+def usgs_sf_bay_1m_dataset(block: dict[str, Any]) -> Path:
+    return usgs_sf_bay_1m_block_dir(block) / str(block["datasetName"])
+
+
+def usgs_sf_bay_1m_contours_raw(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_contours_raw.geojson"
+
+
+def usgs_sf_bay_1m_contours_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_contours_wgs84.geojson"
+
+
+def usgs_sf_bay_1m_terrain_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_terrain_wgs84.tif"
+
+
+def usgs_sf_bay_1m_elevation_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_elevation.png"
+
+
+def usgs_sf_bay_1m_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_color.png"
+
+
+def usgs_sf_bay_1m_relief_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_relief.png"
+
+
+def usgs_sf_bay_1m_composite_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_composite.png"
+
+
+def prepare_usgs_sf_bay_1m_blocks() -> None:
+    for block in USGS_SF_BAY_1M_BLOCKS:
+        dataset = usgs_sf_bay_1m_dataset(block)
+        if dataset.exists():
+            continue
+        zip_path = usgs_sf_bay_1m_zip(block)
+        if zip_path is not None and zip_path.exists():
+            run(["unzip", "-o", str(zip_path), "-d", str(usgs_sf_bay_1m_block_dir(block))])
+
+
+def active_usgs_sf_bay_1m_blocks() -> list[dict[str, Any]]:
+    return [
+        block
+        for block in USGS_SF_BAY_1M_BLOCKS
+        if usgs_sf_bay_1m_dataset(block).exists()
+    ]
+
+
 def contour_levels() -> list[float]:
     levels: set[float] = set()
     for item in TIME_SLICES:
@@ -1121,6 +1249,36 @@ def generate_contours() -> None:
             str(block["contourSimplify"]),
             str(bathymetry_block_contours_wgs84(block)),
             str(bathymetry_block_contours_raw(block)),
+        ])
+
+    for block in active_usgs_sf_bay_1m_blocks():
+        block_levels = [
+            str(level)
+            for level in contour_levels()
+            if float(block["contourMinimum"]) <= level <= float(block["contourMaximum"])
+        ]
+        if not block_levels:
+            continue
+        run([
+            "gdal_contour",
+            "-q",
+            "-a",
+            "elevation_m",
+            "-fl",
+            *block_levels,
+            str(usgs_sf_bay_1m_dataset(block)),
+            str(usgs_sf_bay_1m_contours_raw(block)),
+        ])
+        run([
+            "ogr2ogr",
+            "-f",
+            "GeoJSON",
+            "-t_srs",
+            "EPSG:4326",
+            "-simplify",
+            str(block["contourSimplify"]),
+            str(usgs_sf_bay_1m_contours_wgs84(block)),
+            str(usgs_sf_bay_1m_contours_raw(block)),
         ])
 
     # DEM 4 is the high-resolution Golden Gate / Ocean Beach / San Francisco Bar tile.
@@ -1681,6 +1839,52 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
     )
 
 
+def generate_usgs_sf_bay_1m_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-ts",
+        str(block["terrainSize"]),
+        "0",
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-dstnodata",
+        "-9999",
+        str(usgs_sf_bay_1m_dataset(block)),
+        str(usgs_sf_bay_1m_terrain_wgs84(block)),
+    ])
+    write_terrain_pngs_from_wgs84(
+        usgs_sf_bay_1m_terrain_wgs84(block),
+        usgs_sf_bay_1m_elevation_png(block),
+        usgs_sf_bay_1m_texture_png(block),
+        usgs_sf_bay_1m_relief_texture_png(block),
+        usgs_sf_bay_1m_composite_texture_png(block),
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        24,
+    )
+    return terrain_metadata(
+        str(block["sourceId"]),
+        source_label(str(block["sourceId"])),
+        usgs_sf_bay_1m_terrain_wgs84(block),
+        usgs_sf_bay_1m_elevation_png(block),
+        usgs_sf_bay_1m_texture_png(block),
+        usgs_sf_bay_1m_relief_texture_png(block),
+        usgs_sf_bay_1m_composite_texture_png(block),
+        None,
+        None,
+        None,
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        str(block["note"]),
+    )
+
+
 def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
     run([
         "gdalwarp",
@@ -1875,10 +2079,13 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         bathymetry_block_backscatter_wgs84(block).unlink(missing_ok=True)
         if block.get("characterZipName"):
             bathymetry_block_character_wgs84(block).unlink(missing_ok=True)
+    for block in active_usgs_sf_bay_1m_blocks():
+        usgs_sf_bay_1m_terrain_wgs84(block).unlink(missing_ok=True)
 
     return [
         generate_crm_terrain_asset(),
         generate_cudem_terrain_asset(),
+        *[generate_usgs_sf_bay_1m_terrain_asset(block) for block in active_usgs_sf_bay_1m_blocks()],
         *[generate_nos_bag_terrain_asset(block) for block in NOS_BAG_BLOCKS],
         *[generate_bathymetry_block_terrain_asset(block) for block in BATHYMETRY_BLOCKS],
         generate_usgs_terrain_asset(),
@@ -2045,11 +2252,12 @@ def probe_features_for_level(
     return features
 
 
-BATHYMETRY_SOURCE_IDS = {str(block["sourceId"]) for block in BATHYMETRY_BLOCKS}
+BATHYMETRY_SOURCE_IDS = {str(block["sourceId"]) for block in [*BATHYMETRY_BLOCKS, *USGS_SF_BAY_1M_BLOCKS]}
 NOS_BAG_SOURCE_IDS = {str(block["sourceId"]) for block in NOS_BAG_BLOCKS}
 SOURCE_LABELS = {
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in NOS_BAG_BLOCKS},
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in BATHYMETRY_BLOCKS},
+    **{str(block["sourceId"]): str(block["sourceLabel"]) for block in USGS_SF_BAY_1M_BLOCKS},
 }
 
 
@@ -2068,6 +2276,7 @@ def source_label(source_id: str) -> str:
 
 
 def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    bay_dem_blocks = active_usgs_sf_bay_1m_blocks()
     crm_by_level = build_level_index(CRM_CONTOURS_BROWSER, "noaa_crm_vol7_3as", 0.004, False)
     cudem_by_level = build_level_index(CUDEM_CONTOURS_BROWSER, "noaa_cudem_1_9as", 0.004, False)
     nos_bag_by_level = merge_level_indexes([
@@ -2087,6 +2296,14 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             False,
         )
         for block in BATHYMETRY_BLOCKS
+    ] + [
+        build_level_index(
+            usgs_sf_bay_1m_contours_wgs84(block),
+            str(block["sourceId"]),
+            float(block["minDegreesLength"]),
+            False,
+        )
+        for block in bay_dem_blocks
     ])
     usgs_by_level = build_level_index(DS684_CONTOURS_WGS84, "usgs_ds684_dem4", 0.003, False)
     terrain = generate_terrain_assets()
@@ -2200,6 +2417,10 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 for block in BATHYMETRY_BLOCKS
             ],
             *[
+                str(usgs_sf_bay_1m_dataset(block).relative_to(ROOT))
+                for block in bay_dem_blocks
+            ],
+            *[
                 str(bathymetry_block_backscatter_dataset(block, str(zip_name)).relative_to(ROOT))
                 for block in BATHYMETRY_BLOCKS
                 for zip_name in block.get("backscatterZipNames", [])
@@ -2244,6 +2465,17 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                     bathymetry_block_sonar_texture_png(block),
                     bathymetry_block_hybrid_texture_png(block),
                     bathymetry_block_character_texture_png(block),
+                )
+                if path.exists()
+            ],
+            *[
+                str(path.relative_to(ROOT))
+                for block in bay_dem_blocks
+                for path in (
+                    usgs_sf_bay_1m_elevation_png(block),
+                    usgs_sf_bay_1m_texture_png(block),
+                    usgs_sf_bay_1m_relief_texture_png(block),
+                    usgs_sf_bay_1m_composite_texture_png(block),
                 )
                 if path.exists()
             ],
@@ -2364,6 +2596,7 @@ def main() -> int:
     prepare_noaa_cudem_subset()
     download_nos_bag_blocks()
     download_bathymetry_blocks()
+    prepare_usgs_sf_bay_1m_blocks()
     download_usgs_ds684_dem4()
     generate_contours()
     payload, metadata = build_browser_payload()

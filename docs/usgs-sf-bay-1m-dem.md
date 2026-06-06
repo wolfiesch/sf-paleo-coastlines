@@ -12,6 +12,7 @@ Plain-English purpose: this is the dataset we want for a much sharper Bay floor.
 2. Download central and south first. They are large but manageable zipped GeoTIFF packages.
 3. Treat north carefully: the NAVD88 primary GeoTIFF is about 4.4 GB before any local overviews or processed outputs.
 4. After import, compare overlaps against CUDEM, DS684, and NOAA BAG patches before trusting exact contour positions.
+5. Regenerate `pnpm paleo-coastlines:generate` after a full zip/tif is present; the generator auto-detects local NAVD88 Bay DEM sections and adds them as optional terrain/contour sources.
 
 ## Discovered Files
 
@@ -46,3 +47,4 @@ python3 scripts/acquire_usgs_sf_bay_1m_dem.py --datum navd88 --section all --dow
 - The DEM is very detailed, but it is still an interpreted continuous surface. Gaps between survey swaths were interpolated.
 - These files describe modern Bay bathymetry, not paleo erosion, sediment, marsh growth, or river-channel migration.
 - MLLW is useful for nautical/bathymetric comparison. NAVD88 is the better first fit for our land-plus-waterline simulation.
+- ScienceBase may stream these large files slowly or fail mid-transfer. The acquisition script validates file size and rejects HTML/error responses before treating a download as complete.
