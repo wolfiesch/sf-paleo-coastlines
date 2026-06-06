@@ -12,13 +12,14 @@ estimated coastline
 
 ## Current Data
 
-The checked-in browser data now uses three public elevation sources:
+The checked-in browser data now uses one broad elevation source plus several sharper USGS patches:
 
 | Source | Why it is used |
 |---|---|
+| NOAA CRM Vol. 7, 3 arc-second grid | Broad Bay/offshore coverage toward the Farallones. This keeps the full map continuous when detailed survey patches have gaps. |
+| USGS/CSMP DS 781, 2 m coastal bathymetry blocks | Sharper nearshore ocean-floor detail for Bolinas, San Francisco, Pacifica, and Half Moon Bay. These blocks improve the coastal shelf, but they do not cover the full offshore region. |
+| USGS OFR 2014-1234 Farallon Escarpment / Rittenburg Bank bathymetry | Sharper offshore multibeam patches west of San Francisco, including a 10 m Farallon Escarpment grid and a 2 m Rittenburg Bank grid. These are the current best detail improvements farther out toward the Farallon region. |
 | USGS DS684 DEM 4, 2 m San Francisco Bar tile | Better local detail around Ocean Beach, the Golden Gate, Marin Headlands, and the San Francisco Bar. This drives the present, 5k, and 10k slices where it has enough depth coverage. |
-| USGS/CSMP DS 781 Offshore of San Francisco, 2 m bathymetry | Sharper ocean-floor detail west of San Francisco and the Golden Gate. This is the new high-resolution nearshore seafloor inset. |
-| NOAA CRM Vol. 7, 3 arc-second grid | Broader Bay/offshore coverage toward the Farallones. This drives the wide 3D terrain surface and the 20k lowstand because the USGS tile does not reach far enough offshore or deep enough for a full -120 m contour. |
 | NOAA ETOPO 2022, 15 arc-second grid | Fallback broad source kept in the raw data references. CRM is now preferred for the app because it is about 5x finer for this region. |
 
 Generated app files:
@@ -30,18 +31,23 @@ Local source/work files:
 
 - `data/paleo-coastlines/raw/etopo_2022_sf_bay_coast_15s.nc`
 - `data/paleo-coastlines/raw/noaa-crm/crm_vol7_sf_farallones_3as.tif`
+- `data/paleo-coastlines/raw/usgs-csmp-offshore-bolinas/Bathymetry_OffshoreBolinas.tif`
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-sf/Bathymetry_OffshoreSanFrancisco.zip`
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-sf/Bathymetry_OffshoreSanFrancisco.tif`
+- `data/paleo-coastlines/raw/usgs-csmp-offshore-pacifica/Bathymetry_OffshorePacifica.tif`
+- `data/paleo-coastlines/raw/usgs-csmp-offshore-half-moon-bay/Bathymetry_OffshoreHalfMoonBay.tif`
+- `data/paleo-coastlines/raw/usgs-farallon-escarpment/USGS_escarpment_bathy_10m.asc`
+- `data/paleo-coastlines/raw/usgs-rittenburg-bank/usgs_rittenburgbank_bathy_2m.asc`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF.zip`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF/DEM_4_GeoTIFF.tif`
 - `data/paleo-coastlines/work/noaa_crm_vol7_contours_raw.geojson`
 - `data/paleo-coastlines/work/noaa_crm_vol7_contours_browser.geojson`
-- `data/paleo-coastlines/work/usgs_csmp_offshore_sf_contours_raw.geojson`
-- `data/paleo-coastlines/work/usgs_csmp_offshore_sf_contours_wgs84.geojson`
+- `data/paleo-coastlines/work/*_contours_raw.geojson`
+- `data/paleo-coastlines/work/*_contours_wgs84.geojson`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_contours_raw.geojson`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_contours_wgs84.geojson`
 - `data/paleo-coastlines/work/noaa_crm_vol7_sf_farallones_terrain_wgs84.tif`
-- `data/paleo-coastlines/work/usgs_csmp_offshore_sf_terrain_wgs84.tif`
+- `data/paleo-coastlines/work/*_terrain_wgs84.tif`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_terrain_wgs84.tif`
 
 ## Regenerate
@@ -55,8 +61,8 @@ The script downloads missing source files, runs `gdal_contour`, simplifies the b
 The important idea is:
 
 ```text
-use high-resolution USGS/CSMP or DS684 tiles where they cover the contour
-otherwise use the broad NOAA offshore grid
+always keep the broad NOAA contour for continuity
+overlay high-resolution USGS contours where survey patches exist
         |
         v
 one browser GeoJSON file with source labels per line
@@ -71,8 +77,12 @@ NOAA CRM broad surface
         covers Bay + offshore shelf + Farallon Islands
         |
         v
-USGS/CSMP nearshore seafloor inset
-        sharper ocean floor west of San Francisco and the Golden Gate
+USGS/CSMP coastal seafloor patches
+        sharper nearshore ocean floor from Bolinas to Half Moon Bay
+        |
+        v
+USGS Farallon Escarpment / Rittenburg Bank patches
+        sharper surveyed ocean floor farther offshore
         |
         v
 USGS DS684 local inset
@@ -91,8 +101,18 @@ Generated terrain files:
 
 - `public/data/paleo-coastlines/terrain/crm_vol7_sf_farallones_elevation.png`
 - `public/data/paleo-coastlines/terrain/crm_vol7_sf_farallones_color.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_elevation.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_color.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_color.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_elevation.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_color.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_elevation.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_color.png`
+- `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_elevation.png`
+- `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_color.png`
+- `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_elevation.png`
+- `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_color.png`
 - `public/data/paleo-coastlines/terrain/dem4_elevation.png`
 - `public/data/paleo-coastlines/terrain/dem4_color.png`
 
@@ -113,12 +133,13 @@ The uncertainty toggle shows extra contour lines around each estimate. These ban
 
 ## Data Limits
 
-- USGS/CSMP DS 781 is high resolution, but it only covers the nearshore ocean floor west of San Francisco and the Golden Gate. It does not reach all the way to the Farallon Islands.
+- USGS/CSMP DS 781 is high resolution, but the blocks are mostly nearshore and state-water focused. They do not form one seamless full-ocean DEM.
+- USGS OFR 2014-1234 improves the Farallon Escarpment and Rittenburg Bank areas, but it is still patch coverage, not full Farallones-region coverage.
 - USGS DS684 DEM 4 is high resolution, but it is only one tile. It improves the Golden Gate and nearby coast; it is not full Bay-plus-Farallones coverage.
 - NOAA CRM is much coarser than the USGS tile, but it covers the offshore shelf and Farallones at about 3 arc-second resolution.
 - NOAA ETOPO is coarser still, but remains a fallback global relief source if CRM access changes.
-- The script keeps each time slice's uncertainty band on the same elevation source as its main estimate when possible. That avoids mixing a broad offshore estimate with a short local-only uncertainty line.
-- The vertical datums differ: USGS/CSMP DS 781 and USGS DS684 are NAVD88; NOAA CRM and ETOPO use broader sea-level/EGM-style references. This first pass treats the sea-level values as approximate relative heights, not as a full local tidal-datum correction.
+- The script now keeps the broad NOAA contour for continuity and adds high-resolution USGS contour pieces where available. This avoids losing the full shoreline just because a detailed patch is incomplete.
+- The vertical datums differ: USGS/CSMP DS 781, USGS OFR 2014-1234, and USGS DS684 are NAVD88-style sources; NOAA CRM and ETOPO use broader sea-level/EGM-style references. This first pass treats the sea-level values as approximate relative heights, not as a full local tidal-datum correction.
 
 ## Higher-Resolution Next Step
 
@@ -132,7 +153,12 @@ Primary references:
 
 - NOAA ETOPO 2022: https://www.ncei.noaa.gov/products/etopo-global-relief-model
 - NOAA Coastal Relief Model: https://www.ncei.noaa.gov/products/coastal-relief-model
+- USGS DS 781 California State Waters data catalog: https://pubs.usgs.gov/ds/781/
+- USGS Data Series 781 Offshore of Bolinas catalog: https://pubs.usgs.gov/ds/781/OffshoreBolinas/data_catalog_OffshoreBolinas.html
 - USGS Data Series 781 Offshore of San Francisco catalog: https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data_catalog_OffshoreSanFrancisco.html
+- USGS Data Series 781 Offshore of Pacifica catalog: https://pubs.usgs.gov/ds/781/OffshorePacifica/data_catalog_OffshorePacifica.html
+- USGS Data Series 781 Offshore of Half Moon Bay catalog: https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data_catalog_OffshoreHalfMoonBay.html
+- USGS OFR 2014-1234 Farallon Escarpment and Rittenburg Bank: https://pubs.usgs.gov/of/2014/1234/datacatalog.html
 - USGS Data Series 684 DEM GeoTIFF files: https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/
 - USGS CoNED SF Bay: https://www.usgs.gov/special-topics/coastal-national-elevation-database-applications-project/science/topobathymetric-0
 - USGS SF Bay bathymetry DEM: https://www.usgs.gov/data/high-resolution-1-m-digital-elevation-model-dem-san-francisco-bay-california-created-using

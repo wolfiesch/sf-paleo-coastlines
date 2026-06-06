@@ -46,6 +46,13 @@ function waterlineStage(level: number): string {
   return "Glacial lowstand range";
 }
 
+function terrainSummary(slice: PaleoTimeSlice): string | null {
+  const terrains = slice.terrains?.length ? slice.terrains : slice.terrain ? [slice.terrain] : [];
+  if (!terrains.length) return null;
+  if (terrains.length === 1) return terrains[0].note;
+  return `${terrains.length} terrain surfaces: NOAA broad Bay-to-Farallones coverage, USGS/CSMP 2 m coastal bathymetry blocks, Farallon Escarpment/Rittenburg Bank offshore multibeam patches, and DS684 Golden Gate detail.`;
+}
+
 export function PaleoCoastlineControls({
   slices,
   activeSliceId,
@@ -62,11 +69,7 @@ export function PaleoCoastlineControls({
   const activeSlice = options.find((slice) => slice.id === activeSliceId) ?? options[0];
   const activeWaterLevel = waterLevelMeters ?? activeSlice.seaLevelMeters;
   const probeLevel = Math.max(-120, Math.min(0, nearestProbeLevel(activeWaterLevel)));
-  const terrainNotes = activeSlice.terrains?.length
-    ? activeSlice.terrains.map((terrain) => terrain.note)
-    : activeSlice.terrain?.note
-      ? [activeSlice.terrain.note]
-      : [];
+  const terrainStackSummary = terrainSummary(activeSlice);
 
   return (
     <section className="pointer-events-auto w-full rounded-lg border border-cyan-400/20 bg-gray-950/92 p-3 shadow-2xl backdrop-blur-md">
@@ -175,7 +178,7 @@ export function PaleoCoastlineControls({
           <Database size={13} className="mt-0.5 shrink-0 text-cyan-300" />
           <span>{activeSlice.sourceModel}</span>
         </div>
-        {terrainNotes.length ? <p>{terrainNotes.join(" ")}</p> : null}
+        {terrainStackSummary ? <p>{terrainStackSummary}</p> : null}
         <p>{activeSlice.datumNote}</p>
         {showUncertainty ? <p>{activeSlice.uncertaintyNote}</p> : null}
       </div>
