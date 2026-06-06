@@ -1,5 +1,5 @@
 import { Database, Gauge, Pause, Play, RotateCcw, Waves } from "lucide-react";
-import type { PaleoTimeSlice, PaleoTimeSliceId, TerrainDetailLevel } from "../types";
+import type { PaleoTimeSlice, PaleoTimeSliceId, TerrainDetailLevel, TerrainTextureMode } from "../types";
 
 interface PaleoCoastlineControlsProps {
   slices: PaleoTimeSlice[];
@@ -8,18 +8,25 @@ interface PaleoCoastlineControlsProps {
   waterLevelMeters: number | null;
   isPlaying: boolean;
   terrainDetail: TerrainDetailLevel;
+  terrainTextureMode: TerrainTextureMode;
   onSliceChange: (id: PaleoTimeSliceId) => void;
   onToggleUncertainty: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
   onResetWaterLevel: () => void;
   onTerrainDetailChange: (level: TerrainDetailLevel) => void;
+  onTerrainTextureModeChange: (mode: TerrainTextureMode) => void;
 }
 
 const TERRAIN_DETAIL_OPTIONS: { id: TerrainDetailLevel; label: string; title: string }[] = [
   { id: "fast", label: "Fast", title: "Lower mesh density" },
   { id: "detailed", label: "Detailed", title: "Balanced mesh density" },
   { id: "survey", label: "Survey", title: "Highest mesh density" },
+];
+
+const TERRAIN_TEXTURE_OPTIONS: { id: TerrainTextureMode; label: string; title: string }[] = [
+  { id: "relief", label: "Relief", title: "Depth color plus DEM-derived light and shadow" },
+  { id: "color", label: "Color", title: "Depth color without baked terrain shading" },
 ];
 
 const FALLBACK_SLICES: PaleoTimeSlice[] = [
@@ -68,12 +75,14 @@ export function PaleoCoastlineControls({
   waterLevelMeters,
   isPlaying,
   terrainDetail,
+  terrainTextureMode,
   onSliceChange,
   onToggleUncertainty,
   onWaterLevelChange,
   onTogglePlayback,
   onResetWaterLevel,
   onTerrainDetailChange,
+  onTerrainTextureModeChange,
 }: PaleoCoastlineControlsProps) {
   const options = slices.length ? slices : FALLBACK_SLICES;
   const activeSlice = options.find((slice) => slice.id === activeSliceId) ?? options[0];
@@ -81,6 +90,7 @@ export function PaleoCoastlineControls({
   const probeLevel = Math.max(-120, Math.min(0, nearestProbeLevel(activeWaterLevel)));
   const terrainStackSummary = terrainSummary(activeSlice);
   const activeTerrainDetail = TERRAIN_DETAIL_OPTIONS.find((option) => option.id === terrainDetail);
+  const activeTextureMode = TERRAIN_TEXTURE_OPTIONS.find((option) => option.id === terrainTextureMode);
 
   return (
     <section className="pointer-events-auto w-full rounded-lg border border-cyan-400/20 bg-gray-950/92 p-3 shadow-2xl backdrop-blur-md">
@@ -209,6 +219,31 @@ export function PaleoCoastlineControls({
               </button>
             );
           })}
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-800/80 pt-2">
+          <span className="text-[11px] uppercase leading-4 text-gray-500">Surface style</span>
+          <div className="grid w-36 grid-cols-2 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
+            {TERRAIN_TEXTURE_OPTIONS.map((option) => {
+              const active = option.id === terrainTextureMode;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => onTerrainTextureModeChange(option.id)}
+                  className={`min-h-7 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    active
+                      ? "bg-cyan-300 text-gray-950"
+                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                  }`}
+                  aria-pressed={active}
+                  title={option.title}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="sr-only">{activeTextureMode?.label}</span>
         </div>
       </div>
 

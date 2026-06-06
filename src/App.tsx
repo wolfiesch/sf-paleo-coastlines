@@ -15,6 +15,7 @@ import type {
   PaleoTimeSliceManifestItem,
   PaleoWaterlineProbeIndex,
   TerrainDetailLevel,
+  TerrainTextureMode,
 } from "./types";
 
 const START_VIEW: MapViewState = {
@@ -57,6 +58,7 @@ function App() {
   const [waterLevelMeters, setWaterLevelMeters] = useState<number | null>(-120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
+  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("relief");
 
   useEffect(() => {
     let cancelled = false;
@@ -217,7 +219,8 @@ function App() {
     showPaleoUncertainty: showUncertainty,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
-  }), [activeSliceId, renderSlices, showUncertainty, terrainDetail, waterLevelMeters]);
+    terrainTextureMode,
+  }), [activeSliceId, renderSlices, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -260,6 +263,7 @@ function App() {
           waterLevelMeters={waterLevelMeters}
           isPlaying={isPlaying}
           terrainDetail={terrainDetail}
+          terrainTextureMode={terrainTextureMode}
           onSliceChange={handleSliceChange}
           onToggleUncertainty={() => setShowUncertainty((shown) => !shown)}
           onWaterLevelChange={(level) => {
@@ -272,6 +276,7 @@ function App() {
             setWaterLevelMeters(2);
           }}
           onTerrainDetailChange={setTerrainDetail}
+          onTerrainTextureModeChange={setTerrainTextureMode}
         />
       </div>
 

@@ -39,6 +39,7 @@ CRM_CONTOURS_BROWSER = WORK_DIR / "noaa_crm_vol7_contours_browser.geojson"
 CRM_TERRAIN_WGS84 = WORK_DIR / "noaa_crm_vol7_sf_farallones_terrain_wgs84.tif"
 CRM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_elevation.png"
 CRM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_color.png"
+CRM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_relief.png"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
 DS684_TIF = DS684_DIR / "DEM_4_GeoTIFF" / "DEM_4_GeoTIFF.tif"
@@ -47,9 +48,11 @@ DS684_CONTOURS_WGS84 = WORK_DIR / "usgs_ds684_dem4_contours_wgs84.geojson"
 DS684_TERRAIN_WGS84 = WORK_DIR / "usgs_ds684_dem4_terrain_wgs84.tif"
 DS684_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "dem4_elevation.png"
 DS684_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "dem4_color.png"
+DS684_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "dem4_relief.png"
 ETOPO_TERRAIN_WGS84 = WORK_DIR / "etopo_2022_bay_farallones_terrain_wgs84.tif"
 ETOPO_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_elevation.png"
 ETOPO_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_color.png"
+ETOPO_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_relief.png"
 CRM_TERRAIN_SIZE = 1536
 DS684_TERRAIN_SIZE = 768
 DS684_TERRAIN_MIN_M = -130.0
@@ -393,6 +396,10 @@ def bathymetry_block_texture_png(block: dict[str, Any]) -> Path:
     return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_color.png"
 
 
+def bathymetry_block_relief_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_relief.png"
+
+
 def download_bathymetry_block(block: dict[str, Any]) -> None:
     download_url(str(block["zipUrl"]), bathymetry_block_zip(block))
     if bathymetry_block_dataset(block).exists():
@@ -534,28 +541,103 @@ def terrain_color(height: float) -> tuple[int, int, int]:
     return TERRAIN_COLOR_STOPS[-1][1]
 
 
-def write_terrain_pngs_from_wgs84(source_path: Path, elevation_path: Path, texture_path: Path, minimum: float, maximum: float) -> None:
+def shaded_relief_color(base: tuple[int, int, int], shade: float, slope: float, height: float) -> tuple[int, int, int]:
+    if height < 0:
+        depth_boost = max(0.0, min(1.0, abs(height) / 140.0))
+        contrast = 0.78 + depth_boost * 0.32
+        brightness = 0.34 + shade * 0.92 + min(0.28, slope * 0.018)
+    else:
+        contrast = 0.9
+        brightness = 0.42 + shade * 0.82 + min(0.22, slope * 0.012)
+
+    return tuple(clamp_byte(((channel - 128) * contrast + 128) * brightness) for channel in base)
+
+
+def relief_shade(
+    heights: list[float | None],
+    width: int,
+    height: int,
+    x: int,
+    y: int,
+) -> tuple[float, float]:
+    def sample(sample_x: int, sample_y: int) -> float:
+        clamped_x = max(0, min(width - 1, sample_x))
+        clamped_y = max(0, min(height - 1, sample_y))
+        value = heights[clamped_y * width + clamped_x]
+        center = heights[y * width + x]
+        if value is None and center is not None:
+            return center
+        return value if value is not None else 0.0
+
+    west = sample(x - 1, y)
+    east = sample(x + 1, y)
+    north = sample(x, y - 1)
+    south = sample(x, y + 1)
+    dz_dx = east - west
+    dz_dy = south - north
+    slope = math.hypot(dz_dx, dz_dy)
+
+    # A simple northwest light. This is visual shading, not a measured sun model.
+    normal_x = -dz_dx
+    normal_y = -dz_dy
+    normal_z = 42.0
+    normal_length = math.sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z)
+    light_x, light_y, light_z = -0.48, -0.58, 0.66
+    shade = (normal_x * light_x + normal_y * light_y + normal_z * light_z) / normal_length
+    return max(0.0, min(1.0, shade * 0.5 + 0.5)), slope
+
+
+def write_terrain_pngs_from_wgs84(
+    source_path: Path,
+    elevation_path: Path,
+    texture_path: Path,
+    relief_texture_path: Path,
+    minimum: float,
+    maximum: float,
+) -> None:
     source = Image.open(source_path)
     elevation = Image.new("RGB", source.size)
     texture = Image.new("RGBA", source.size)
+    relief_texture = Image.new("RGBA", source.size)
+    width, image_height = source.size
 
     elevation_pixels = []
     texture_pixels: list[tuple[int, int, int, int]] = []
+    relief_pixels: list[tuple[int, int, int, int]] = []
+    heights: list[float | None] = []
+    base_colors: list[tuple[int, int, int] | None] = []
 
     for raw in source.getdata():
-        height = float(raw)
-        if not is_valid_height(height):
+        elevation_m = float(raw)
+        if not is_valid_height(elevation_m):
             elevation_pixels.append((0, 0, 0))
             texture_pixels.append((0, 0, 0, 0))
+            heights.append(None)
+            base_colors.append(None)
             continue
 
-        elevation_pixels.append(encode_height_rgb(height, minimum, maximum))
-        texture_pixels.append((*terrain_color(height), 255))
+        base_color = terrain_color(elevation_m)
+        elevation_pixels.append(encode_height_rgb(elevation_m, minimum, maximum))
+        texture_pixels.append((*base_color, 255))
+        heights.append(elevation_m)
+        base_colors.append(base_color)
+
+    for index, base_color in enumerate(base_colors):
+        height_value = heights[index]
+        if base_color is None or height_value is None:
+            relief_pixels.append((0, 0, 0, 0))
+            continue
+        x = index % width
+        y = index // width
+        shade, slope = relief_shade(heights, width, image_height, x, y)
+        relief_pixels.append((*shaded_relief_color(base_color, shade, slope, height_value), 255))
 
     elevation.putdata(elevation_pixels)
     texture.putdata(texture_pixels)
+    relief_texture.putdata(relief_pixels)
     elevation.save(elevation_path)
     texture.save(texture_path)
+    relief_texture.save(relief_texture_path)
 
 
 def terrain_metadata(
@@ -564,6 +646,7 @@ def terrain_metadata(
     wgs84_tif: Path,
     elevation_png: Path,
     texture_png: Path,
+    relief_texture_png: Path,
     minimum: float,
     maximum: float,
     note: str,
@@ -585,6 +668,10 @@ def terrain_metadata(
         "sourceLabel": source_label_value,
         "elevationData": public_url(elevation_png),
         "texture": public_url(texture_png),
+        "textures": {
+            "depthColor": public_url(texture_png),
+            "shadedRelief": public_url(relief_texture_png),
+        },
         "bounds": [round(west, 7), round(south, 7), round(east, 7), round(north, 7)],
         "heightRangeMeters": [minimum, maximum],
         "verticalExaggeration": TERRAIN_VERTICAL_EXAGGERATION,
@@ -619,6 +706,7 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_WGS84,
         DS684_TERRAIN_ELEVATION_PNG,
         DS684_TERRAIN_TEXTURE_PNG,
+        DS684_TERRAIN_RELIEF_TEXTURE_PNG,
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
     )
@@ -628,6 +716,7 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_WGS84,
         DS684_TERRAIN_ELEVATION_PNG,
         DS684_TERRAIN_TEXTURE_PNG,
+        DS684_TERRAIN_RELIEF_TEXTURE_PNG,
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
         "Higher-resolution 2 m terrain inset for the Golden Gate, Ocean Beach, Marin Headlands, and San Francisco Bar.",
@@ -655,6 +744,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         bathymetry_block_terrain_wgs84(block),
         bathymetry_block_elevation_png(block),
         bathymetry_block_texture_png(block),
+        bathymetry_block_relief_texture_png(block),
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
     )
@@ -664,6 +754,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         bathymetry_block_terrain_wgs84(block),
         bathymetry_block_elevation_png(block),
         bathymetry_block_texture_png(block),
+        bathymetry_block_relief_texture_png(block),
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
         str(block["note"]),
@@ -694,6 +785,7 @@ def generate_etopo_terrain_asset() -> dict[str, Any]:
         ETOPO_TERRAIN_WGS84,
         ETOPO_TERRAIN_ELEVATION_PNG,
         ETOPO_TERRAIN_TEXTURE_PNG,
+        ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
         ETOPO_TERRAIN_MIN_M,
         ETOPO_TERRAIN_MAX_M,
     )
@@ -703,6 +795,7 @@ def generate_etopo_terrain_asset() -> dict[str, Any]:
         ETOPO_TERRAIN_WGS84,
         ETOPO_TERRAIN_ELEVATION_PNG,
         ETOPO_TERRAIN_TEXTURE_PNG,
+        ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
         ETOPO_TERRAIN_MIN_M,
         ETOPO_TERRAIN_MAX_M,
         "Broad Bay-to-Farallones terrain surface. It is coarser than the USGS tile, but it reaches the offshore shelf and Farallon Islands.",
@@ -726,6 +819,7 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
         CRM_TERRAIN_WGS84,
         CRM_TERRAIN_ELEVATION_PNG,
         CRM_TERRAIN_TEXTURE_PNG,
+        CRM_TERRAIN_RELIEF_TEXTURE_PNG,
         CRM_TERRAIN_MIN_M,
         CRM_TERRAIN_MAX_M,
     )
@@ -735,6 +829,7 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
         CRM_TERRAIN_WGS84,
         CRM_TERRAIN_ELEVATION_PNG,
         CRM_TERRAIN_TEXTURE_PNG,
+        CRM_TERRAIN_RELIEF_TEXTURE_PNG,
         CRM_TERRAIN_MIN_M,
         CRM_TERRAIN_MAX_M,
         "NOAA CRM Vol. 7 broad Bay-to-Farallones terrain surface at 3 arc-second resolution. It is coarser than the USGS tile, but about 5x finer than ETOPO 2022 for this view.",
@@ -748,18 +843,22 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         DS684_TERRAIN_WGS84,
         DS684_TERRAIN_ELEVATION_PNG,
         DS684_TERRAIN_TEXTURE_PNG,
+        DS684_TERRAIN_RELIEF_TEXTURE_PNG,
         CRM_TERRAIN_WGS84,
         CRM_TERRAIN_ELEVATION_PNG,
         CRM_TERRAIN_TEXTURE_PNG,
+        CRM_TERRAIN_RELIEF_TEXTURE_PNG,
         ETOPO_TERRAIN_WGS84,
         ETOPO_TERRAIN_ELEVATION_PNG,
         ETOPO_TERRAIN_TEXTURE_PNG,
+        ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
     ):
         target.unlink(missing_ok=True)
     for block in BATHYMETRY_BLOCKS:
         bathymetry_block_terrain_wgs84(block).unlink(missing_ok=True)
         bathymetry_block_elevation_png(block).unlink(missing_ok=True)
         bathymetry_block_texture_png(block).unlink(missing_ok=True)
+        bathymetry_block_relief_texture_png(block).unlink(missing_ok=True)
 
     return [
         generate_crm_terrain_asset(),
@@ -1048,13 +1147,19 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         "terrainAssets": [
             str(CRM_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(CRM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
+            str(CRM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
             *[
                 str(path.relative_to(ROOT))
                 for block in BATHYMETRY_BLOCKS
-                for path in (bathymetry_block_elevation_png(block), bathymetry_block_texture_png(block))
+                for path in (
+                    bathymetry_block_elevation_png(block),
+                    bathymetry_block_texture_png(block),
+                    bathymetry_block_relief_texture_png(block),
+                )
             ],
             str(DS684_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(DS684_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
+            str(DS684_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
         ],
         "sources": SOURCES,
         "timeSlices": [

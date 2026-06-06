@@ -1,11 +1,16 @@
 export type PaleoTimeSliceId = "present" | "5k_years_ago" | "10k_years_ago" | "20k_years_ago";
 export type TerrainDetailLevel = "fast" | "detailed" | "survey";
+export type TerrainTextureMode = "relief" | "color";
 
 export interface PaleoTerrainConfig {
   sourceId: string;
   sourceLabel: string;
   elevationData: string;
   texture: string;
+  textures?: {
+    depthColor: string;
+    shadedRelief: string;
+  };
   bounds: [number, number, number, number];
   heightRangeMeters: [number, number];
   verticalExaggeration: number;
@@ -96,4 +101,5 @@ export interface PaleoRenderContext {
   showPaleoUncertainty: boolean;
   paleoWaterLevelMeters: number | null;
   terrainDetail: TerrainDetailLevel;
+  terrainTextureMode: TerrainTextureMode;
 }

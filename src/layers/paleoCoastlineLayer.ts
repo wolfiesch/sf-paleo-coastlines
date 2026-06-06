@@ -7,6 +7,7 @@ import type {
   PaleoTerrainConfig,
   PaleoTimeSlice,
   TerrainDetailLevel,
+  TerrainTextureMode,
 } from "../types";
 
 interface WaterPlaneFeature {
@@ -115,6 +116,11 @@ function meshMaxErrorForTerrain(
   return isBroadTerrain(terrain) || terrainIndex === 0 ? 2.5 : 0.8;
 }
 
+function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode): string {
+  if (mode === "color") return terrain.textures?.depthColor ?? terrain.texture;
+  return terrain.textures?.shadedRelief ?? terrain.texture;
+}
+
 export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: PaleoRenderContext) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
@@ -135,7 +141,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     new TerrainLayer({
       id: `paleo-terrain-${terrain.sourceId}`,
       elevationData: terrain.elevationData,
-      texture: terrain.texture,
+      texture: textureForTerrain(terrain, context.terrainTextureMode),
       bounds: terrain.bounds,
       elevationDecoder: terrain.elevationDecoder,
       meshMaxError: meshMaxErrorForTerrain(terrain, index, context.terrainDetail),

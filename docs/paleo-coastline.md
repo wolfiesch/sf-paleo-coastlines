@@ -109,22 +109,32 @@ Generated terrain files:
 
 - `public/data/paleo-coastlines/terrain/crm_vol7_sf_farallones_elevation.png`
 - `public/data/paleo-coastlines/terrain/crm_vol7_sf_farallones_color.png`
+- `public/data/paleo-coastlines/terrain/crm_vol7_sf_farallones_relief.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_color.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_relief.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_color.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_sf_relief.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_color.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_relief.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_color.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_relief.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_elevation.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_color.png`
+- `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_relief.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_elevation.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_color.png`
+- `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_relief.png`
 - `public/data/paleo-coastlines/terrain/dem4_elevation.png`
 - `public/data/paleo-coastlines/terrain/dem4_color.png`
+- `public/data/paleo-coastlines/terrain/dem4_relief.png`
 
 The `*_elevation.png` files encode height in RGB, not grayscale. In plain English: each pixel gets three color channels to store the height number, which preserves much finer vertical detail than a single 0-255 grayscale value.
+
+The `*_relief.png` files blend the depth color ramp with DEM-derived light and shadow. They are the default app texture because they make ridges, banks, channels, and small seafloor texture easier to see. The original `*_color.png` files remain available through the surface-style control.
 
 The vertical scale is exaggerated 4x so the shelf, ridges, and small protruding islands are easier to see. The waterline slider moves the transparent water plane independently of the selected scientific time slice, so you can scrub sea level and watch terrain start to emerge.
 
