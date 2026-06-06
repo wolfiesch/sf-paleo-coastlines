@@ -116,6 +116,8 @@ Generated terrain files:
 - `public/data/paleo-coastlines/terrain/dem4_elevation.png`
 - `public/data/paleo-coastlines/terrain/dem4_color.png`
 
+The `*_elevation.png` files encode height in RGB, not grayscale. In plain English: each pixel gets three color channels to store the height number, which preserves much finer vertical detail than a single 0-255 grayscale value.
+
 The vertical scale is exaggerated 4x so the shelf, ridges, and small protruding islands are easier to see. The waterline slider moves the transparent water plane independently of the selected scientific time slice, so you can scrub sea level and watch terrain start to emerge.
 
 The slider also draws the nearest 5 m contour as a bright probe line. This probe is not a dated coastline reconstruction. It is a visual helper for the question: "if the water were at this height, which terrain edge would meet the water?" The probe interval is deliberately 5 m for the first pass so the single browser JSON stays manageable.

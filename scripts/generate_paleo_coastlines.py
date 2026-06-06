@@ -505,6 +505,16 @@ def clamp_byte(value: float) -> int:
     return max(0, min(255, round(value)))
 
 
+def encode_height_rgb(height: float, minimum: float, maximum: float) -> tuple[int, int, int]:
+    normalized = max(0.0, min(1.0, (height - minimum) / (maximum - minimum)))
+    encoded = round(normalized * 16_777_215)
+    return (
+        (encoded >> 16) & 255,
+        (encoded >> 8) & 255,
+        encoded & 255,
+    )
+
+
 def terrain_color(height: float) -> tuple[int, int, int]:
     if height <= TERRAIN_COLOR_STOPS[0][0]:
         return TERRAIN_COLOR_STOPS[0][1]
@@ -524,21 +534,20 @@ def terrain_color(height: float) -> tuple[int, int, int]:
 
 def write_terrain_pngs_from_wgs84(source_path: Path, elevation_path: Path, texture_path: Path, minimum: float, maximum: float) -> None:
     source = Image.open(source_path)
-    elevation = Image.new("L", source.size)
+    elevation = Image.new("RGB", source.size)
     texture = Image.new("RGBA", source.size)
 
     elevation_pixels = []
-    texture_pixels = []
-    scale = 255.0 / (maximum - minimum)
+    texture_pixels: list[tuple[int, int, int, int]] = []
 
     for raw in source.getdata():
         height = float(raw)
         if not is_valid_height(height):
-            elevation_pixels.append(0)
+            elevation_pixels.append((0, 0, 0))
             texture_pixels.append((0, 0, 0, 0))
             continue
 
-        elevation_pixels.append(clamp_byte((height - minimum) * scale))
+        elevation_pixels.append(encode_height_rgb(height, minimum, maximum))
         texture_pixels.append((*terrain_color(height), 255))
 
     elevation.putdata(elevation_pixels)
@@ -578,9 +587,9 @@ def terrain_metadata(
         "heightRangeMeters": [minimum, maximum],
         "verticalExaggeration": TERRAIN_VERTICAL_EXAGGERATION,
         "elevationDecoder": {
-            "rScaler": ((maximum - minimum) / 255.0) * TERRAIN_VERTICAL_EXAGGERATION,
-            "gScaler": 0,
-            "bScaler": 0,
+            "rScaler": ((maximum - minimum) / 16_777_215.0) * 65_536 * TERRAIN_VERTICAL_EXAGGERATION,
+            "gScaler": ((maximum - minimum) / 16_777_215.0) * 256 * TERRAIN_VERTICAL_EXAGGERATION,
+            "bScaler": ((maximum - minimum) / 16_777_215.0) * TERRAIN_VERTICAL_EXAGGERATION,
             "offset": minimum * TERRAIN_VERTICAL_EXAGGERATION,
         },
         "note": note,
