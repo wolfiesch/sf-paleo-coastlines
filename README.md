@@ -2,6 +2,8 @@
 
 Standalone 3D paleo-coastline simulator for the San Francisco Bay, Golden Gate, offshore shelf, and Farallon Islands.
 
+It uses a broad NOAA seafloor model for the full Bay-to-Farallones view, plus sharper USGS 2 m bathymetry insets where public high-resolution source tiles are available.
+
 This project was split out from `cityscope-sf` because it is a separate research tool. CityScope should stay focused on civic map layers such as police calls, 311 reports, permits, heritage parcels, and live feeds.
 
 ## Run

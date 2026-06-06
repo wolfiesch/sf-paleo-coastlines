@@ -12,11 +12,12 @@ estimated coastline
 
 ## Current Data
 
-The checked-in browser data now uses two public elevation sources:
+The checked-in browser data now uses three public elevation sources:
 
 | Source | Why it is used |
 |---|---|
 | USGS DS684 DEM 4, 2 m San Francisco Bar tile | Better local detail around Ocean Beach, the Golden Gate, Marin Headlands, and the San Francisco Bar. This drives the present, 5k, and 10k slices where it has enough depth coverage. |
+| USGS/CSMP DS 781 Offshore of San Francisco, 2 m bathymetry | Sharper ocean-floor detail west of San Francisco and the Golden Gate. This is the new high-resolution nearshore seafloor inset. |
 | NOAA CRM Vol. 7, 3 arc-second grid | Broader Bay/offshore coverage toward the Farallones. This drives the wide 3D terrain surface and the 20k lowstand because the USGS tile does not reach far enough offshore or deep enough for a full -120 m contour. |
 | NOAA ETOPO 2022, 15 arc-second grid | Fallback broad source kept in the raw data references. CRM is now preferred for the app because it is about 5x finer for this region. |
 
@@ -29,13 +30,18 @@ Local source/work files:
 
 - `data/paleo-coastlines/raw/etopo_2022_sf_bay_coast_15s.nc`
 - `data/paleo-coastlines/raw/noaa-crm/crm_vol7_sf_farallones_3as.tif`
+- `data/paleo-coastlines/raw/usgs-csmp-offshore-sf/Bathymetry_OffshoreSanFrancisco.zip`
+- `data/paleo-coastlines/raw/usgs-csmp-offshore-sf/Bathymetry_OffshoreSanFrancisco.tif`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF.zip`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF/DEM_4_GeoTIFF.tif`
 - `data/paleo-coastlines/work/noaa_crm_vol7_contours_raw.geojson`
 - `data/paleo-coastlines/work/noaa_crm_vol7_contours_browser.geojson`
+- `data/paleo-coastlines/work/usgs_csmp_offshore_sf_contours_raw.geojson`
+- `data/paleo-coastlines/work/usgs_csmp_offshore_sf_contours_wgs84.geojson`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_contours_raw.geojson`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_contours_wgs84.geojson`
 - `data/paleo-coastlines/work/noaa_crm_vol7_sf_farallones_terrain_wgs84.tif`
+- `data/paleo-coastlines/work/usgs_csmp_offshore_sf_terrain_wgs84.tif`
 - `data/paleo-coastlines/work/usgs_ds684_dem4_terrain_wgs84.tif`
 
 ## Regenerate
@@ -49,8 +55,8 @@ The script downloads missing source files, runs `gdal_contour`, simplifies the b
 The important idea is:
 
 ```text
-use high-resolution USGS tile when it covers the contour
-otherwise use broad NOAA offshore grid
+use high-resolution USGS/CSMP or DS684 tiles where they cover the contour
+otherwise use the broad NOAA offshore grid
         |
         v
 one browser GeoJSON file with source labels per line
@@ -63,6 +69,10 @@ The Paleo Coastline layer renders a stack of 3D terrain surfaces:
 ```text
 NOAA CRM broad surface
         covers Bay + offshore shelf + Farallon Islands
+        |
+        v
+USGS/CSMP nearshore seafloor inset
+        sharper ocean floor west of San Francisco and the Golden Gate
         |
         v
 USGS DS684 local inset
@@ -81,6 +91,8 @@ Generated terrain files:
 
 - `public/data/paleo-coastlines/terrain/crm_vol7_sf_farallones_elevation.png`
 - `public/data/paleo-coastlines/terrain/crm_vol7_sf_farallones_color.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_sf_elevation.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_sf_color.png`
 - `public/data/paleo-coastlines/terrain/dem4_elevation.png`
 - `public/data/paleo-coastlines/terrain/dem4_color.png`
 
@@ -101,15 +113,16 @@ The uncertainty toggle shows extra contour lines around each estimate. These ban
 
 ## Data Limits
 
+- USGS/CSMP DS 781 is high resolution, but it only covers the nearshore ocean floor west of San Francisco and the Golden Gate. It does not reach all the way to the Farallon Islands.
 - USGS DS684 DEM 4 is high resolution, but it is only one tile. It improves the Golden Gate and nearby coast; it is not full Bay-plus-Farallones coverage.
 - NOAA CRM is much coarser than the USGS tile, but it covers the offshore shelf and Farallones at about 3 arc-second resolution.
 - NOAA ETOPO is coarser still, but remains a fallback global relief source if CRM access changes.
 - The script keeps each time slice's uncertainty band on the same elevation source as its main estimate when possible. That avoids mixing a broad offshore estimate with a short local-only uncertainty line.
-- The vertical datums differ: USGS DS684 is NAVD88; NOAA CRM and ETOPO use broader sea-level/EGM-style references. This first pass treats the sea-level values as approximate relative heights, not as a full local tidal-datum correction.
+- The vertical datums differ: USGS/CSMP DS 781 and USGS DS684 are NAVD88; NOAA CRM and ETOPO use broader sea-level/EGM-style references. This first pass treats the sea-level values as approximate relative heights, not as a full local tidal-datum correction.
 
 ## Higher-Resolution Next Step
 
-The best next science upgrade is to add more USGS DS684 tiles or the USGS CoNED SF Bay topobathymetric DEM, then mosaic and clip them into one local Bay-plus-offshore elevation model. The rendering layer should not need to change if the generated JSON keeps the same shape.
+The best next science upgrade is to add more USGS California Seafloor Mapping Program blocks, more USGS DS684 tiles, or the USGS CoNED SF Bay topobathymetric DEM, then mosaic and clip them into one local Bay-plus-offshore elevation model. The rendering layer should not need to change if the generated JSON keeps the same shape.
 
 ## Rendering Backend
 
@@ -119,6 +132,7 @@ Primary references:
 
 - NOAA ETOPO 2022: https://www.ncei.noaa.gov/products/etopo-global-relief-model
 - NOAA Coastal Relief Model: https://www.ncei.noaa.gov/products/coastal-relief-model
+- USGS Data Series 781 Offshore of San Francisco catalog: https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data_catalog_OffshoreSanFrancisco.html
 - USGS Data Series 684 DEM GeoTIFF files: https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/
 - USGS CoNED SF Bay: https://www.usgs.gov/special-topics/coastal-national-elevation-database-applications-project/science/topobathymetric-0
 - USGS SF Bay bathymetry DEM: https://www.usgs.gov/data/high-resolution-1-m-digital-elevation-model-dem-san-francisco-bay-california-created-using

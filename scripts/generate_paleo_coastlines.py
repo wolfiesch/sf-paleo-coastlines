@@ -2,8 +2,8 @@
 """Generate first-pass paleo-coastline contours from public elevation grids.
 
 The browser layer uses NOAA CRM Vol. 7 for broad SF/Farallones coverage and
-the higher-resolution USGS DS684 San Francisco Bar tile for local Golden Gate
-detail where that tile covers the requested sea-level contour.
+high-resolution USGS/CSMP bathymetry where local tiles cover the requested
+sea-level contour.
 """
 
 from __future__ import annotations
@@ -37,6 +37,14 @@ CRM_CONTOURS_BROWSER = WORK_DIR / "noaa_crm_vol7_contours_browser.geojson"
 CRM_TERRAIN_WGS84 = WORK_DIR / "noaa_crm_vol7_sf_farallones_terrain_wgs84.tif"
 CRM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_elevation.png"
 CRM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_color.png"
+CSMP_DIR = RAW_DIR / "usgs-csmp-offshore-sf"
+CSMP_ZIP = CSMP_DIR / "Bathymetry_OffshoreSanFrancisco.zip"
+CSMP_TIF = CSMP_DIR / "Bathymetry_OffshoreSanFrancisco.tif"
+CSMP_CONTOURS_RAW = WORK_DIR / "usgs_csmp_offshore_sf_contours_raw.geojson"
+CSMP_CONTOURS_WGS84 = WORK_DIR / "usgs_csmp_offshore_sf_contours_wgs84.geojson"
+CSMP_TERRAIN_WGS84 = WORK_DIR / "usgs_csmp_offshore_sf_terrain_wgs84.tif"
+CSMP_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "csmp_offshore_sf_elevation.png"
+CSMP_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "csmp_offshore_sf_color.png"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
 DS684_TIF = DS684_DIR / "DEM_4_GeoTIFF" / "DEM_4_GeoTIFF.tif"
@@ -49,7 +57,10 @@ ETOPO_TERRAIN_WGS84 = WORK_DIR / "etopo_2022_bay_farallones_terrain_wgs84.tif"
 ETOPO_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_elevation.png"
 ETOPO_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_color.png"
 CRM_TERRAIN_SIZE = 1536
+CSMP_TERRAIN_SIZE = 2048
 DS684_TERRAIN_SIZE = 768
+CSMP_TERRAIN_MIN_M = -120.0
+CSMP_TERRAIN_MAX_M = 5.0
 DS684_TERRAIN_MIN_M = -130.0
 DS684_TERRAIN_MAX_M = 400.0
 ETOPO_TERRAIN_MIN_M = -150.0
@@ -85,6 +96,7 @@ ERDDAP_URL = (
 )
 
 CRM_VOL7_REMOTE = 'NETCDF:"https://www.ngdc.noaa.gov/thredds/dodsC/crm/crm_vol7.nc":z'
+CSMP_OFFSHORE_SF_URL = "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/Bathymetry_OffshoreSanFrancisco.zip"
 DS684_DEM4_URL = "https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/DEM_4_GeoTIFF.zip"
 
 TIME_SLICES = [
@@ -137,6 +149,11 @@ SOURCES = [
         "name": "NOAA NCEI Coastal Relief Model Vol. 7, 3 arc-second",
         "url": "https://www.ngdc.noaa.gov/thredds/catalog/crm/catalog.html",
         "role": "Broad SF-to-Farallones elevation source for offshore shelf terrain and contours.",
+    },
+    {
+        "name": "USGS Data Series 781 / California Seafloor Mapping Program, Offshore of San Francisco 2 m bathymetry",
+        "url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data_catalog_OffshoreSanFrancisco.html",
+        "role": "High-resolution nearshore bathymetry for the ocean floor west of San Francisco and the Golden Gate.",
     },
     {
         "name": "USGS Data Series 684 DEM 4, San Francisco Bar 2 m GeoTIFF",
@@ -224,6 +241,13 @@ def download_usgs_ds684_dem4() -> None:
     run(["unzip", "-o", str(DS684_ZIP), "-d", str(DS684_DIR)])
 
 
+def download_usgs_csmp_offshore_sf() -> None:
+    download_url(CSMP_OFFSHORE_SF_URL, CSMP_ZIP)
+    if CSMP_TIF.exists():
+        return
+    run(["unzip", "-o", str(CSMP_ZIP), "-d", str(CSMP_DIR)])
+
+
 def contour_levels() -> list[float]:
     levels: set[float] = set()
     for item in TIME_SLICES:
@@ -257,6 +281,31 @@ def generate_contours() -> None:
         "0.0008",
         str(CRM_CONTOURS_BROWSER),
         str(CRM_CONTOURS_RAW),
+    ])
+
+    # CSMP Offshore San Francisco is a 2 m bathymetry grid in NAD83 / UTM zone 10N,
+    # NAVD88. It gives the ocean-floor texture the broad CRM grid cannot show.
+    csmp_levels = [str(level) for level in contour_levels() if -115.0 <= level <= 1.0]
+    run([
+        "gdal_contour",
+        "-q",
+        "-a",
+        "elevation_m",
+        "-fl",
+        *csmp_levels,
+        str(CSMP_TIF),
+        str(CSMP_CONTOURS_RAW),
+    ])
+    run([
+        "ogr2ogr",
+        "-f",
+        "GeoJSON",
+        "-t_srs",
+        "EPSG:4326",
+        "-simplify",
+        "8",
+        str(CSMP_CONTOURS_WGS84),
+        str(CSMP_CONTOURS_RAW),
     ])
 
     # DEM 4 is the high-resolution Golden Gate / Ocean Beach / San Francisco Bar tile.
@@ -412,6 +461,42 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
     )
 
 
+def generate_csmp_terrain_asset() -> dict[str, Any]:
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-ts",
+        str(CSMP_TERRAIN_SIZE),
+        "0",
+        "-r",
+        "bilinear",
+        "-dstnodata",
+        "-9999",
+        str(CSMP_TIF),
+        str(CSMP_TERRAIN_WGS84),
+    ])
+    write_terrain_pngs_from_wgs84(
+        CSMP_TERRAIN_WGS84,
+        CSMP_TERRAIN_ELEVATION_PNG,
+        CSMP_TERRAIN_TEXTURE_PNG,
+        CSMP_TERRAIN_MIN_M,
+        CSMP_TERRAIN_MAX_M,
+    )
+    return terrain_metadata(
+        "usgs_csmp_offshore_sf_2m",
+        source_label("usgs_csmp_offshore_sf_2m"),
+        CSMP_TERRAIN_WGS84,
+        CSMP_TERRAIN_ELEVATION_PNG,
+        CSMP_TERRAIN_TEXTURE_PNG,
+        CSMP_TERRAIN_MIN_M,
+        CSMP_TERRAIN_MAX_M,
+        "High-resolution 2 m CSMP/USGS nearshore bathymetry inset for the ocean floor west of San Francisco and the Golden Gate.",
+    )
+
+
 def generate_etopo_terrain_asset() -> dict[str, Any]:
     west = 236.0020833333333 - 360.0
     east = 238.5020833333333 - 360.0
@@ -490,6 +575,9 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         DS684_TERRAIN_WGS84,
         DS684_TERRAIN_ELEVATION_PNG,
         DS684_TERRAIN_TEXTURE_PNG,
+        CSMP_TERRAIN_WGS84,
+        CSMP_TERRAIN_ELEVATION_PNG,
+        CSMP_TERRAIN_TEXTURE_PNG,
         CRM_TERRAIN_WGS84,
         CRM_TERRAIN_ELEVATION_PNG,
         CRM_TERRAIN_TEXTURE_PNG,
@@ -501,6 +589,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
 
     return [
         generate_crm_terrain_asset(),
+        generate_csmp_terrain_asset(),
         generate_usgs_terrain_asset(),
     ]
 
@@ -581,29 +670,49 @@ def build_level_index(path: Path, source_id: str, min_degrees_length: float, nor
 def features_for_level(
     level: float,
     crm_by_level: dict[float, list[dict[str, Any]]],
+    csmp_by_level: dict[float, list[dict[str, Any]]],
     usgs_by_level: dict[float, list[dict[str, Any]]],
     preferred_source_id: str | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
     level_key = rounded_level(level)
     if preferred_source_id == "usgs_ds684_dem4" and usgs_by_level.get(level_key):
         return "usgs_ds684_dem4", usgs_by_level[level_key]
+    if preferred_source_id == "usgs_csmp_offshore_sf_2m" and csmp_by_level.get(level_key):
+        return "usgs_csmp_offshore_sf_2m", csmp_by_level[level_key]
     if preferred_source_id == "noaa_crm_vol7_3as" and crm_by_level.get(level_key):
         return "noaa_crm_vol7_3as", crm_by_level[level_key]
+    if preferred_source_id == "composite_high_resolution_local" and (
+        usgs_by_level.get(level_key) or csmp_by_level.get(level_key)
+    ):
+        return "composite_high_resolution_local", [
+            *csmp_by_level.get(level_key, []),
+            *usgs_by_level.get(level_key, []),
+        ]
 
-    usgs_features = usgs_by_level.get(rounded_level(level), [])
-    if usgs_features:
-        return "usgs_ds684_dem4", usgs_features
-    return "noaa_crm_vol7_3as", crm_by_level.get(rounded_level(level), [])
+    local_features = [
+        *csmp_by_level.get(level_key, []),
+        *usgs_by_level.get(level_key, []),
+    ]
+    if local_features:
+        source_id = (
+            "composite_high_resolution_local"
+            if csmp_by_level.get(level_key) and usgs_by_level.get(level_key)
+            else local_features[0]["properties"]["source_id"]
+        )
+        return source_id, local_features
+    return "noaa_crm_vol7_3as", crm_by_level.get(level_key, [])
 
 
 def probe_features_for_level(
     level: float,
     crm_by_level: dict[float, list[dict[str, Any]]],
+    csmp_by_level: dict[float, list[dict[str, Any]]],
     usgs_by_level: dict[float, list[dict[str, Any]]],
 ) -> list[dict[str, Any]]:
     level_key = rounded_level(level)
     features: list[dict[str, Any]] = []
     features.extend(crm_by_level.get(level_key, []))
+    features.extend(csmp_by_level.get(level_key, []))
     features.extend(usgs_by_level.get(level_key, []))
     return features
 
@@ -611,6 +720,10 @@ def probe_features_for_level(
 def source_label(source_id: str) -> str:
     if source_id == "usgs_ds684_dem4":
         return "USGS DS684 DEM 4, 2 m San Francisco Bar / Ocean Beach tile"
+    if source_id == "usgs_csmp_offshore_sf_2m":
+        return "USGS/CSMP DS 781, 2 m Offshore of San Francisco bathymetry"
+    if source_id == "composite_high_resolution_local":
+        return "Composite high-resolution local bathymetry plus topobathymetry"
     if source_id == "noaa_crm_vol7_3as":
         return "NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid"
     return "NOAA ETOPO 2022 15 arc-second broad Bay/offshore grid"
@@ -618,6 +731,7 @@ def source_label(source_id: str) -> str:
 
 def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     crm_by_level = build_level_index(CRM_CONTOURS_BROWSER, "noaa_crm_vol7_3as", 0.004, False)
+    csmp_by_level = build_level_index(CSMP_CONTOURS_WGS84, "usgs_csmp_offshore_sf_2m", 0.003, False)
     usgs_by_level = build_level_index(DS684_CONTOURS_WGS84, "usgs_ds684_dem4", 0.003, False)
     terrain = generate_terrain_assets()
 
@@ -626,7 +740,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     waterline_probe_features: list[dict[str, Any]] = []
 
     for level in WATERLINE_PROBE_LEVELS:
-        for feature in probe_features_for_level(level, crm_by_level, usgs_by_level):
+        for feature in probe_features_for_level(level, crm_by_level, csmp_by_level, usgs_by_level):
             source_id = feature["properties"]["source_id"]
             waterline_probe_features.append(
                 clone_feature(
@@ -657,7 +771,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         low = rounded_level(center - spread)
         high = rounded_level(center + spread)
 
-        estimate_source_id, estimate_source_features = features_for_level(center, crm_by_level, usgs_by_level)
+        estimate_source_id, estimate_source_features = features_for_level(center, crm_by_level, csmp_by_level, usgs_by_level)
         coastline_features = [
             clone_feature(
                 feature,
@@ -667,8 +781,8 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                     "line_role": "estimate",
                     "elevation_m": center,
                     "years_before_present": item["yearsBeforePresent"],
-                    "source_id": estimate_source_id,
-                    "source_label": source_label(estimate_source_id),
+                    "source_id": feature["properties"]["source_id"],
+                    "source_label": source_label(feature["properties"]["source_id"]),
                 },
                 bool(feature["properties"].get("normalize_360_lon")),
             )
@@ -679,6 +793,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             uncertainty_source_id, uncertainty_source_features = features_for_level(
                 level,
                 crm_by_level,
+                csmp_by_level,
                 usgs_by_level,
                 estimate_source_id,
             )
@@ -691,8 +806,8 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                         "line_role": role,
                         "elevation_m": level,
                         "years_before_present": item["yearsBeforePresent"],
-                        "source_id": uncertainty_source_id,
-                        "source_label": source_label(uncertainty_source_id),
+                        "source_id": feature["properties"]["source_id"],
+                        "source_label": source_label(feature["properties"]["source_id"]),
                     },
                     bool(feature["properties"].get("normalize_360_lon")),
                 )
@@ -703,7 +818,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             **item,
             "generatedAt": generated_at,
             "sourceModel": source_label(estimate_source_id),
-            "datumNote": "USGS DS684 uses NAVD88; NOAA CRM and ETOPO use broad sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
+            "datumNote": "USGS CSMP and DS684 sources use NAVD88; NOAA CRM and ETOPO use broad sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
             "uncertaintyNote": "Lines show only sea-level uncertainty. They do not model erosion, sediment, marsh growth, tectonic motion, or river-channel migration.",
             "terrain": terrain[0],
             "terrains": terrain,
@@ -715,16 +830,19 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset plus the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, USGS/CSMP Offshore San Francisco 2 m bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(RAW_NETCDF.relative_to(ROOT)),
+            str(CSMP_TIF.relative_to(ROOT)),
             str(DS684_TIF.relative_to(ROOT)),
         ],
         "browserDataset": "public/data/paleo-coastlines/paleo_coastlines.json",
         "terrainAssets": [
             str(CRM_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(CRM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
+            str(CSMP_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
+            str(CSMP_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(DS684_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(DS684_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
         ],
@@ -765,6 +883,7 @@ def main() -> int:
     require_tool("unzip")
     download_raw_netcdf()
     download_noaa_crm_vol7_subset()
+    download_usgs_csmp_offshore_sf()
     download_usgs_ds684_dem4()
     generate_contours()
     payload, metadata = build_browser_payload()
