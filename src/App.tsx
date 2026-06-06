@@ -27,6 +27,42 @@ const START_VIEW: MapViewState = {
   bearing: -32,
 };
 
+const VIEW_PRESETS = [
+  {
+    id: "gate",
+    label: "Gate",
+    viewState: {
+      longitude: -122.61,
+      latitude: 37.78,
+      zoom: 10.05,
+      pitch: 64,
+      bearing: -39,
+    },
+  },
+  {
+    id: "farallones",
+    label: "Farallones",
+    viewState: {
+      longitude: -123.13,
+      latitude: 37.69,
+      zoom: 8.75,
+      pitch: 62,
+      bearing: -34,
+    },
+  },
+  {
+    id: "shelf",
+    label: "Shelf",
+    viewState: {
+      longitude: -123.38,
+      latitude: 37.77,
+      zoom: 8.35,
+      pitch: 66,
+      bearing: -43,
+    },
+  },
+] satisfies { id: string; label: string; viewState: MapViewState }[];
+
 function nearestProbeLevel(level: number, levels: number[]): number | null {
   if (!levels.length) return null;
 
@@ -61,6 +97,7 @@ function App() {
   const [showUncertainty, setShowUncertainty] = useState(true);
   const [waterLevelMeters, setWaterLevelMeters] = useState<number | null>(-120);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showTerrainFootprints, setShowTerrainFootprints] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("bottom");
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");
@@ -244,11 +281,12 @@ function App() {
   const layers = useMemo(() => createPaleoCoastlineLayers(renderSlices, {
     paleoTimeSliceId: activeSliceId,
     showPaleoUncertainty: showUncertainty,
+    showTerrainFootprints,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
     terrainTextureMode,
     sceneProfile,
-  }), [activeSliceId, renderSlices, sceneProfile, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters]);
+  }), [activeSliceId, renderSlices, sceneProfile, showTerrainFootprints, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -293,8 +331,11 @@ function App() {
           terrainDetail={terrainDetail}
           terrainTextureMode={terrainTextureMode}
           sceneProfile={sceneProfile}
+          showTerrainFootprints={showTerrainFootprints}
+          viewPresets={VIEW_PRESETS}
           onSliceChange={handleSliceChange}
           onToggleUncertainty={() => setShowUncertainty((shown) => !shown)}
+          onToggleTerrainFootprints={() => setShowTerrainFootprints((shown) => !shown)}
           onWaterLevelChange={(level) => {
             setIsPlaying(false);
             setWaterLevelMeters(level);
@@ -307,6 +348,7 @@ function App() {
           onTerrainDetailChange={setTerrainDetail}
           onTerrainTextureModeChange={setTerrainTextureMode}
           onSceneProfileChange={setSceneProfile}
+          onViewPreset={(nextViewState) => setViewState(nextViewState)}
         />
       </div>
 

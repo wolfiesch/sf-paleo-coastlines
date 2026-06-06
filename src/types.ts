@@ -104,6 +104,7 @@ export type PaleoWaterlineProbeIndex = PaleoManifest["waterlineProbe"];
 export interface PaleoRenderContext {
   paleoTimeSliceId: PaleoTimeSliceId;
   showPaleoUncertainty: boolean;
+  showTerrainFootprints: boolean;
   paleoWaterLevelMeters: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;

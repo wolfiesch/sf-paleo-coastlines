@@ -1,4 +1,4 @@
-import { GeoJsonLayer, PolygonLayer, ScatterplotLayer } from "deck.gl";
+import { GeoJsonLayer, PolygonLayer, ScatterplotLayer, TextLayer } from "deck.gl";
 import { TerrainLayer } from "@deck.gl/geo-layers";
 import type {
   PaleoCoastlineFeature,
@@ -25,6 +25,17 @@ interface PickedPaleoFeature {
 interface EmergencePoint {
   position: [number, number, number];
   offsetMeters: number;
+}
+
+interface TerrainFootprint {
+  sourceId: string;
+  sourceLabel: string;
+  note: string;
+  category: "noaaBag" | "usgsCsmp" | "usgsOffshore" | "usgsGoldenGate" | "other";
+  bounds: [number, number, number, number];
+  heightRangeMeters: [number, number];
+  polygon: [number, number, number][];
+  position: [number, number, number];
 }
 
 type GeoJsonCoordinates = number[] | GeoJsonCoordinates[];
@@ -221,7 +232,76 @@ function probeFeaturesForWaterLevel(
 }
 
 function isBroadTerrain(terrain: PaleoTerrainConfig): boolean {
-  return terrain.sourceId.includes("crm") || terrain.sourceId.includes("etopo");
+  return terrain.sourceId.includes("crm") || terrain.sourceId.includes("cudem") || terrain.sourceId.includes("etopo");
+}
+
+function terrainFootprintCategory(terrain: PaleoTerrainConfig): TerrainFootprint["category"] {
+  if (terrain.sourceId.includes("noaa_nos")) return "noaaBag";
+  if (terrain.sourceId.includes("csmp")) return "usgsCsmp";
+  if (terrain.sourceId.includes("farallon") || terrain.sourceId.includes("rittenburg")) return "usgsOffshore";
+  if (terrain.sourceId.includes("ds684")) return "usgsGoldenGate";
+  return "other";
+}
+
+function terrainFootprintColor(category: TerrainFootprint["category"], alpha: number): [number, number, number, number] {
+  if (category === "noaaBag") return [70, 210, 255, alpha];
+  if (category === "usgsCsmp") return [255, 208, 92, alpha];
+  if (category === "usgsOffshore") return [190, 124, 255, alpha];
+  if (category === "usgsGoldenGate") return [110, 255, 170, alpha];
+  return [235, 244, 255, alpha];
+}
+
+function shortTerrainLabel(terrain: TerrainFootprint): string {
+  if (terrain.sourceId.includes("h12109")) return "H12109";
+  if (terrain.sourceId.includes("h12110")) return "H12110";
+  if (terrain.sourceId.includes("h12111")) return "H12111";
+  if (terrain.sourceId.includes("h11965")) return "H11965";
+  if (terrain.sourceId.includes("h13334")) return "H13334";
+  if (terrain.sourceId.includes("w00477")) return "W00477";
+  if (terrain.sourceId.includes("w00614")) return "W00614";
+  if (terrain.sourceId.includes("tomales")) return "Tomales";
+  if (terrain.sourceId.includes("point_reyes")) return "Point Reyes";
+  if (terrain.sourceId.includes("bolinas")) return "Bolinas";
+  if (terrain.sourceId.includes("offshore_sf")) return "Offshore SF";
+  if (terrain.sourceId.includes("pacifica")) return "Pacifica";
+  if (terrain.sourceId.includes("half_moon")) return "Half Moon";
+  if (terrain.sourceId.includes("san_gregorio")) return "San Gregorio";
+  if (terrain.sourceId.includes("farallon_escarpment")) return "Escarpment";
+  if (terrain.sourceId.includes("rittenburg")) return "Rittenburg";
+  if (terrain.sourceId.includes("ds684")) return "SF Bar";
+  return terrain.sourceLabel.split(",")[0];
+}
+
+function terrainFootprintsForSlice(
+  slice: PaleoTimeSlice,
+  activeWaterLevel: number,
+  profile: SceneProfileConfig,
+): TerrainFootprint[] {
+  const terrain = primaryTerrainForSlice(slice);
+  if (!terrain) return [];
+
+  const zMeters = terrainZ(terrain, activeWaterLevel, profile, 26);
+  return terrainStackForSlice(slice)
+    .filter((item) => !isBroadTerrain(item))
+    .map((item) => {
+      const [west, south, east, north] = item.bounds;
+      return {
+        sourceId: item.sourceId,
+        sourceLabel: item.sourceLabel,
+        note: item.note,
+        category: terrainFootprintCategory(item),
+        bounds: item.bounds,
+        heightRangeMeters: item.heightRangeMeters,
+        polygon: [
+          [west, south, zMeters],
+          [east, south, zMeters],
+          [east, north, zMeters],
+          [west, north, zMeters],
+          [west, south, zMeters],
+        ],
+        position: [(west + east) / 2, (south + north) / 2, zMeters + 16],
+      };
+    });
 }
 
 function meshMaxErrorForTerrain(
@@ -354,6 +434,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
   const rawProbeFeatures = probeFeaturesForWaterLevel(data, slice, activeWaterLevel);
   const activeProbeFeatures = rawProbeFeatures.filter((feature) => Math.abs(feature.properties.elevation_m - activeWaterLevel) <= 2.5);
   const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
+  const terrainFootprints = context.showTerrainFootprints ? terrainFootprintsForSlice(slice, activeWaterLevel, profile) : [];
   const features = [
     ...slice.coastline.features,
     ...activeProbeFeatures,
@@ -401,6 +482,45 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     getLineColor: [188, 248, 255, profile.waterLineAlpha],
     getLineWidth: 2,
     lineWidthUnits: "pixels",
+  });
+
+  const terrainFootprintFillLayer = new PolygonLayer<TerrainFootprint>({
+    id: "paleo-terrain-footprints-fill",
+    data: terrainFootprints,
+    pickable: true,
+    filled: true,
+    stroked: true,
+    getPolygon: (item) => item.polygon,
+    getFillColor: (item) => terrainFootprintColor(item.category, 18),
+    getLineColor: (item) => terrainFootprintColor(item.category, 220),
+    getLineWidth: 2,
+    lineWidthUnits: "pixels",
+    parameters: {
+      depthCompare: "always",
+      depthWriteEnabled: false,
+    },
+  });
+
+  const terrainFootprintLabelLayer = new TextLayer<TerrainFootprint>({
+    id: "paleo-terrain-footprints-labels",
+    data: terrainFootprints,
+    pickable: false,
+    getPosition: (item) => item.position,
+    getText: shortTerrainLabel,
+    getSize: (item) => item.category === "usgsOffshore" ? 12 : 11,
+    getColor: (item) => terrainFootprintColor(item.category, 245),
+    getAngle: 0,
+    getTextAnchor: "middle",
+    getAlignmentBaseline: "center",
+    sizeUnits: "pixels",
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    fontWeight: 700,
+    outlineWidth: 2,
+    outlineColor: [2, 8, 23, 230],
+    parameters: {
+      depthCompare: "always",
+      depthWriteEnabled: false,
+    },
   });
 
   const depthContourLayer = new GeoJsonLayer<PaleoCoastlineProperties>({
@@ -485,11 +605,38 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     highlightColor: [255, 255, 255, 180],
   });
 
-  return [...terrainLayers, waterLayer, depthContourLayer, shorelineGlowOuterLayer, shorelineGlowInnerLayer, coastlineLayer, emergenceLayer];
+  return [
+    ...terrainLayers,
+    waterLayer,
+    terrainFootprintFillLayer,
+    terrainFootprintLabelLayer,
+    depthContourLayer,
+    shorelineGlowOuterLayer,
+    shorelineGlowInnerLayer,
+    coastlineLayer,
+    emergenceLayer,
+  ];
 }
 
 export function getPaleoTooltip(object: unknown) {
-  if (!object || typeof object !== "object" || !("properties" in object)) return null;
+  if (!object || typeof object !== "object") return null;
+
+  if ("sourceLabel" in object && "heightRangeMeters" in object) {
+    const terrain = object as TerrainFootprint;
+    return {
+      text: `${terrain.sourceLabel}\n${terrain.heightRangeMeters[0]} to ${terrain.heightRangeMeters[1]} m\n${terrain.note}`,
+      style: {
+        backgroundColor: "rgba(4, 20, 28, 0.92)",
+        color: "#c8fbff",
+        fontSize: "13px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        border: "1px solid rgba(103, 232, 249, 0.35)",
+      },
+    };
+  }
+
+  if (!("properties" in object)) return null;
 
   const feature = object as PickedPaleoFeature;
   return {

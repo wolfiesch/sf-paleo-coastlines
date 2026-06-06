@@ -1,23 +1,34 @@
-import { Database, Gauge, Pause, Play, RotateCcw, Waves } from "lucide-react";
+import { Database, Gauge, Layers3, MapPinned, Pause, Play, RotateCcw, Waves } from "lucide-react";
+import type { MapViewState } from "deck.gl";
 import type { PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainTextureMode } from "../types";
+
+interface ViewPreset {
+  id: string;
+  label: string;
+  viewState: MapViewState;
+}
 
 interface PaleoCoastlineControlsProps {
   slices: PaleoTimeSlice[];
   activeSliceId: PaleoTimeSliceId;
   showUncertainty: boolean;
+  showTerrainFootprints: boolean;
   waterLevelMeters: number | null;
   isPlaying: boolean;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;
   sceneProfile: SceneProfile;
+  viewPresets: ViewPreset[];
   onSliceChange: (id: PaleoTimeSliceId) => void;
   onToggleUncertainty: () => void;
+  onToggleTerrainFootprints: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
   onResetWaterLevel: () => void;
   onTerrainDetailChange: (level: TerrainDetailLevel) => void;
   onTerrainTextureModeChange: (mode: TerrainTextureMode) => void;
   onSceneProfileChange: (profile: SceneProfile) => void;
+  onViewPreset: (viewState: MapViewState) => void;
 }
 
 const TERRAIN_DETAIL_OPTIONS: { id: TerrainDetailLevel; label: string; title: string }[] = [
@@ -39,6 +50,13 @@ const SCENE_PROFILE_OPTIONS: { id: SceneProfile; label: string; title: string }[
   { id: "study", label: "Study", title: "Lower contrast view for reading source layers and labels" },
   { id: "relief", label: "Relief", title: "Stronger height, light, and shadow for terrain shape" },
   { id: "emergence", label: "Emerge", title: "Clearer waterline and newly exposed terrain" },
+];
+
+const COVERAGE_LEGEND = [
+  { label: "NOAA BAG", className: "bg-cyan-300" },
+  { label: "USGS CSMP", className: "bg-amber-300" },
+  { label: "USGS offshore", className: "bg-violet-300" },
+  { label: "SF Bar", className: "bg-emerald-300" },
 ];
 
 const FALLBACK_SLICES: PaleoTimeSlice[] = [
@@ -84,19 +102,23 @@ export function PaleoCoastlineControls({
   slices,
   activeSliceId,
   showUncertainty,
+  showTerrainFootprints,
   waterLevelMeters,
   isPlaying,
   terrainDetail,
   terrainTextureMode,
   sceneProfile,
+  viewPresets,
   onSliceChange,
   onToggleUncertainty,
+  onToggleTerrainFootprints,
   onWaterLevelChange,
   onTogglePlayback,
   onResetWaterLevel,
   onTerrainDetailChange,
   onTerrainTextureModeChange,
   onSceneProfileChange,
+  onViewPreset,
 }: PaleoCoastlineControlsProps) {
   const options = slices.length ? slices : FALLBACK_SLICES;
   const activeSlice = options.find((slice) => slice.id === activeSliceId) ?? options[0];
@@ -165,6 +187,52 @@ export function PaleoCoastlineControls({
             {showUncertainty ? `+/- ${activeSlice.uncertaintyMeters} m` : "hidden"}
           </div>
         </button>
+      </div>
+
+      <div className="mb-3 rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5 text-[11px] uppercase leading-4 text-gray-500">
+            <MapPinned size={12} />
+            View
+          </span>
+          <button
+            type="button"
+            onClick={onToggleTerrainFootprints}
+            className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+              showTerrainFootprints
+                ? "border-cyan-300/40 bg-cyan-300 text-gray-950"
+                : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
+            }`}
+            aria-pressed={showTerrainFootprints}
+            title="Show high-detail survey coverage"
+          >
+            <Layers3 size={13} />
+            Coverage
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
+          {viewPresets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onViewPreset(preset.viewState)}
+              className="min-h-8 rounded px-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              title={`${preset.label} view`}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        {showTerrainFootprints ? (
+          <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
+            {COVERAGE_LEGEND.map((item) => (
+              <span key={item.label} className="flex items-center gap-1.5">
+                <span className={`h-1.5 w-4 rounded-full ${item.className}`} />
+                {item.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <label className="mb-3 block rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
