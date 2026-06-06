@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "paleo-coastlines:generate": "python3 scripts/generate_paleo_coastlines.py",
-    "paleo-coastlines:inventory": "python3 scripts/build_survey_inventory.py --with-gdalinfo"
+    "paleo-coastlines:inventory": "python3 scripts/build_survey_inventory.py --with-gdalinfo",
+    "paleo-coastlines:usgs-bay-dem": "python3 scripts/acquire_usgs_sf_bay_1m_dem.py"
   },
   "dependencies": {
     "@deck.gl/geo-layers": "^9.2.11",

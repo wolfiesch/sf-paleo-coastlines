@@ -14,7 +14,7 @@ estimated coastline
 
 The checked-in browser data now uses two broad elevation sources plus several sharper NOAA and USGS patches:
 
-For the source-by-source quality audit, resolution notes, datum cautions, and next data chases, see `docs/survey-inventory.md`. The browser-readable JSON version is `public/data/paleo-coastlines/survey_inventory.json`.
+For the source-by-source quality audit, resolution notes, datum cautions, and next data chases, see `docs/survey-inventory.md`. The browser-readable JSON version is `public/data/paleo-coastlines/survey_inventory.json`. For the high-detail Bay DEM acquisition path, see `docs/usgs-sf-bay-1m-dem.md` and `public/data/paleo-coastlines/usgs_sf_bay_1m_dem_manifest.json`.
 
 | Source | Why it is used |
 |---|---|

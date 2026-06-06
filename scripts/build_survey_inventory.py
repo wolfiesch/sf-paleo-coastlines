@@ -45,7 +45,7 @@ NEXT_DATA_CANDIDATES: list[dict[str, Any]] = [
         "sourceUrl": "https://www.usgs.gov/data/high-resolution-1-m-digital-elevation-model-dem-san-francisco-bay-california-created-using",
         "priority": "highest",
         "reason": "Likely the biggest Bay-interior detail upgrade; it targets the bay floor rather than just the outer coast.",
-        "nextAction": "Download, inspect datum/resolution, and add as a Bay-focused terrain inset above CUDEM but below small survey patches.",
+        "nextAction": "Run `pnpm paleo-coastlines:usgs-bay-dem` to refresh exact ScienceBase file metadata, then download NAVD88 sections one at a time and add them as Bay-focused terrain insets above CUDEM but below small survey patches.",
     },
     {
         "id": "noaa_bdv_query",
