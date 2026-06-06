@@ -160,6 +160,8 @@ The `*_relief.png` files blend the depth color ramp with DEM-derived light and s
 
 The `*_composite.png` files power the `Survey` surface style. They combine depth color, shaded relief, local slope, roughness, and a simple ridge-or-hollow signal calculated from neighboring height pixels. In plain English: this is still the same terrain height data, but the texture makes small banks, channels, scarps, rocky patches, and newly exposed ridges easier to read at a glance.
 
+The composite texture bake now reads the DEM at two scales: very nearby pixels for fine bumps and a wider neighborhood for broader banks, ridges, and channels. In plain English: the app is not inventing more depth measurements, but it is doing a better job of showing the shape that already exists in the data.
+
 The `*_sonar.png` files are generated from USGS/CSMP acoustic backscatter where that data exists. In plain English: backscatter is how strongly the seafloor reflected the survey sound signal. Hard rock, sand, mud, and rough bottom can show up differently, so this gives the surface a much more detailed "ocean survey" look. It does not change the 3D height shape; the height still comes from the bathymetry DEM. The app keeps `Sonar` as a separate surface style and falls back to shaded relief for terrain sources without backscatter.
 
 The `*_hybrid.png` files are the default `Hybrid` surface style for USGS/CSMP blocks with acoustic backscatter. They bake sonar intensity on top of the Survey texture. In plain English: where sonar exists, Hybrid shows both measured seafloor reflectivity and DEM-derived shape detail; where sonar does not exist, the app falls back to Survey so the map remains continuous.

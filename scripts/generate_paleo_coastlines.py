@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from PIL import Image
 
 
@@ -1157,153 +1158,6 @@ def clamp_byte(value: float) -> int:
     return max(0, min(255, round(value)))
 
 
-def encode_height_rgb(height: float, minimum: float, maximum: float) -> tuple[int, int, int]:
-    normalized = max(0.0, min(1.0, (height - minimum) / (maximum - minimum)))
-    encoded = round(normalized * 16_777_215)
-    return (
-        (encoded >> 16) & 255,
-        (encoded >> 8) & 255,
-        encoded & 255,
-    )
-
-
-def terrain_color(height: float) -> tuple[int, int, int]:
-    if height <= TERRAIN_COLOR_STOPS[0][0]:
-        return TERRAIN_COLOR_STOPS[0][1]
-
-    for index in range(1, len(TERRAIN_COLOR_STOPS)):
-        low_height, low_color = TERRAIN_COLOR_STOPS[index - 1]
-        high_height, high_color = TERRAIN_COLOR_STOPS[index]
-        if height <= high_height:
-            amount = (height - low_height) / (high_height - low_height)
-            return tuple(
-                clamp_byte(low_color[channel] + ((high_color[channel] - low_color[channel]) * amount))
-                for channel in range(3)
-            )
-
-    return TERRAIN_COLOR_STOPS[-1][1]
-
-
-def shaded_relief_color(base: tuple[int, int, int], shade: float, slope: float, height: float) -> tuple[int, int, int]:
-    if height < 0:
-        depth_boost = max(0.0, min(1.0, abs(height) / 140.0))
-        contrast = 0.78 + depth_boost * 0.32
-        brightness = 0.34 + shade * 0.92 + min(0.28, slope * 0.018)
-    else:
-        contrast = 0.9
-        brightness = 0.42 + shade * 0.82 + min(0.22, slope * 0.012)
-
-    return tuple(clamp_byte(((channel - 128) * contrast + 128) * brightness) for channel in base)
-
-
-def mix_color(a: tuple[int, int, int], b: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
-    amount = max(0.0, min(1.0, amount))
-    return tuple(clamp_byte(a[channel] + (b[channel] - a[channel]) * amount) for channel in range(3))
-
-
-def survey_composite_color(
-    base: tuple[int, int, int],
-    relief: tuple[int, int, int],
-    shade: float,
-    slope: float,
-    roughness: float,
-    curvature: float,
-    height: float,
-) -> tuple[int, int, int]:
-    slope_signal = max(0.0, min(1.0, slope / (34.0 if height < 0 else 92.0)))
-    rough_signal = max(0.0, min(1.0, roughness / (65.0 if height < 0 else 140.0)))
-    ridge_signal = max(0.0, min(1.0, curvature / (22.0 if height < 0 else 48.0)))
-    hollow_signal = max(0.0, min(1.0, -curvature / (22.0 if height < 0 else 48.0)))
-
-    if height < 0:
-        shelf_cyan = (56, 183, 198)
-        deep_blue = (10, 28, 62)
-        ridge_gold = (247, 215, 126)
-        pale_scarp = (238, 246, 226)
-
-        detail_signal = max(slope_signal * 0.8, rough_signal * 0.72, ridge_signal * 0.9)
-        color = mix_color(relief, shelf_cyan, 0.08 + slope_signal * 0.16)
-        color = mix_color(color, deep_blue, hollow_signal * 0.28)
-        color = mix_color(color, ridge_gold, ridge_signal * 0.38 + rough_signal * 0.12)
-        color = mix_color(color, pale_scarp, detail_signal * 0.18)
-
-        contrast = 1.04 + detail_signal * 0.34
-        brightness = 0.92 + (shade - 0.5) * 0.22 - hollow_signal * 0.12
-        return tuple(clamp_byte(((channel - 128) * contrast + 128) * brightness) for channel in color)
-
-    land_detail = min(0.28, slope_signal * 0.18 + rough_signal * 0.1)
-    color = mix_color(relief, base, 0.18)
-    color = mix_color(color, (248, 248, 240), land_detail)
-    return tuple(clamp_byte(channel * (0.96 + shade * 0.12)) for channel in color)
-
-
-def relief_shade(
-    heights: list[float | None],
-    width: int,
-    height: int,
-    x: int,
-    y: int,
-) -> tuple[float, float]:
-    def sample(sample_x: int, sample_y: int) -> float:
-        clamped_x = max(0, min(width - 1, sample_x))
-        clamped_y = max(0, min(height - 1, sample_y))
-        value = heights[clamped_y * width + clamped_x]
-        center = heights[y * width + x]
-        if value is None and center is not None:
-            return center
-        return value if value is not None else 0.0
-
-    west = sample(x - 1, y)
-    east = sample(x + 1, y)
-    north = sample(x, y - 1)
-    south = sample(x, y + 1)
-    dz_dx = east - west
-    dz_dy = south - north
-    slope = math.hypot(dz_dx, dz_dy)
-
-    # A simple northwest light. This is visual shading, not a measured sun model.
-    normal_x = -dz_dx
-    normal_y = -dz_dy
-    normal_z = 42.0
-    normal_length = math.sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z)
-    light_x, light_y, light_z = -0.48, -0.58, 0.66
-    shade = (normal_x * light_x + normal_y * light_y + normal_z * light_z) / normal_length
-    return max(0.0, min(1.0, shade * 0.5 + 0.5)), slope
-
-
-def terrain_surface_metrics(
-    heights: list[float | None],
-    width: int,
-    height: int,
-    x: int,
-    y: int,
-) -> tuple[float, float]:
-    center = heights[y * width + x]
-    if center is None:
-        return 0.0, 0.0
-
-    def sample(sample_x: int, sample_y: int) -> float:
-        clamped_x = max(0, min(width - 1, sample_x))
-        clamped_y = max(0, min(height - 1, sample_y))
-        value = heights[clamped_y * width + clamped_x]
-        return value if value is not None else center
-
-    neighbors = [
-        sample(sample_x, sample_y)
-        for sample_y in range(y - 1, y + 2)
-        for sample_x in range(x - 1, x + 2)
-    ]
-    roughness = max(neighbors) - min(neighbors)
-    cardinal_average = (
-        sample(x - 1, y)
-        + sample(x + 1, y)
-        + sample(x, y - 1)
-        + sample(x, y + 1)
-    ) / 4.0
-    curvature = center - cardinal_average
-    return roughness, curvature
-
-
 def raw_pixel_value(raw: Any) -> float:
     if isinstance(raw, tuple):
         values = [float(value) for value in raw[:3] if isinstance(value, (int, float)) and math.isfinite(float(value))]
@@ -1422,72 +1276,152 @@ def write_terrain_pngs_from_wgs84(
     minimum: float,
     maximum: float,
     edge_fade_pixels: int = 0,
+    low_detail_alpha_floor: int = 255,
 ) -> None:
     source = Image.open(source_path)
-    elevation = Image.new("RGB", source.size)
-    texture = Image.new("RGBA", source.size)
-    relief_texture = Image.new("RGBA", source.size)
-    composite_texture = Image.new("RGBA", source.size)
-    width, image_height = source.size
+    heights = np.asarray(source, dtype=np.float32)
+    if heights.ndim > 2:
+        heights = heights[:, :, 0]
 
-    elevation_pixels = []
-    texture_pixels: list[tuple[int, int, int, int]] = []
-    relief_pixels: list[tuple[int, int, int, int]] = []
-    composite_pixels: list[tuple[int, int, int, int]] = []
-    heights: list[float | None] = []
-    base_colors: list[tuple[int, int, int] | None] = []
+    image_height, width = heights.shape
+    valid = np.isfinite(heights) & (heights > -9000) & (heights < 1_000_000)
+    safe_heights = np.where(valid, heights, 0.0).astype(np.float32)
 
-    def alpha_for_pixel(x: int, y: int) -> int:
-        if edge_fade_pixels <= 0:
-            return 255
-        edge_distance = min(x, y, width - 1 - x, image_height - 1 - y)
-        amount = max(0.0, min(1.0, edge_distance / edge_fade_pixels))
-        return clamp_byte(255 * amount)
+    normalized = np.clip((safe_heights - minimum) / (maximum - minimum), 0.0, 1.0)
+    encoded = np.rint(normalized * 16_777_215).astype(np.uint32)
+    elevation_pixels = np.zeros((image_height, width, 3), dtype=np.uint8)
+    elevation_pixels[:, :, 0] = ((encoded >> 16) & 255).astype(np.uint8)
+    elevation_pixels[:, :, 1] = ((encoded >> 8) & 255).astype(np.uint8)
+    elevation_pixels[:, :, 2] = (encoded & 255).astype(np.uint8)
+    elevation_pixels[~valid] = 0
 
-    for index, raw in enumerate(source.getdata()):
-        elevation_m = float(raw)
-        if not is_valid_height(elevation_m):
-            elevation_pixels.append((0, 0, 0))
-            texture_pixels.append((0, 0, 0, 0))
-            heights.append(None)
-            base_colors.append(None)
-            continue
+    stop_heights = np.array([stop[0] for stop in TERRAIN_COLOR_STOPS], dtype=np.float32)
+    stop_colors = np.array([stop[1] for stop in TERRAIN_COLOR_STOPS], dtype=np.float32)
+    base = np.stack(
+        [np.interp(safe_heights, stop_heights, stop_colors[:, channel]) for channel in range(3)],
+        axis=-1,
+    ).astype(np.float32)
+    base[~valid] = 0
 
-        x = index % width
-        y = index // width
-        alpha = alpha_for_pixel(x, y)
-        base_color = terrain_color(elevation_m)
-        elevation_pixels.append(encode_height_rgb(elevation_m, minimum, maximum))
-        texture_pixels.append((*base_color, alpha))
-        heights.append(elevation_m)
-        base_colors.append(base_color)
+    if edge_fade_pixels > 0:
+        x_edges = np.minimum(np.arange(width), np.arange(width)[::-1])
+        y_edges = np.minimum(np.arange(image_height), np.arange(image_height)[::-1])
+        edge_distance = np.minimum(y_edges[:, None], x_edges[None, :])
+        alpha = np.rint(np.clip(edge_distance / edge_fade_pixels, 0.0, 1.0) * 255).astype(np.uint8)
+    else:
+        alpha = np.full((image_height, width), 255, dtype=np.uint8)
+    alpha = np.where(valid, alpha, 0).astype(np.uint8)
 
-    for index, base_color in enumerate(base_colors):
-        height_value = heights[index]
-        if base_color is None or height_value is None:
-            relief_pixels.append((0, 0, 0, 0))
-            composite_pixels.append((0, 0, 0, 0))
-            continue
-        x = index % width
-        y = index // width
-        shade, slope = relief_shade(heights, width, image_height, x, y)
-        roughness, curvature = terrain_surface_metrics(heights, width, image_height, x, y)
-        relief_color = shaded_relief_color(base_color, shade, slope, height_value)
-        alpha = alpha_for_pixel(x, y)
-        relief_pixels.append((*relief_color, alpha))
-        composite_pixels.append((
-            *survey_composite_color(base_color, relief_color, shade, slope, roughness, curvature, height_value),
-            alpha,
-        ))
+    pad_radius = 3
+    padded_heights = np.pad(safe_heights, pad_radius, mode="edge")
+    padded_valid = np.pad(valid, pad_radius, mode="edge")
 
-    elevation.putdata(elevation_pixels)
-    texture.putdata(texture_pixels)
-    relief_texture.putdata(relief_pixels)
-    composite_texture.putdata(composite_pixels)
-    elevation.save(elevation_path)
-    texture.save(texture_path)
-    relief_texture.save(relief_texture_path)
-    composite_texture.save(composite_texture_path)
+    def sample(dx: int, dy: int) -> np.ndarray:
+        y0 = pad_radius + dy
+        x0 = pad_radius + dx
+        sampled_heights = padded_heights[y0:y0 + image_height, x0:x0 + width]
+        sampled_valid = padded_valid[y0:y0 + image_height, x0:x0 + width]
+        return np.where(sampled_valid, sampled_heights, safe_heights)
+
+    west = sample(-1, 0)
+    east = sample(1, 0)
+    north = sample(0, -1)
+    south = sample(0, 1)
+    dz_dx = east - west
+    dz_dy = south - north
+    slope = np.hypot(dz_dx, dz_dy)
+
+    normal_x = -dz_dx
+    normal_y = -dz_dy
+    normal_z = 42.0
+    normal_length = np.sqrt((normal_x * normal_x) + (normal_y * normal_y) + (normal_z * normal_z))
+    shade = ((normal_x * -0.48) + (normal_y * -0.58) + (normal_z * 0.66)) / normal_length
+    shade = np.clip((shade * 0.5) + 0.5, 0.0, 1.0)
+
+    local_min = safe_heights.copy()
+    local_max = safe_heights.copy()
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            neighbor = sample(dx, dy)
+            local_min = np.minimum(local_min, neighbor)
+            local_max = np.maximum(local_max, neighbor)
+    roughness = local_max - local_min
+    curvature = safe_heights - ((west + east + north + south) / 4.0)
+
+    broad_neighbors = [
+        sample(-3, -3),
+        sample(0, -3),
+        sample(3, -3),
+        sample(-3, 0),
+        sample(3, 0),
+        sample(-3, 3),
+        sample(0, 3),
+        sample(3, 3),
+    ]
+    broad_min = broad_neighbors[0].copy()
+    broad_max = broad_neighbors[0].copy()
+    for neighbor in broad_neighbors[1:]:
+        broad_min = np.minimum(broad_min, neighbor)
+        broad_max = np.maximum(broad_max, neighbor)
+    broad_roughness = broad_max - broad_min
+    broad_curvature = safe_heights - ((sample(-3, 0) + sample(3, 0) + sample(0, -3) + sample(0, 3)) / 4.0)
+
+    underwater = safe_heights < 0
+    depth_boost = np.clip(np.abs(safe_heights) / 140.0, 0.0, 1.0)
+    relief_contrast = np.where(underwater, 0.78 + depth_boost * 0.32, 0.9)
+    relief_brightness = np.where(
+        underwater,
+        0.34 + shade * 0.92 + np.minimum(0.28, slope * 0.018),
+        0.42 + shade * 0.82 + np.minimum(0.22, slope * 0.012),
+    )
+    relief = ((base - 128.0) * relief_contrast[:, :, None] + 128.0) * relief_brightness[:, :, None]
+
+    slope_signal = np.clip(slope / np.where(underwater, 34.0, 92.0), 0.0, 1.0)
+    rough_signal = np.clip(roughness / np.where(underwater, 65.0, 140.0), 0.0, 1.0)
+    ridge_signal = np.clip(curvature / np.where(underwater, 22.0, 48.0), 0.0, 1.0)
+    hollow_signal = np.clip(-curvature / np.where(underwater, 22.0, 48.0), 0.0, 1.0)
+    broad_rough_signal = np.clip(broad_roughness / np.where(underwater, 95.0, 220.0), 0.0, 1.0)
+    broad_ridge_signal = np.clip(broad_curvature / np.where(underwater, 34.0, 72.0), 0.0, 1.0)
+    broad_hollow_signal = np.clip(-broad_curvature / np.where(underwater, 34.0, 72.0), 0.0, 1.0)
+
+    def mix(image: np.ndarray, color: tuple[int, int, int], amount: np.ndarray) -> np.ndarray:
+        color_array = np.array(color, dtype=np.float32)
+        return image + (color_array - image) * np.clip(amount, 0.0, 1.0)[:, :, None]
+
+    fine_detail_signal = np.maximum.reduce([slope_signal * 0.86, rough_signal * 0.78, ridge_signal * 0.96])
+    broad_form_signal = np.maximum.reduce([broad_rough_signal * 0.62, broad_ridge_signal * 0.78, broad_hollow_signal * 0.72])
+    if low_detail_alpha_floor < 255:
+        detail_alpha = np.clip(np.maximum(fine_detail_signal, broad_form_signal) / 0.45, 0.0, 1.0)
+        floor = max(0.0, min(1.0, low_detail_alpha_floor / 255.0))
+        alpha = np.rint(alpha.astype(np.float32) * (floor + ((1.0 - floor) * detail_alpha))).astype(np.uint8)
+
+    composite_water = relief.copy()
+    composite_water = mix(composite_water, (56, 183, 198), 0.08 + slope_signal * 0.15 + broad_rough_signal * 0.07)
+    composite_water = mix(composite_water, (10, 28, 62), hollow_signal * 0.22 + broad_hollow_signal * 0.24)
+    composite_water = mix(composite_water, (30, 17, 72), broad_hollow_signal * 0.16)
+    composite_water = mix(composite_water, (247, 215, 126), ridge_signal * 0.34 + broad_ridge_signal * 0.28 + rough_signal * 0.10)
+    composite_water = mix(composite_water, (238, 246, 226), fine_detail_signal * 0.14 + broad_form_signal * 0.10)
+    water_contrast = 1.04 + fine_detail_signal * 0.30 + broad_form_signal * 0.18
+    water_brightness = 0.92 + (shade - 0.5) * 0.22 - hollow_signal * 0.10 - broad_hollow_signal * 0.10
+    composite_water = ((composite_water - 128.0) * water_contrast[:, :, None] + 128.0) * water_brightness[:, :, None]
+
+    land_detail = np.minimum(0.34, slope_signal * 0.18 + rough_signal * 0.10 + broad_rough_signal * 0.08)
+    composite_land = relief + (base - relief) * 0.18
+    composite_land = mix(composite_land, (248, 248, 240), land_detail)
+    composite_land = composite_land * (0.96 + shade * 0.12)[:, :, None]
+    composite = np.where(underwater[:, :, None], composite_water, composite_land)
+
+    texture_pixels = np.dstack((np.clip(np.rint(base), 0, 255).astype(np.uint8), alpha))
+    relief_pixels = np.dstack((np.clip(np.rint(relief), 0, 255).astype(np.uint8), alpha))
+    composite_pixels = np.dstack((np.clip(np.rint(composite), 0, 255).astype(np.uint8), alpha))
+    texture_pixels[~valid] = 0
+    relief_pixels[~valid] = 0
+    composite_pixels[~valid] = 0
+
+    Image.fromarray(elevation_pixels, "RGB").save(elevation_path)
+    Image.fromarray(texture_pixels, "RGBA").save(texture_path)
+    Image.fromarray(relief_pixels, "RGBA").save(relief_texture_path)
+    Image.fromarray(composite_pixels, "RGBA").save(composite_texture_path)
 
 
 def terrain_metadata(
@@ -1779,6 +1713,7 @@ def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
         24,
+        72,
     )
     return terrain_metadata(
         str(block["sourceId"]),
@@ -1928,45 +1863,18 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     for target in (
         DS684_TERRAIN_WGS84,
-        DS684_TERRAIN_ELEVATION_PNG,
-        DS684_TERRAIN_TEXTURE_PNG,
-        DS684_TERRAIN_RELIEF_TEXTURE_PNG,
-        DS684_TERRAIN_COMPOSITE_TEXTURE_PNG,
         CRM_TERRAIN_WGS84,
-        CRM_TERRAIN_ELEVATION_PNG,
-        CRM_TERRAIN_TEXTURE_PNG,
-        CRM_TERRAIN_RELIEF_TEXTURE_PNG,
-        CRM_TERRAIN_COMPOSITE_TEXTURE_PNG,
         CUDEM_TERRAIN_WGS84,
-        CUDEM_TERRAIN_ELEVATION_PNG,
-        CUDEM_TERRAIN_TEXTURE_PNG,
-        CUDEM_TERRAIN_RELIEF_TEXTURE_PNG,
-        CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG,
         ETOPO_TERRAIN_WGS84,
-        ETOPO_TERRAIN_ELEVATION_PNG,
-        ETOPO_TERRAIN_TEXTURE_PNG,
-        ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
-        ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG,
     ):
         target.unlink(missing_ok=True)
     for block in NOS_BAG_BLOCKS:
         nos_bag_terrain_wgs84(block).unlink(missing_ok=True)
-        nos_bag_elevation_png(block).unlink(missing_ok=True)
-        nos_bag_texture_png(block).unlink(missing_ok=True)
-        nos_bag_relief_texture_png(block).unlink(missing_ok=True)
-        nos_bag_composite_texture_png(block).unlink(missing_ok=True)
     for block in BATHYMETRY_BLOCKS:
         bathymetry_block_terrain_wgs84(block).unlink(missing_ok=True)
-        bathymetry_block_elevation_png(block).unlink(missing_ok=True)
-        bathymetry_block_texture_png(block).unlink(missing_ok=True)
-        bathymetry_block_relief_texture_png(block).unlink(missing_ok=True)
-        bathymetry_block_composite_texture_png(block).unlink(missing_ok=True)
         bathymetry_block_backscatter_wgs84(block).unlink(missing_ok=True)
-        bathymetry_block_sonar_texture_png(block).unlink(missing_ok=True)
-        bathymetry_block_hybrid_texture_png(block).unlink(missing_ok=True)
         if block.get("characterZipName"):
             bathymetry_block_character_wgs84(block).unlink(missing_ok=True)
-            bathymetry_block_character_texture_png(block).unlink(missing_ok=True)
 
     return [
         generate_crm_terrain_asset(),
