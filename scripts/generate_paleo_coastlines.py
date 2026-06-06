@@ -41,6 +41,15 @@ CRM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_elevati
 CRM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_color.png"
 CRM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_relief.png"
 CRM_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_composite.png"
+CUDEM_DIR = RAW_DIR / "noaa-cudem"
+CUDEM_TIF = CUDEM_DIR / "cudem_sf_bay_farallones_1_9as_subset.tif"
+CUDEM_CONTOURS_RAW = WORK_DIR / "noaa_cudem_1_9as_contours_raw.geojson"
+CUDEM_CONTOURS_BROWSER = WORK_DIR / "noaa_cudem_1_9as_contours_browser.geojson"
+CUDEM_TERRAIN_WGS84 = WORK_DIR / "noaa_cudem_1_9as_terrain_wgs84.tif"
+CUDEM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_elevation.png"
+CUDEM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_color.png"
+CUDEM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_relief.png"
+CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_composite.png"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
 DS684_TIF = DS684_DIR / "DEM_4_GeoTIFF" / "DEM_4_GeoTIFF.tif"
@@ -57,13 +66,16 @@ ETOPO_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_color.png
 ETOPO_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_relief.png"
 ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_composite.png"
 CRM_TERRAIN_SIZE = 1536
+CUDEM_TERRAIN_SIZE = 4096
 DS684_TERRAIN_SIZE = 768
 DS684_TERRAIN_MIN_M = -130.0
 DS684_TERRAIN_MAX_M = 400.0
-ETOPO_TERRAIN_MIN_M = -150.0
+ETOPO_TERRAIN_MIN_M = -2500.0
 ETOPO_TERRAIN_MAX_M = 1000.0
-CRM_TERRAIN_MIN_M = -150.0
+CRM_TERRAIN_MIN_M = -2500.0
 CRM_TERRAIN_MAX_M = 1000.0
+CUDEM_TERRAIN_MIN_M = -2500.0
+CUDEM_TERRAIN_MAX_M = 1200.0
 TERRAIN_VERTICAL_EXAGGERATION = 4.0
 TERRAIN_COLOR_STOPS = [
     (-1000.0, (18, 8, 48)),
@@ -98,6 +110,41 @@ ERDDAP_URL = (
 CRM_VOL7_REMOTE = 'NETCDF:"https://www.ngdc.noaa.gov/thredds/dodsC/crm/crm_vol7.nc":z'
 CSMP_OFFSHORE_SF_URL = "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/Bathymetry_OffshoreSanFrancisco.zip"
 DS684_DEM4_URL = "https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/DEM_4_GeoTIFF.zip"
+CUDEM_BASE_URL = "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_ninth_Topobathy_2014_8483/CA"
+CUDEM_TILE_NAMES = [
+    "ncei19_n37x00_w121x75_2023v1.tif",
+    "ncei19_n37x00_w122x00_2023v1.tif",
+    "ncei19_n37x00_w122x25_2023v1.tif",
+    "ncei19_n37x00_w122x50_2023v1.tif",
+    "ncei19_n37x25_w121x75_2023v1.tif",
+    "ncei19_n37x25_w122x00_2023v1.tif",
+    "ncei19_n37x25_w122x25_2023v1.tif",
+    "ncei19_n37x25_w122x50_2023v1.tif",
+    "ncei19_n37x50_w122x00_2022v1.tif",
+    "ncei19_n37x50_w122x25_2022v1.tif",
+    "ncei19_n37x50_w122x50_2022v1.tif",
+    "ncei19_n37x50_w122x75_2022v1.tif",
+    "ncei19_n37x75_w122x00_2022v1.tif",
+    "ncei19_n37x75_w122x25_2022v1.tif",
+    "ncei19_n37x75_w122x50_2022v1.tif",
+    "ncei19_n37x75_w122x75_2022v1.tif",
+    "ncei19_n38x00_w122x00_2022v1.tif",
+    "ncei19_n38x00_w122x25_2022v1.tif",
+    "ncei19_n38x00_w122x50_2022v1.tif",
+    "ncei19_n38x00_w122x75_2022v1.tif",
+    "ncei19_n38x00_w123x00_2025v1.tif",
+    "ncei19_n38x00_w123x25_2025v1.tif",
+    "ncei19_n38x00_w123x50_2025v1.tif",
+    "ncei19_n38x25_w122x00_2022v1.tif",
+    "ncei19_n38x25_w122x25_2022v1.tif",
+    "ncei19_n38x25_w122x50_2022v1.tif",
+    "ncei19_n38x25_w122x75_2022v1.tif",
+    "ncei19_n38x25_w123x00_2025v1.tif",
+    "ncei19_n38x25_w123x25_2025v1.tif",
+    "ncei19_n38x25_w123x50_2025v1.tif",
+]
+CUDEM_TILE_URLS = [f"{CUDEM_BASE_URL}/{name}" for name in CUDEM_TILE_NAMES]
+CUDEM_GDAL_INPUTS = [f"/vsicurl/{url}" for url in CUDEM_TILE_URLS]
 
 BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
     {
@@ -400,6 +447,11 @@ SOURCES = [
         "url": "https://www.ngdc.noaa.gov/thredds/catalog/crm/catalog.html",
         "role": "Broad SF-to-Farallones elevation source for offshore shelf terrain and contours.",
     },
+    {
+        "name": "NOAA CUDEM 1/9 arc-second California topobathymetry",
+        "url": "https://coast.noaa.gov/htdata/raster2/elevation/NCEI_ninth_Topobathy_2014_8483/",
+        "role": "Sharper broad Bay/coast topobathymetry inset built from remote California COG tiles.",
+    },
     *[
         {
             "name": block["sourceName"],
@@ -484,6 +536,43 @@ def download_noaa_crm_vol7_subset() -> None:
         str(BBOX["south"]),
         CRM_VOL7_REMOTE,
         str(CRM_TIF),
+    ])
+
+
+def prepare_noaa_cudem_subset() -> None:
+    if CUDEM_TIF.exists():
+        print(f"Using existing source file: {CUDEM_TIF}")
+        return
+
+    CUDEM_DIR.mkdir(parents=True, exist_ok=True)
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-of",
+        "GTiff",
+        "-co",
+        "COMPRESS=DEFLATE",
+        "-co",
+        "TILED=YES",
+        "-t_srs",
+        "EPSG:4326",
+        "-te",
+        str(BBOX["west"]),
+        str(BBOX["south"]),
+        str(BBOX["east"]),
+        str(BBOX["north"]),
+        "-ts",
+        str(CUDEM_TERRAIN_SIZE),
+        "0",
+        "-r",
+        "bilinear",
+        "-srcnodata",
+        "-9999",
+        "-dstnodata",
+        "-9999",
+        *CUDEM_GDAL_INPUTS,
+        str(CUDEM_TIF),
     ])
 
 
@@ -634,6 +723,25 @@ def generate_contours() -> None:
         str(CRM_CONTOURS_BROWSER),
         str(CRM_CONTOURS_RAW),
     ])
+    run([
+        "gdal_contour",
+        "-q",
+        "-a",
+        "elevation_m",
+        "-fl",
+        *levels,
+        str(CUDEM_TIF),
+        str(CUDEM_CONTOURS_RAW),
+    ])
+    run([
+        "ogr2ogr",
+        "-f",
+        "GeoJSON",
+        "-simplify",
+        "0.0008",
+        str(CUDEM_CONTOURS_BROWSER),
+        str(CUDEM_CONTOURS_RAW),
+    ])
 
     # These bathymetry blocks are sharper than the broad CRM grid, but each
     # covers only a patch. Generate all matching contours and merge them later.
@@ -695,7 +803,7 @@ def generate_contours() -> None:
 
 
 def is_valid_height(value: float) -> bool:
-    return math.isfinite(value) and -1000 < value < 1_000_000
+    return math.isfinite(value) and -9000 < value < 1_000_000
 
 
 def clamp_byte(value: float) -> int:
@@ -1363,6 +1471,47 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
     )
 
 
+def generate_cudem_terrain_asset() -> dict[str, Any]:
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-ts",
+        str(CUDEM_TERRAIN_SIZE),
+        "0",
+        "-r",
+        "bilinear",
+        "-dstnodata",
+        "-9999",
+        str(CUDEM_TIF),
+        str(CUDEM_TERRAIN_WGS84),
+    ])
+    write_terrain_pngs_from_wgs84(
+        CUDEM_TERRAIN_WGS84,
+        CUDEM_TERRAIN_ELEVATION_PNG,
+        CUDEM_TERRAIN_TEXTURE_PNG,
+        CUDEM_TERRAIN_RELIEF_TEXTURE_PNG,
+        CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        CUDEM_TERRAIN_MIN_M,
+        CUDEM_TERRAIN_MAX_M,
+    )
+    return terrain_metadata(
+        "noaa_cudem_1_9as",
+        source_label("noaa_cudem_1_9as"),
+        CUDEM_TERRAIN_WGS84,
+        CUDEM_TERRAIN_ELEVATION_PNG,
+        CUDEM_TERRAIN_TEXTURE_PNG,
+        CUDEM_TERRAIN_RELIEF_TEXTURE_PNG,
+        CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        None,
+        None,
+        None,
+        CUDEM_TERRAIN_MIN_M,
+        CUDEM_TERRAIN_MAX_M,
+        "NOAA CUDEM 1/9 arc-second topobathymetry clipped from remote California COG tiles. It is a sharper broad Bay/coast inset than CRM, but it does not replace CRM for complete offshore continuity toward the Farallones.",
+    )
+
+
 def generate_terrain_assets() -> list[dict[str, Any]]:
     TERRAIN_PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
     WORK_DIR.mkdir(parents=True, exist_ok=True)
@@ -1377,6 +1526,11 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         CRM_TERRAIN_TEXTURE_PNG,
         CRM_TERRAIN_RELIEF_TEXTURE_PNG,
         CRM_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        CUDEM_TERRAIN_WGS84,
+        CUDEM_TERRAIN_ELEVATION_PNG,
+        CUDEM_TERRAIN_TEXTURE_PNG,
+        CUDEM_TERRAIN_RELIEF_TEXTURE_PNG,
+        CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG,
         ETOPO_TERRAIN_WGS84,
         ETOPO_TERRAIN_ELEVATION_PNG,
         ETOPO_TERRAIN_TEXTURE_PNG,
@@ -1399,6 +1553,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
 
     return [
         generate_crm_terrain_asset(),
+        generate_cudem_terrain_asset(),
         *[generate_bathymetry_block_terrain_asset(block) for block in BATHYMETRY_BLOCKS],
         generate_usgs_terrain_asset(),
     ]
@@ -1497,6 +1652,7 @@ def features_for_source(index: dict[float, list[dict[str, Any]]], level: float, 
 def features_for_level(
     level: float,
     crm_by_level: dict[float, list[dict[str, Any]]],
+    cudem_by_level: dict[float, list[dict[str, Any]]],
     bathymetry_by_level: dict[float, list[dict[str, Any]]],
     usgs_by_level: dict[float, list[dict[str, Any]]],
     preferred_source_id: str | None = None,
@@ -1508,18 +1664,25 @@ def features_for_level(
         preferred_features = features_for_source(bathymetry_by_level, level_key, preferred_source_id)
         if preferred_features:
             return preferred_source_id, preferred_features
+    if preferred_source_id == "noaa_cudem_1_9as" and cudem_by_level.get(level_key):
+        return "noaa_cudem_1_9as", [
+            *crm_by_level.get(level_key, []),
+            *cudem_by_level[level_key],
+        ]
     if preferred_source_id == "noaa_crm_vol7_3as" and crm_by_level.get(level_key):
         return "noaa_crm_vol7_3as", crm_by_level[level_key]
     if preferred_source_id == "composite_high_resolution_local" and (
-        usgs_by_level.get(level_key) or bathymetry_by_level.get(level_key)
+        cudem_by_level.get(level_key) or usgs_by_level.get(level_key) or bathymetry_by_level.get(level_key)
     ):
         return "composite_high_resolution_local", [
             *crm_by_level.get(level_key, []),
+            *cudem_by_level.get(level_key, []),
             *bathymetry_by_level.get(level_key, []),
             *usgs_by_level.get(level_key, []),
         ]
 
     local_features = [
+        *cudem_by_level.get(level_key, []),
         *bathymetry_by_level.get(level_key, []),
         *usgs_by_level.get(level_key, []),
     ]
@@ -1534,12 +1697,14 @@ def features_for_level(
 def probe_features_for_level(
     level: float,
     crm_by_level: dict[float, list[dict[str, Any]]],
+    cudem_by_level: dict[float, list[dict[str, Any]]],
     bathymetry_by_level: dict[float, list[dict[str, Any]]],
     usgs_by_level: dict[float, list[dict[str, Any]]],
 ) -> list[dict[str, Any]]:
     level_key = rounded_level(level)
     features: list[dict[str, Any]] = []
     features.extend(crm_by_level.get(level_key, []))
+    features.extend(cudem_by_level.get(level_key, []))
     features.extend(bathymetry_by_level.get(level_key, []))
     features.extend(usgs_by_level.get(level_key, []))
     return features
@@ -1555,7 +1720,9 @@ def source_label(source_id: str) -> str:
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
     if source_id == "composite_high_resolution_local":
-        return "Composite high-resolution local bathymetry plus topobathymetry"
+        return "Composite high-resolution CUDEM, local bathymetry, and topobathymetry"
+    if source_id == "noaa_cudem_1_9as":
+        return "NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry"
     if source_id == "noaa_crm_vol7_3as":
         return "NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid"
     return "NOAA ETOPO 2022 15 arc-second broad Bay/offshore grid"
@@ -1563,6 +1730,7 @@ def source_label(source_id: str) -> str:
 
 def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     crm_by_level = build_level_index(CRM_CONTOURS_BROWSER, "noaa_crm_vol7_3as", 0.004, False)
+    cudem_by_level = build_level_index(CUDEM_CONTOURS_BROWSER, "noaa_cudem_1_9as", 0.004, False)
     bathymetry_by_level = merge_level_indexes([
         build_level_index(
             bathymetry_block_contours_wgs84(block),
@@ -1580,7 +1748,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     waterline_probe_features: list[dict[str, Any]] = []
 
     for level in WATERLINE_PROBE_LEVELS:
-        for feature in probe_features_for_level(level, crm_by_level, bathymetry_by_level, usgs_by_level):
+        for feature in probe_features_for_level(level, crm_by_level, cudem_by_level, bathymetry_by_level, usgs_by_level):
             source_id = feature["properties"]["source_id"]
             waterline_probe_features.append(
                 clone_feature(
@@ -1611,7 +1779,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         low = rounded_level(center - spread)
         high = rounded_level(center + spread)
 
-        estimate_source_id, estimate_source_features = features_for_level(center, crm_by_level, bathymetry_by_level, usgs_by_level)
+        estimate_source_id, estimate_source_features = features_for_level(center, crm_by_level, cudem_by_level, bathymetry_by_level, usgs_by_level)
         coastline_features = [
             clone_feature(
                 feature,
@@ -1633,6 +1801,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             uncertainty_source_id, uncertainty_source_features = features_for_level(
                 level,
                 crm_by_level,
+                cudem_by_level,
                 bathymetry_by_level,
                 usgs_by_level,
                 estimate_source_id,
@@ -1658,7 +1827,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             **item,
             "generatedAt": generated_at,
             "sourceModel": source_label(estimate_source_id),
-            "datumNote": "USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
+            "datumNote": "NOAA CUDEM, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
             "uncertaintyNote": "Lines show only sea-level uncertainty. They do not model erosion, sediment, marsh growth, tectonic motion, or river-channel migration.",
             "terrain": terrain[0],
             "terrains": terrain,
@@ -1670,9 +1839,11 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
+            str(CUDEM_TIF.relative_to(ROOT)),
+            *CUDEM_TILE_URLS,
             str(RAW_NETCDF.relative_to(ROOT)),
             *[
                 str(bathymetry_block_dataset(block).relative_to(ROOT))
@@ -1697,6 +1868,10 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(CRM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(CRM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
             str(CRM_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            str(CUDEM_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
+            str(CUDEM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
+            str(CUDEM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
+            str(CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
             *[
                 str(path.relative_to(ROOT))
                 for block in BATHYMETRY_BLOCKS
@@ -1825,6 +2000,7 @@ def main() -> int:
     require_tool("unzip")
     download_raw_netcdf()
     download_noaa_crm_vol7_subset()
+    prepare_noaa_cudem_subset()
     download_bathymetry_blocks()
     download_usgs_ds684_dem4()
     generate_contours()
