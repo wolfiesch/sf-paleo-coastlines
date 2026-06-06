@@ -40,6 +40,7 @@ CRM_TERRAIN_WGS84 = WORK_DIR / "noaa_crm_vol7_sf_farallones_terrain_wgs84.tif"
 CRM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_elevation.png"
 CRM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_color.png"
 CRM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_relief.png"
+CRM_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "crm_vol7_sf_farallones_composite.png"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
 DS684_TIF = DS684_DIR / "DEM_4_GeoTIFF" / "DEM_4_GeoTIFF.tif"
@@ -49,10 +50,12 @@ DS684_TERRAIN_WGS84 = WORK_DIR / "usgs_ds684_dem4_terrain_wgs84.tif"
 DS684_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "dem4_elevation.png"
 DS684_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "dem4_color.png"
 DS684_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "dem4_relief.png"
+DS684_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "dem4_composite.png"
 ETOPO_TERRAIN_WGS84 = WORK_DIR / "etopo_2022_bay_farallones_terrain_wgs84.tif"
 ETOPO_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_elevation.png"
 ETOPO_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_color.png"
 ETOPO_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_relief.png"
+ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_composite.png"
 CRM_TERRAIN_SIZE = 1536
 DS684_TERRAIN_SIZE = 768
 DS684_TERRAIN_MIN_M = -130.0
@@ -421,6 +424,10 @@ def bathymetry_block_relief_texture_png(block: dict[str, Any]) -> Path:
     return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_relief.png"
 
 
+def bathymetry_block_composite_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_composite.png"
+
+
 def bathymetry_block_sonar_texture_png(block: dict[str, Any]) -> Path:
     return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_sonar.png"
 
@@ -598,6 +605,47 @@ def shaded_relief_color(base: tuple[int, int, int], shade: float, slope: float, 
     return tuple(clamp_byte(((channel - 128) * contrast + 128) * brightness) for channel in base)
 
 
+def mix_color(a: tuple[int, int, int], b: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
+    amount = max(0.0, min(1.0, amount))
+    return tuple(clamp_byte(a[channel] + (b[channel] - a[channel]) * amount) for channel in range(3))
+
+
+def survey_composite_color(
+    base: tuple[int, int, int],
+    relief: tuple[int, int, int],
+    shade: float,
+    slope: float,
+    roughness: float,
+    curvature: float,
+    height: float,
+) -> tuple[int, int, int]:
+    slope_signal = max(0.0, min(1.0, slope / (34.0 if height < 0 else 92.0)))
+    rough_signal = max(0.0, min(1.0, roughness / (65.0 if height < 0 else 140.0)))
+    ridge_signal = max(0.0, min(1.0, curvature / (22.0 if height < 0 else 48.0)))
+    hollow_signal = max(0.0, min(1.0, -curvature / (22.0 if height < 0 else 48.0)))
+
+    if height < 0:
+        shelf_cyan = (56, 183, 198)
+        deep_blue = (10, 28, 62)
+        ridge_gold = (247, 215, 126)
+        pale_scarp = (238, 246, 226)
+
+        detail_signal = max(slope_signal * 0.8, rough_signal * 0.72, ridge_signal * 0.9)
+        color = mix_color(relief, shelf_cyan, 0.08 + slope_signal * 0.16)
+        color = mix_color(color, deep_blue, hollow_signal * 0.28)
+        color = mix_color(color, ridge_gold, ridge_signal * 0.38 + rough_signal * 0.12)
+        color = mix_color(color, pale_scarp, detail_signal * 0.18)
+
+        contrast = 1.04 + detail_signal * 0.34
+        brightness = 0.92 + (shade - 0.5) * 0.22 - hollow_signal * 0.12
+        return tuple(clamp_byte(((channel - 128) * contrast + 128) * brightness) for channel in color)
+
+    land_detail = min(0.28, slope_signal * 0.18 + rough_signal * 0.1)
+    color = mix_color(relief, base, 0.18)
+    color = mix_color(color, (248, 248, 240), land_detail)
+    return tuple(clamp_byte(channel * (0.96 + shade * 0.12)) for channel in color)
+
+
 def relief_shade(
     heights: list[float | None],
     width: int,
@@ -630,6 +678,39 @@ def relief_shade(
     light_x, light_y, light_z = -0.48, -0.58, 0.66
     shade = (normal_x * light_x + normal_y * light_y + normal_z * light_z) / normal_length
     return max(0.0, min(1.0, shade * 0.5 + 0.5)), slope
+
+
+def terrain_surface_metrics(
+    heights: list[float | None],
+    width: int,
+    height: int,
+    x: int,
+    y: int,
+) -> tuple[float, float]:
+    center = heights[y * width + x]
+    if center is None:
+        return 0.0, 0.0
+
+    def sample(sample_x: int, sample_y: int) -> float:
+        clamped_x = max(0, min(width - 1, sample_x))
+        clamped_y = max(0, min(height - 1, sample_y))
+        value = heights[clamped_y * width + clamped_x]
+        return value if value is not None else center
+
+    neighbors = [
+        sample(sample_x, sample_y)
+        for sample_y in range(y - 1, y + 2)
+        for sample_x in range(x - 1, x + 2)
+    ]
+    roughness = max(neighbors) - min(neighbors)
+    cardinal_average = (
+        sample(x - 1, y)
+        + sample(x + 1, y)
+        + sample(x, y - 1)
+        + sample(x, y + 1)
+    ) / 4.0
+    curvature = center - cardinal_average
+    return roughness, curvature
 
 
 def raw_pixel_value(raw: Any) -> float:
@@ -703,6 +784,7 @@ def write_terrain_pngs_from_wgs84(
     elevation_path: Path,
     texture_path: Path,
     relief_texture_path: Path,
+    composite_texture_path: Path,
     minimum: float,
     maximum: float,
 ) -> None:
@@ -710,11 +792,13 @@ def write_terrain_pngs_from_wgs84(
     elevation = Image.new("RGB", source.size)
     texture = Image.new("RGBA", source.size)
     relief_texture = Image.new("RGBA", source.size)
+    composite_texture = Image.new("RGBA", source.size)
     width, image_height = source.size
 
     elevation_pixels = []
     texture_pixels: list[tuple[int, int, int, int]] = []
     relief_pixels: list[tuple[int, int, int, int]] = []
+    composite_pixels: list[tuple[int, int, int, int]] = []
     heights: list[float | None] = []
     base_colors: list[tuple[int, int, int] | None] = []
 
@@ -737,18 +821,27 @@ def write_terrain_pngs_from_wgs84(
         height_value = heights[index]
         if base_color is None or height_value is None:
             relief_pixels.append((0, 0, 0, 0))
+            composite_pixels.append((0, 0, 0, 0))
             continue
         x = index % width
         y = index // width
         shade, slope = relief_shade(heights, width, image_height, x, y)
-        relief_pixels.append((*shaded_relief_color(base_color, shade, slope, height_value), 255))
+        roughness, curvature = terrain_surface_metrics(heights, width, image_height, x, y)
+        relief_color = shaded_relief_color(base_color, shade, slope, height_value)
+        relief_pixels.append((*relief_color, 255))
+        composite_pixels.append((
+            *survey_composite_color(base_color, relief_color, shade, slope, roughness, curvature, height_value),
+            255,
+        ))
 
     elevation.putdata(elevation_pixels)
     texture.putdata(texture_pixels)
     relief_texture.putdata(relief_pixels)
+    composite_texture.putdata(composite_pixels)
     elevation.save(elevation_path)
     texture.save(texture_path)
     relief_texture.save(relief_texture_path)
+    composite_texture.save(composite_texture_path)
 
 
 def terrain_metadata(
@@ -758,6 +851,7 @@ def terrain_metadata(
     elevation_png: Path,
     texture_png: Path,
     relief_texture_png: Path,
+    composite_texture_png: Path,
     sonar_texture_png: Path | None,
     minimum: float,
     maximum: float,
@@ -778,6 +872,7 @@ def terrain_metadata(
     textures = {
         "depthColor": public_url(texture_png),
         "shadedRelief": public_url(relief_texture_png),
+        "surveyComposite": public_url(composite_texture_png),
     }
     if sonar_texture_png is not None and sonar_texture_png.exists():
         textures["sonarBackscatter"] = public_url(sonar_texture_png)
@@ -823,6 +918,7 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_ELEVATION_PNG,
         DS684_TERRAIN_TEXTURE_PNG,
         DS684_TERRAIN_RELIEF_TEXTURE_PNG,
+        DS684_TERRAIN_COMPOSITE_TEXTURE_PNG,
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
     )
@@ -833,6 +929,7 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_ELEVATION_PNG,
         DS684_TERRAIN_TEXTURE_PNG,
         DS684_TERRAIN_RELIEF_TEXTURE_PNG,
+        DS684_TERRAIN_COMPOSITE_TEXTURE_PNG,
         None,
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
@@ -915,6 +1012,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         bathymetry_block_elevation_png(block),
         bathymetry_block_texture_png(block),
         bathymetry_block_relief_texture_png(block),
+        bathymetry_block_composite_texture_png(block),
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
     )
@@ -926,6 +1024,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         bathymetry_block_elevation_png(block),
         bathymetry_block_texture_png(block),
         bathymetry_block_relief_texture_png(block),
+        bathymetry_block_composite_texture_png(block),
         sonar_texture,
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
@@ -958,6 +1057,7 @@ def generate_etopo_terrain_asset() -> dict[str, Any]:
         ETOPO_TERRAIN_ELEVATION_PNG,
         ETOPO_TERRAIN_TEXTURE_PNG,
         ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
+        ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG,
         ETOPO_TERRAIN_MIN_M,
         ETOPO_TERRAIN_MAX_M,
     )
@@ -968,6 +1068,7 @@ def generate_etopo_terrain_asset() -> dict[str, Any]:
         ETOPO_TERRAIN_ELEVATION_PNG,
         ETOPO_TERRAIN_TEXTURE_PNG,
         ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
+        ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG,
         None,
         ETOPO_TERRAIN_MIN_M,
         ETOPO_TERRAIN_MAX_M,
@@ -993,6 +1094,7 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
         CRM_TERRAIN_ELEVATION_PNG,
         CRM_TERRAIN_TEXTURE_PNG,
         CRM_TERRAIN_RELIEF_TEXTURE_PNG,
+        CRM_TERRAIN_COMPOSITE_TEXTURE_PNG,
         CRM_TERRAIN_MIN_M,
         CRM_TERRAIN_MAX_M,
     )
@@ -1003,6 +1105,7 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
         CRM_TERRAIN_ELEVATION_PNG,
         CRM_TERRAIN_TEXTURE_PNG,
         CRM_TERRAIN_RELIEF_TEXTURE_PNG,
+        CRM_TERRAIN_COMPOSITE_TEXTURE_PNG,
         None,
         CRM_TERRAIN_MIN_M,
         CRM_TERRAIN_MAX_M,
@@ -1018,14 +1121,17 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         DS684_TERRAIN_ELEVATION_PNG,
         DS684_TERRAIN_TEXTURE_PNG,
         DS684_TERRAIN_RELIEF_TEXTURE_PNG,
+        DS684_TERRAIN_COMPOSITE_TEXTURE_PNG,
         CRM_TERRAIN_WGS84,
         CRM_TERRAIN_ELEVATION_PNG,
         CRM_TERRAIN_TEXTURE_PNG,
         CRM_TERRAIN_RELIEF_TEXTURE_PNG,
+        CRM_TERRAIN_COMPOSITE_TEXTURE_PNG,
         ETOPO_TERRAIN_WGS84,
         ETOPO_TERRAIN_ELEVATION_PNG,
         ETOPO_TERRAIN_TEXTURE_PNG,
         ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
+        ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG,
     ):
         target.unlink(missing_ok=True)
     for block in BATHYMETRY_BLOCKS:
@@ -1033,6 +1139,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         bathymetry_block_elevation_png(block).unlink(missing_ok=True)
         bathymetry_block_texture_png(block).unlink(missing_ok=True)
         bathymetry_block_relief_texture_png(block).unlink(missing_ok=True)
+        bathymetry_block_composite_texture_png(block).unlink(missing_ok=True)
         bathymetry_block_backscatter_wgs84(block).unlink(missing_ok=True)
         bathymetry_block_sonar_texture_png(block).unlink(missing_ok=True)
 
@@ -1330,6 +1437,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(CRM_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(CRM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(CRM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
+            str(CRM_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
             *[
                 str(path.relative_to(ROOT))
                 for block in BATHYMETRY_BLOCKS
@@ -1337,6 +1445,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                     bathymetry_block_elevation_png(block),
                     bathymetry_block_texture_png(block),
                     bathymetry_block_relief_texture_png(block),
+                    bathymetry_block_composite_texture_png(block),
                     bathymetry_block_sonar_texture_png(block),
                 )
                 if path.exists()
@@ -1344,6 +1453,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(DS684_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(DS684_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(DS684_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
+            str(DS684_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
         ],
         "sources": SOURCES,
         "timeSlices": [
