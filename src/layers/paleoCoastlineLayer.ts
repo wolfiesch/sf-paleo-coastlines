@@ -6,6 +6,7 @@ import type {
   PaleoRenderContext,
   PaleoTerrainConfig,
   PaleoTimeSlice,
+  SceneProfile,
   TerrainDetailLevel,
   TerrainTextureMode,
 } from "../types";
@@ -30,6 +31,74 @@ type GeoJsonCoordinates = number[] | GeoJsonCoordinates[];
 
 const DEPTH_CONTOUR_BAND_METERS = 30;
 
+interface SceneProfileConfig {
+  verticalScale: number;
+  waterAlpha: number;
+  waterLineAlpha: number;
+  terrainAmbient: number;
+  terrainDiffuse: number;
+  terrainShininess: number;
+  revealStrengthScale: number;
+  submergedStrengthScale: number;
+  contourAlphaScale: number;
+  contourWidthScale: number;
+  emergenceAlphaScale: number;
+  emergenceRadiusScale: number;
+}
+
+const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
+  study: {
+    verticalScale: 0.95,
+    waterAlpha: 84,
+    waterLineAlpha: 155,
+    terrainAmbient: 0.5,
+    terrainDiffuse: 0.55,
+    terrainShininess: 12,
+    revealStrengthScale: 0.78,
+    submergedStrengthScale: 0.82,
+    contourAlphaScale: 0.78,
+    contourWidthScale: 0.9,
+    emergenceAlphaScale: 0.7,
+    emergenceRadiusScale: 0.82,
+  },
+  relief: {
+    verticalScale: 1.22,
+    waterAlpha: 58,
+    waterLineAlpha: 205,
+    terrainAmbient: 0.34,
+    terrainDiffuse: 0.86,
+    terrainShininess: 26,
+    revealStrengthScale: 1.04,
+    submergedStrengthScale: 0.95,
+    contourAlphaScale: 1.08,
+    contourWidthScale: 1.08,
+    emergenceAlphaScale: 0.92,
+    emergenceRadiusScale: 0.95,
+  },
+  emergence: {
+    verticalScale: 1.12,
+    waterAlpha: 42,
+    waterLineAlpha: 235,
+    terrainAmbient: 0.38,
+    terrainDiffuse: 0.78,
+    terrainShininess: 22,
+    revealStrengthScale: 1.28,
+    submergedStrengthScale: 1.18,
+    contourAlphaScale: 1.22,
+    contourWidthScale: 1.18,
+    emergenceAlphaScale: 1.18,
+    emergenceRadiusScale: 1.18,
+  },
+};
+
+function sceneConfig(profile: SceneProfile): SceneProfileConfig {
+  return SCENE_PROFILE_CONFIG[profile] ?? SCENE_PROFILE_CONFIG.emergence;
+}
+
+function scaleAlpha(alpha: number, scale: number): number {
+  return Math.max(0, Math.min(255, Math.round(alpha * scale)));
+}
+
 function lineRoleLabel(role: PaleoCoastlineProperties["line_role"]): string {
   if (role === "lower_sea_level_bound") return "Lower sea-level bound";
   if (role === "higher_sea_level_bound") return "Higher sea-level bound";
@@ -37,61 +106,61 @@ function lineRoleLabel(role: PaleoCoastlineProperties["line_role"]): string {
   return "Best estimate";
 }
 
-function probeLineColor(feature: PickedPaleoFeature, activeWaterLevel: number): [number, number, number, number] {
+function probeLineColor(feature: PickedPaleoFeature, activeWaterLevel: number, profile: SceneProfileConfig): [number, number, number, number] {
   const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
   const fade = Math.max(0, 1 - Math.abs(offsetMeters) / 20);
   const alpha = Math.round(80 + fade * 165);
 
-  if (Math.abs(offsetMeters) <= 2.5) return [255, 255, 255, 250];
-  if (offsetMeters > 0) return [255, 220, 118, alpha];
-  return [62, 214, 255, Math.max(70, alpha - 20)];
+  if (Math.abs(offsetMeters) <= 2.5) return [255, 255, 255, scaleAlpha(250, profile.contourAlphaScale)];
+  if (offsetMeters > 0) return [255, 220, 118, scaleAlpha(alpha, profile.contourAlphaScale)];
+  return [62, 214, 255, scaleAlpha(Math.max(70, alpha - 20), profile.contourAlphaScale)];
 }
 
-function getLineColor(feature: PickedPaleoFeature, activeWaterLevel: number): [number, number, number, number] {
-  if (feature.properties.line_role === "waterline_probe") return probeLineColor(feature, activeWaterLevel);
+function getLineColor(feature: PickedPaleoFeature, activeWaterLevel: number, profile: SceneProfileConfig): [number, number, number, number] {
+  if (feature.properties.line_role === "waterline_probe") return probeLineColor(feature, activeWaterLevel, profile);
   if (feature.properties.line_role === "estimate") return [70, 220, 238, 235];
   if (feature.properties.line_role === "lower_sea_level_bound") return [114, 184, 255, 125];
   return [255, 207, 92, 125];
 }
 
-function getLineWidth(feature: PickedPaleoFeature, activeWaterLevel: number): number {
+function getLineWidth(feature: PickedPaleoFeature, activeWaterLevel: number, profile: SceneProfileConfig): number {
   if (feature.properties.line_role === "waterline_probe") {
     const offsetMeters = Math.abs(feature.properties.elevation_m - activeWaterLevel);
-    if (offsetMeters <= 2.5) return 3.4;
-    return offsetMeters <= 10 ? 1.8 : 1.15;
+    if (offsetMeters <= 2.5) return 3.4 * profile.contourWidthScale;
+    return (offsetMeters <= 10 ? 1.8 : 1.15) * profile.contourWidthScale;
   }
   return feature.properties.line_role === "estimate" ? 3 : 1.5;
 }
 
-function depthContourColor(feature: PickedPaleoFeature, activeWaterLevel: number): [number, number, number, number] {
+function depthContourColor(feature: PickedPaleoFeature, activeWaterLevel: number, profile: SceneProfileConfig): [number, number, number, number] {
   const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
   const distance = Math.abs(offsetMeters);
   const fade = Math.max(0, 1 - distance / DEPTH_CONTOUR_BAND_METERS);
-  if (distance <= 2.5) return [255, 255, 255, 235];
-  if (offsetMeters > 0) return [255, 218, 96, Math.round(72 + fade * 92)];
-  return [42, 125, 176, Math.round(56 + fade * 86)];
+  if (distance <= 2.5) return [255, 255, 255, scaleAlpha(235, profile.contourAlphaScale)];
+  if (offsetMeters > 0) return [255, 218, 96, scaleAlpha(72 + fade * 92, profile.contourAlphaScale)];
+  return [42, 125, 176, scaleAlpha(56 + fade * 86, profile.contourAlphaScale)];
 }
 
-function depthContourWidth(feature: PickedPaleoFeature, activeWaterLevel: number): number {
+function depthContourWidth(feature: PickedPaleoFeature, activeWaterLevel: number, profile: SceneProfileConfig): number {
   const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
-  if (distance <= 2.5) return 2.8;
-  return Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.25 : 0.7;
+  if (distance <= 2.5) return 2.8 * profile.contourWidthScale;
+  return (Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.25 : 0.7) * profile.contourWidthScale;
 }
 
-function shorelineGlowColor(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner"): [number, number, number, number] {
+function shorelineGlowColor(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner", profile: SceneProfileConfig): [number, number, number, number] {
   const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
   const distance = Math.abs(offsetMeters);
   const fade = Math.max(0, 1 - distance / 4.5);
   const baseAlpha = strength === "outer" ? 62 : 130;
-  const alpha = Math.round(baseAlpha * fade);
+  const alpha = scaleAlpha(baseAlpha * fade, profile.contourAlphaScale);
   if (offsetMeters > 0) return [255, 221, 104, alpha];
   return strength === "outer" ? [88, 228, 255, alpha] : [232, 255, 255, alpha];
 }
 
-function shorelineGlowWidth(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner"): number {
+function shorelineGlowWidth(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner", profile: SceneProfileConfig): number {
   const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
   const fade = Math.max(0, 1 - distance / 4.5);
-  return strength === "outer" ? 12 + fade * 6 : 5 + fade * 4;
+  return (strength === "outer" ? 12 + fade * 6 : 5 + fade * 4) * profile.contourWidthScale;
 }
 
 function selectedSlice(data: PaleoTimeSlice[], context: PaleoRenderContext): PaleoTimeSlice | null {
@@ -109,12 +178,12 @@ function primaryTerrainForSlice(slice: PaleoTimeSlice): PaleoTerrainConfig | nul
   return terrainStackForSlice(slice)[0] ?? null;
 }
 
-function waterPlaneForSlice(slice: PaleoTimeSlice): WaterPlaneFeature[] {
+function waterPlaneForSlice(slice: PaleoTimeSlice, profile: SceneProfileConfig): WaterPlaneFeature[] {
   const terrain = primaryTerrainForSlice(slice);
   if (!terrain) return [];
 
   const [west, south, east, north] = terrain.bounds;
-  const elevation = slice.seaLevelMeters * terrain.verticalExaggeration;
+  const elevation = terrainZ(terrain, slice.seaLevelMeters, profile);
 
   return [{
     label: slice.label,
@@ -180,6 +249,19 @@ function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode
   return terrain.textures?.shadedRelief ?? terrain.texture;
 }
 
+function elevationDecoderForTerrain(terrain: PaleoTerrainConfig, profile: SceneProfileConfig): PaleoTerrainConfig["elevationDecoder"] {
+  return {
+    rScaler: terrain.elevationDecoder.rScaler * profile.verticalScale,
+    gScaler: terrain.elevationDecoder.gScaler * profile.verticalScale,
+    bScaler: terrain.elevationDecoder.bScaler * profile.verticalScale,
+    offset: terrain.elevationDecoder.offset * profile.verticalScale,
+  };
+}
+
+function terrainZ(terrain: PaleoTerrainConfig, elevationMeters: number, profile: SceneProfileConfig, zOffsetMeters = 0): number {
+  return (elevationMeters * terrain.verticalExaggeration * profile.verticalScale) + zOffsetMeters;
+}
+
 function addZToCoordinates(coordinates: unknown, zMeters: number): unknown {
   if (!Array.isArray(coordinates)) return coordinates;
   if (
@@ -206,11 +288,16 @@ function extractPositions(coordinates: unknown): number[][] {
   return coordinates.flatMap((item) => extractPositions(item));
 }
 
-function elevatedFeature(feature: PaleoCoastlineFeature, terrain: PaleoTerrainConfig | null, zOffsetOverride?: number): PaleoCoastlineFeature {
+function elevatedFeature(
+  feature: PaleoCoastlineFeature,
+  terrain: PaleoTerrainConfig | null,
+  zOffsetOverride: number | undefined,
+  profile: SceneProfileConfig,
+): PaleoCoastlineFeature {
   if (!terrain) return feature;
 
   const zOffset = zOffsetOverride ?? (feature.properties.line_role === "waterline_probe" ? 1.8 : 1.2);
-  const zMeters = feature.properties.elevation_m * terrain.verticalExaggeration + zOffset;
+  const zMeters = terrainZ(terrain, feature.properties.elevation_m, profile, zOffset);
   return {
     ...feature,
     geometry: {
@@ -224,6 +311,7 @@ function emergencePointsForWaterLevel(
   features: PaleoCoastlineFeature[],
   terrain: PaleoTerrainConfig | null,
   activeWaterLevel: number,
+  profile: SceneProfileConfig,
 ): EmergencePoint[] {
   if (!terrain) return [];
 
@@ -235,7 +323,7 @@ function emergencePointsForWaterLevel(
 
     const positions = extractPositions(feature.geometry.coordinates);
     const stride = Math.max(1, Math.ceil(positions.length / 18));
-    const zMeters = feature.properties.elevation_m * terrain.verticalExaggeration + 3.4;
+    const zMeters = terrainZ(terrain, feature.properties.elevation_m, profile, 3.4);
 
     for (let index = 0; index < positions.length; index += stride) {
       const position = positions[index];
@@ -262,16 +350,17 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
   };
 
   const terrain = primaryTerrainForSlice(slice);
+  const profile = sceneConfig(context.sceneProfile);
   const rawProbeFeatures = probeFeaturesForWaterLevel(data, slice, activeWaterLevel);
   const activeProbeFeatures = rawProbeFeatures.filter((feature) => Math.abs(feature.properties.elevation_m - activeWaterLevel) <= 2.5);
-  const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel);
+  const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
   const features = [
     ...slice.coastline.features,
     ...activeProbeFeatures,
     ...(context.showPaleoUncertainty ? slice.uncertainty.features : []),
-  ].map((feature) => elevatedFeature(feature, terrain));
-  const shorelineGlowFeatures = activeProbeFeatures.map((feature) => elevatedFeature(feature, terrain, 3.2));
-  const depthContourFeatures = rawProbeFeatures.map((feature) => elevatedFeature(feature, terrain));
+  ].map((feature) => elevatedFeature(feature, terrain, undefined, profile));
+  const shorelineGlowFeatures = activeProbeFeatures.map((feature) => elevatedFeature(feature, terrain, 3.2, profile));
+  const depthContourFeatures = rawProbeFeatures.map((feature) => elevatedFeature(feature, terrain, undefined, profile));
 
   const terrainLayers = terrainStackForSlice(slice).map((terrain, index) =>
     new TerrainLayer({
@@ -279,13 +368,13 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
       elevationData: terrain.elevationData,
       texture: textureForTerrain(terrain, context.terrainTextureMode),
       bounds: terrain.bounds,
-      elevationDecoder: terrain.elevationDecoder,
+      elevationDecoder: elevationDecoderForTerrain(terrain, profile),
       meshMaxError: meshMaxErrorForTerrain(terrain, index, context.terrainDetail),
       wireframe: false,
       material: {
-        ambient: 0.45,
-        diffuse: 0.65,
-        shininess: 18,
+        ambient: profile.terrainAmbient,
+        diffuse: profile.terrainDiffuse,
+        shininess: profile.terrainShininess,
         specularColor: [60, 70, 78],
       },
       _subLayerProps: {
@@ -293,9 +382,9 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
           extensions: [terrainRevealExtension],
           terrainRevealBandMeters: isBroadTerrain(terrain) ? 28 : 44,
           terrainRevealEnabled: true,
-          terrainRevealStrength: isBroadTerrain(terrain) ? 0.24 : 0.42,
-          terrainRevealSubmergedStrength: isBroadTerrain(terrain) ? 0.14 : 0.26,
-          terrainRevealWaterLevelZ: activeWaterLevel * terrain.verticalExaggeration,
+          terrainRevealStrength: (isBroadTerrain(terrain) ? 0.24 : 0.42) * profile.revealStrengthScale,
+          terrainRevealSubmergedStrength: (isBroadTerrain(terrain) ? 0.14 : 0.26) * profile.submergedStrengthScale,
+          terrainRevealWaterLevelZ: terrainZ(terrain, activeWaterLevel, profile),
         },
       },
     }),
@@ -303,13 +392,13 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
 
   const waterLayer = new PolygonLayer<WaterPlaneFeature>({
     id: "paleo-water",
-    data: waterPlaneForSlice(waterSlice),
+    data: waterPlaneForSlice(waterSlice, profile),
     pickable: false,
     filled: true,
     stroked: true,
     getPolygon: (item) => item.polygon,
-    getFillColor: [24, 112, 166, 76],
-    getLineColor: [188, 248, 255, 185],
+    getFillColor: [24, 112, 166, profile.waterAlpha],
+    getLineColor: [188, 248, 255, profile.waterLineAlpha],
     getLineWidth: 2,
     lineWidthUnits: "pixels",
   });
@@ -325,8 +414,8 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     filled: false,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 0.5,
-    getLineColor: (feature) => depthContourColor(feature, activeWaterLevel),
-    getLineWidth: (feature) => depthContourWidth(feature, activeWaterLevel),
+    getLineColor: (feature) => depthContourColor(feature, activeWaterLevel, profile),
+    getLineWidth: (feature) => depthContourWidth(feature, activeWaterLevel, profile),
   });
 
   const shorelineGlowOuterLayer = new GeoJsonLayer<PaleoCoastlineProperties>({
@@ -340,8 +429,8 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     filled: false,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 1,
-    getLineColor: (feature) => shorelineGlowColor(feature, activeWaterLevel, "outer"),
-    getLineWidth: (feature) => shorelineGlowWidth(feature, activeWaterLevel, "outer"),
+    getLineColor: (feature) => shorelineGlowColor(feature, activeWaterLevel, "outer", profile),
+    getLineWidth: (feature) => shorelineGlowWidth(feature, activeWaterLevel, "outer", profile),
   });
 
   const shorelineGlowInnerLayer = new GeoJsonLayer<PaleoCoastlineProperties>({
@@ -355,8 +444,8 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     filled: false,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 1,
-    getLineColor: (feature) => shorelineGlowColor(feature, activeWaterLevel, "inner"),
-    getLineWidth: (feature) => shorelineGlowWidth(feature, activeWaterLevel, "inner"),
+    getLineColor: (feature) => shorelineGlowColor(feature, activeWaterLevel, "inner", profile),
+    getLineWidth: (feature) => shorelineGlowWidth(feature, activeWaterLevel, "inner", profile),
   });
 
   const emergenceLayer = new ScatterplotLayer<EmergencePoint>({
@@ -369,12 +458,12 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     radiusMinPixels: 2.2,
     radiusMaxPixels: 7,
     getPosition: (item) => item.position,
-    getRadius: (item) => 180 + (15 - item.offsetMeters) * 14,
+    getRadius: (item) => (180 + (15 - item.offsetMeters) * 14) * profile.emergenceRadiusScale,
     getFillColor: (item) => {
-      const alpha = Math.round(135 + (15 - item.offsetMeters) * 7);
+      const alpha = scaleAlpha(135 + (15 - item.offsetMeters) * 7, profile.emergenceAlphaScale);
       return [255, 232, 92, alpha];
     },
-    getLineColor: [255, 255, 255, 190],
+    getLineColor: [255, 255, 255, scaleAlpha(190, profile.emergenceAlphaScale)],
     getLineWidth: 1,
     lineWidthUnits: "pixels",
   });
@@ -390,8 +479,8 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     filled: false,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 1,
-    getLineColor: (feature) => getLineColor(feature, activeWaterLevel),
-    getLineWidth: (feature) => getLineWidth(feature, activeWaterLevel),
+    getLineColor: (feature) => getLineColor(feature, activeWaterLevel, profile),
+    getLineWidth: (feature) => getLineWidth(feature, activeWaterLevel, profile),
     autoHighlight: true,
     highlightColor: [255, 255, 255, 180],
   });

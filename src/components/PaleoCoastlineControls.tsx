@@ -1,5 +1,5 @@
 import { Database, Gauge, Pause, Play, RotateCcw, Waves } from "lucide-react";
-import type { PaleoTimeSlice, PaleoTimeSliceId, TerrainDetailLevel, TerrainTextureMode } from "../types";
+import type { PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainTextureMode } from "../types";
 
 interface PaleoCoastlineControlsProps {
   slices: PaleoTimeSlice[];
@@ -9,6 +9,7 @@ interface PaleoCoastlineControlsProps {
   isPlaying: boolean;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;
+  sceneProfile: SceneProfile;
   onSliceChange: (id: PaleoTimeSliceId) => void;
   onToggleUncertainty: () => void;
   onWaterLevelChange: (level: number) => void;
@@ -16,6 +17,7 @@ interface PaleoCoastlineControlsProps {
   onResetWaterLevel: () => void;
   onTerrainDetailChange: (level: TerrainDetailLevel) => void;
   onTerrainTextureModeChange: (mode: TerrainTextureMode) => void;
+  onSceneProfileChange: (profile: SceneProfile) => void;
 }
 
 const TERRAIN_DETAIL_OPTIONS: { id: TerrainDetailLevel; label: string; title: string }[] = [
@@ -31,6 +33,12 @@ const TERRAIN_TEXTURE_OPTIONS: { id: TerrainTextureMode; label: string; title: s
   { id: "relief", label: "Relief", title: "Depth color plus DEM-derived light and shadow" },
   { id: "sonar", label: "Sonar", title: "Acoustic backscatter where available, relief elsewhere" },
   { id: "color", label: "Color", title: "Depth color without baked terrain shading" },
+];
+
+const SCENE_PROFILE_OPTIONS: { id: SceneProfile; label: string; title: string }[] = [
+  { id: "study", label: "Study", title: "Lower contrast view for reading source layers and labels" },
+  { id: "relief", label: "Relief", title: "Stronger height, light, and shadow for terrain shape" },
+  { id: "emergence", label: "Emerge", title: "Clearer waterline and newly exposed terrain" },
 ];
 
 const FALLBACK_SLICES: PaleoTimeSlice[] = [
@@ -80,6 +88,7 @@ export function PaleoCoastlineControls({
   isPlaying,
   terrainDetail,
   terrainTextureMode,
+  sceneProfile,
   onSliceChange,
   onToggleUncertainty,
   onWaterLevelChange,
@@ -87,6 +96,7 @@ export function PaleoCoastlineControls({
   onResetWaterLevel,
   onTerrainDetailChange,
   onTerrainTextureModeChange,
+  onSceneProfileChange,
 }: PaleoCoastlineControlsProps) {
   const options = slices.length ? slices : FALLBACK_SLICES;
   const activeSlice = options.find((slice) => slice.id === activeSliceId) ?? options[0];
@@ -95,9 +105,10 @@ export function PaleoCoastlineControls({
   const terrainStackSummary = terrainSummary(activeSlice);
   const activeTerrainDetail = TERRAIN_DETAIL_OPTIONS.find((option) => option.id === terrainDetail);
   const activeTextureMode = TERRAIN_TEXTURE_OPTIONS.find((option) => option.id === terrainTextureMode);
+  const activeSceneProfile = SCENE_PROFILE_OPTIONS.find((option) => option.id === sceneProfile);
 
   return (
-    <section className="pointer-events-auto w-full rounded-lg border border-cyan-400/20 bg-gray-950/92 p-3 shadow-2xl backdrop-blur-md">
+    <section className="pointer-events-auto max-h-[calc(100vh-6rem)] w-full overflow-y-auto rounded-lg border border-cyan-400/20 bg-gray-950/92 p-3 shadow-2xl backdrop-blur-md">
       <div className="mb-3 flex items-start gap-2">
         <div className="mt-0.5 rounded-md border border-cyan-400/25 bg-cyan-400/10 p-1.5 text-cyan-200">
           <Waves size={16} />
@@ -217,6 +228,31 @@ export function PaleoCoastlineControls({
       </label>
 
       <div className="mb-3 rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-[11px] uppercase leading-4 text-gray-500">Scene</span>
+          <span className="font-mono text-[11px] leading-4 text-cyan-100">{activeSceneProfile?.label}</span>
+        </div>
+        <div className="mb-2 grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
+          {SCENE_PROFILE_OPTIONS.map((option) => {
+            const active = option.id === sceneProfile;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onSceneProfileChange(option.id)}
+                className={`min-h-8 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                  active
+                    ? "bg-cyan-300 text-gray-950"
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                }`}
+                aria-pressed={active}
+                title={option.title}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
         <div className="mb-2 flex items-center justify-between gap-3">
           <span className="text-[11px] uppercase leading-4 text-gray-500">Terrain mesh</span>
           <span className="font-mono text-[11px] leading-4 text-cyan-100">{activeTerrainDetail?.label}</span>
