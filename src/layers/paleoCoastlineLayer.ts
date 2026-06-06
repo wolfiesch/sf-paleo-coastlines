@@ -1,4 +1,4 @@
-import { GeoJsonLayer, PolygonLayer } from "deck.gl";
+import { GeoJsonLayer, PolygonLayer, ScatterplotLayer } from "deck.gl";
 import { TerrainLayer } from "@deck.gl/geo-layers";
 import type {
   PaleoCoastlineFeature,
@@ -18,6 +18,11 @@ interface WaterPlaneFeature {
 
 interface PickedPaleoFeature {
   properties: PaleoCoastlineProperties;
+}
+
+interface EmergencePoint {
+  position: [number, number, number];
+  offsetMeters: number;
 }
 
 type GeoJsonCoordinates = number[] | GeoJsonCoordinates[];
@@ -151,6 +156,19 @@ function addZToCoordinates(coordinates: unknown, zMeters: number): unknown {
   return (coordinates as GeoJsonCoordinates[]).map((item) => addZToCoordinates(item, zMeters));
 }
 
+function extractPositions(coordinates: unknown): number[][] {
+  if (!Array.isArray(coordinates)) return [];
+  if (
+    coordinates.length >= 2
+    && typeof coordinates[0] === "number"
+    && typeof coordinates[1] === "number"
+  ) {
+    return [coordinates as number[]];
+  }
+
+  return coordinates.flatMap((item) => extractPositions(item));
+}
+
 function elevatedFeature(feature: PaleoCoastlineFeature, terrain: PaleoTerrainConfig | null): PaleoCoastlineFeature {
   if (!terrain) return feature;
 
@@ -165,6 +183,37 @@ function elevatedFeature(feature: PaleoCoastlineFeature, terrain: PaleoTerrainCo
   };
 }
 
+function emergencePointsForWaterLevel(
+  features: PaleoCoastlineFeature[],
+  terrain: PaleoTerrainConfig | null,
+  activeWaterLevel: number,
+): EmergencePoint[] {
+  if (!terrain) return [];
+
+  const points: EmergencePoint[] = [];
+  for (const feature of features) {
+    if (feature.properties.line_role !== "waterline_probe") continue;
+    const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
+    if (offsetMeters <= 0 || offsetMeters > 15) continue;
+
+    const positions = extractPositions(feature.geometry.coordinates);
+    const stride = Math.max(1, Math.ceil(positions.length / 18));
+    const zMeters = feature.properties.elevation_m * terrain.verticalExaggeration + 3.4;
+
+    for (let index = 0; index < positions.length; index += stride) {
+      const position = positions[index];
+      if (typeof position[0] !== "number" || typeof position[1] !== "number") continue;
+      points.push({
+        position: [position[0], position[1], zMeters],
+        offsetMeters,
+      });
+      if (points.length >= 1800) return points;
+    }
+  }
+
+  return points;
+}
+
 export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: PaleoRenderContext) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
@@ -175,11 +224,14 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     seaLevelMeters: activeWaterLevel,
   };
 
+  const terrain = primaryTerrainForSlice(slice);
+  const rawProbeFeatures = probeFeaturesForWaterLevel(data, slice, activeWaterLevel);
+  const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel);
   const features = [
     ...slice.coastline.features,
-    ...probeFeaturesForWaterLevel(data, slice, activeWaterLevel),
+    ...rawProbeFeatures,
     ...(context.showPaleoUncertainty ? slice.uncertainty.features : []),
-  ].map((feature) => elevatedFeature(feature, primaryTerrainForSlice(slice)));
+  ].map((feature) => elevatedFeature(feature, terrain));
 
   const terrainLayers = terrainStackForSlice(slice).map((terrain, index) =>
     new TerrainLayer({
@@ -212,6 +264,26 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     lineWidthUnits: "pixels",
   });
 
+  const emergenceLayer = new ScatterplotLayer<EmergencePoint>({
+    id: "paleo-emergence-glints",
+    data: emergencePoints,
+    pickable: false,
+    stroked: true,
+    filled: true,
+    radiusUnits: "meters",
+    radiusMinPixels: 2.2,
+    radiusMaxPixels: 7,
+    getPosition: (item) => item.position,
+    getRadius: (item) => 180 + (15 - item.offsetMeters) * 14,
+    getFillColor: (item) => {
+      const alpha = Math.round(135 + (15 - item.offsetMeters) * 7);
+      return [255, 232, 92, alpha];
+    },
+    getLineColor: [255, 255, 255, 190],
+    getLineWidth: 1,
+    lineWidthUnits: "pixels",
+  });
+
   const coastlineLayer = new GeoJsonLayer<PaleoCoastlineProperties>({
     id: "paleo-coastline",
     data: {
@@ -229,7 +301,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     highlightColor: [255, 255, 255, 180],
   });
 
-  return [...terrainLayers, waterLayer, coastlineLayer];
+  return [...terrainLayers, waterLayer, coastlineLayer, emergenceLayer];
 }
 
 export function getPaleoTooltip(object: unknown) {
