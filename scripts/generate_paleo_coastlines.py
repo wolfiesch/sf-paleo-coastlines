@@ -215,6 +215,9 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
             "USGS_escarpment_back_10m.zip",
         ],
         "backscatterSourceSrs": "EPSG:26910",
+        "characterZipName": "fe3classnad83.zip",
+        "characterDatasetName": "fe3classnad83.tif",
+        "characterSourceSrs": "EPSG:26910",
         "terrainStem": "usgs_farallon_escarpment",
         "terrainSize": 1024,
         "terrainMinimum": -950.0,
@@ -242,6 +245,9 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
             "USGS_rittenburg_back_2m.zip": "USGS_rittenburg_back.tif",
         },
         "backscatterSourceSrs": "EPSG:26910",
+        "characterZipName": "rb3classnad83.zip",
+        "characterDatasetName": "rb3classnad83.tif",
+        "characterSourceSrs": "EPSG:26910",
         "terrainStem": "usgs_rittenburg_bank",
         "terrainSize": 1024,
         "terrainMinimum": -130.0,
@@ -447,6 +453,10 @@ def bathymetry_block_hybrid_texture_png(block: dict[str, Any]) -> Path:
     return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_hybrid.png"
 
 
+def bathymetry_block_character_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_character.png"
+
+
 def bathymetry_block_backscatter_zip(block: dict[str, Any], zip_name: str) -> Path:
     return bathymetry_block_dir(block) / zip_name
 
@@ -464,6 +474,22 @@ def bathymetry_block_backscatter_wgs84(block: dict[str, Any]) -> Path:
     return WORK_DIR / f"{block['sourceId']}_backscatter_wgs84.tif"
 
 
+def bathymetry_block_character_zip(block: dict[str, Any]) -> Path:
+    return bathymetry_block_dir(block) / str(block["characterZipName"])
+
+
+def bathymetry_block_character_dataset(block: dict[str, Any]) -> Path:
+    return bathymetry_block_dir(block) / str(block["characterDatasetName"])
+
+
+def bathymetry_block_character_url(block: dict[str, Any]) -> str:
+    return f"{str(block['sourceUrl']).rsplit('/', 1)[0]}/data/{block['characterZipName']}"
+
+
+def bathymetry_block_character_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_character_wgs84.tif"
+
+
 def download_bathymetry_block(block: dict[str, Any]) -> None:
     download_url(str(block["zipUrl"]), bathymetry_block_zip(block))
     if not bathymetry_block_dataset(block).exists():
@@ -473,6 +499,11 @@ def download_bathymetry_block(block: dict[str, Any]) -> None:
         download_url(bathymetry_block_backscatter_url(block, str(zip_name)), bathymetry_block_backscatter_zip(block, str(zip_name)))
         if not bathymetry_block_backscatter_dataset(block, str(zip_name)).exists():
             run(["unzip", "-o", str(bathymetry_block_backscatter_zip(block, str(zip_name))), "-d", str(bathymetry_block_dir(block))])
+
+    if block.get("characterZipName"):
+        download_url(bathymetry_block_character_url(block), bathymetry_block_character_zip(block))
+        if not bathymetry_block_character_dataset(block).exists():
+            run(["unzip", "-o", str(bathymetry_block_character_zip(block)), "-d", str(bathymetry_block_dir(block))])
 
 
 def download_bathymetry_blocks() -> None:
@@ -795,6 +826,49 @@ def write_sonar_texture_png(backscatter_path: Path, relief_texture_path: Path, o
     output.save(output_path)
 
 
+def character_color(character_class: int) -> tuple[int, int, int] | None:
+    colors = {
+        1: (226, 193, 118),  # smooth sediment
+        2: (53, 174, 163),   # mixed sediment and rock
+        3: (238, 104, 93),   # rugose rock or boulder-like bottom
+    }
+    return colors.get(character_class)
+
+
+def write_character_texture_png(character_path: Path, base_texture_path: Path, output_path: Path) -> None:
+    character = Image.open(character_path)
+    base = Image.open(base_texture_path).convert("RGBA")
+    if character.size != base.size:
+        character = character.resize(base.size, Image.Resampling.NEAREST)
+
+    output_pixels: list[tuple[int, int, int, int]] = []
+    for raw, base_pixel in zip(character.getdata(), base.getdata()):
+        base_r, base_g, base_b, base_a = base_pixel
+        raw_value = raw_pixel_value(raw)
+        if not math.isfinite(raw_value):
+            output_pixels.append(base_pixel)
+            continue
+
+        class_color = character_color(round(raw_value))
+        if class_color is None:
+            output_pixels.append(base_pixel)
+            continue
+
+        class_r, class_g, class_b = class_color
+        base_luma = (0.2126 * base_r + 0.7152 * base_g + 0.0722 * base_b) / 255.0
+        shade = 0.76 + base_luma * 0.42
+        output_pixels.append((
+            clamp_byte(((class_r * 0.7) + (base_r * 0.3)) * shade),
+            clamp_byte(((class_g * 0.7) + (base_g * 0.3)) * shade),
+            clamp_byte(((class_b * 0.7) + (base_b * 0.3)) * shade),
+            base_a,
+        ))
+
+    output = Image.new("RGBA", base.size)
+    output.putdata(output_pixels)
+    output.save(output_path)
+
+
 def write_terrain_pngs_from_wgs84(
     source_path: Path,
     elevation_path: Path,
@@ -870,6 +944,7 @@ def terrain_metadata(
     composite_texture_png: Path,
     sonar_texture_png: Path | None,
     hybrid_texture_png: Path | None,
+    character_texture_png: Path | None,
     minimum: float,
     maximum: float,
     note: str,
@@ -895,6 +970,8 @@ def terrain_metadata(
         textures["sonarBackscatter"] = public_url(sonar_texture_png)
     if hybrid_texture_png is not None and hybrid_texture_png.exists():
         textures["surveySonarHybrid"] = public_url(hybrid_texture_png)
+    if character_texture_png is not None and character_texture_png.exists():
+        textures["seafloorCharacter"] = public_url(character_texture_png)
 
     return {
         "sourceId": source_id,
@@ -949,6 +1026,7 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_TEXTURE_PNG,
         DS684_TERRAIN_RELIEF_TEXTURE_PNG,
         DS684_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        None,
         None,
         None,
         DS684_TERRAIN_MIN_M,
@@ -1017,6 +1095,54 @@ def generate_bathymetry_block_sonar_texture(block: dict[str, Any]) -> tuple[Path
     return bathymetry_block_sonar_texture_png(block), bathymetry_block_hybrid_texture_png(block)
 
 
+def generate_bathymetry_block_character_texture(block: dict[str, Any], base_texture_path: Path) -> Path | None:
+    if not block.get("characterZipName"):
+        return None
+    if not bathymetry_block_character_dataset(block).exists():
+        return None
+
+    terrain_info = json.loads(subprocess.check_output(["gdalinfo", "-json", str(bathymetry_block_terrain_wgs84(block))]))
+    transform = terrain_info["geoTransform"]
+    width = terrain_info["size"][0]
+    height = terrain_info["size"][1]
+    west = transform[0]
+    north = transform[3]
+    east = west + transform[1] * width
+    south = north + transform[5] * height
+
+    source_srs_args = ["-s_srs", str(block["characterSourceSrs"])] if block.get("characterSourceSrs") else []
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        *source_srs_args,
+        "-t_srs",
+        "EPSG:4326",
+        "-te",
+        str(west),
+        str(south),
+        str(east),
+        str(north),
+        "-ts",
+        str(width),
+        str(height),
+        "-r",
+        "near",
+        "-ot",
+        "Byte",
+        "-dstnodata",
+        "255",
+        str(bathymetry_block_character_dataset(block)),
+        str(bathymetry_block_character_wgs84(block)),
+    ])
+    write_character_texture_png(
+        bathymetry_block_character_wgs84(block),
+        base_texture_path,
+        bathymetry_block_character_texture_png(block),
+    )
+    return bathymetry_block_character_texture_png(block)
+
+
 def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
     run([
         "gdalwarp",
@@ -1044,6 +1170,8 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         float(block["terrainMaximum"]),
     )
     sonar_texture, hybrid_texture = generate_bathymetry_block_sonar_texture(block)
+    character_base = hybrid_texture if hybrid_texture is not None and hybrid_texture.exists() else bathymetry_block_composite_texture_png(block)
+    character_texture = generate_bathymetry_block_character_texture(block, character_base)
     return terrain_metadata(
         str(block["sourceId"]),
         source_label(str(block["sourceId"])),
@@ -1054,6 +1182,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         bathymetry_block_composite_texture_png(block),
         sonar_texture,
         hybrid_texture,
+        character_texture,
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
         str(block["note"]),
@@ -1099,6 +1228,7 @@ def generate_etopo_terrain_asset() -> dict[str, Any]:
         ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG,
         None,
         None,
+        None,
         ETOPO_TERRAIN_MIN_M,
         ETOPO_TERRAIN_MAX_M,
         "Broad Bay-to-Farallones terrain surface. It is coarser than the USGS tile, but it reaches the offshore shelf and Farallon Islands.",
@@ -1137,6 +1267,7 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
         CRM_TERRAIN_COMPOSITE_TEXTURE_PNG,
         None,
         None,
+        None,
         CRM_TERRAIN_MIN_M,
         CRM_TERRAIN_MAX_M,
         "NOAA CRM Vol. 7 broad Bay-to-Farallones terrain surface at 3 arc-second resolution. It is coarser than the USGS tile, but about 5x finer than ETOPO 2022 for this view.",
@@ -1173,6 +1304,9 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         bathymetry_block_backscatter_wgs84(block).unlink(missing_ok=True)
         bathymetry_block_sonar_texture_png(block).unlink(missing_ok=True)
         bathymetry_block_hybrid_texture_png(block).unlink(missing_ok=True)
+        if block.get("characterZipName"):
+            bathymetry_block_character_wgs84(block).unlink(missing_ok=True)
+            bathymetry_block_character_texture_png(block).unlink(missing_ok=True)
 
     return [
         generate_crm_terrain_asset(),
@@ -1461,6 +1595,11 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 for zip_name in block.get("backscatterZipNames", [])
                 if bathymetry_block_backscatter_dataset(block, str(zip_name)).exists()
             ],
+            *[
+                str(bathymetry_block_character_dataset(block).relative_to(ROOT))
+                for block in BATHYMETRY_BLOCKS
+                if block.get("characterZipName") and bathymetry_block_character_dataset(block).exists()
+            ],
             str(DS684_TIF.relative_to(ROOT)),
         ],
         "browserDataset": "public/data/paleo-coastlines/paleo_coastlines.json",
@@ -1479,6 +1618,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                     bathymetry_block_composite_texture_png(block),
                     bathymetry_block_sonar_texture_png(block),
                     bathymetry_block_hybrid_texture_png(block),
+                    bathymetry_block_character_texture_png(block),
                 )
                 if path.exists()
             ],

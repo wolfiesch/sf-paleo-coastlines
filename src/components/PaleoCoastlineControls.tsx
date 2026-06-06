@@ -25,6 +25,7 @@ const TERRAIN_DETAIL_OPTIONS: { id: TerrainDetailLevel; label: string; title: st
 ];
 
 const TERRAIN_TEXTURE_OPTIONS: { id: TerrainTextureMode; label: string; title: string }[] = [
+  { id: "bottom", label: "Bottom", title: "Interpreted seafloor type where USGS character maps exist" },
   { id: "hybrid", label: "Hybrid", title: "Survey texture plus acoustic backscatter where sonar exists" },
   { id: "survey", label: "Survey", title: "Slope, roughness, ridge, and hollow detail blended with depth color" },
   { id: "relief", label: "Relief", title: "Depth color plus DEM-derived light and shadow" },
@@ -243,7 +244,7 @@ export function PaleoCoastlineControls({
         </div>
         <div className="mt-2 border-t border-gray-800/80 pt-2">
           <span className="text-[11px] uppercase leading-4 text-gray-500">Surface style</span>
-          <div className="mt-1 grid grid-cols-5 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
+          <div className="mt-1 grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
             {TERRAIN_TEXTURE_OPTIONS.map((option) => {
               const active = option.id === terrainTextureMode;
               return (

@@ -19,7 +19,7 @@ The checked-in browser data now uses one broad elevation source plus several sha
 | NOAA CRM Vol. 7, 3 arc-second grid | Broad Bay/offshore coverage toward the Farallones. This keeps the full map continuous when detailed survey patches have gaps. |
 | USGS/CSMP DS 781, 2 m coastal bathymetry blocks | Sharper nearshore ocean-floor detail for Bolinas, San Francisco, Pacifica, and Half Moon Bay. These blocks improve the coastal shelf, but they do not cover the full offshore region. |
 | USGS/CSMP DS 781 acoustic backscatter blocks | Sonar intensity texture for the same coastal bathymetry blocks. This makes rocky bottom, sediment patterns, and survey texture visible on top of the 3D surface. It is used as a visual texture, not as elevation. |
-| USGS OFR 2014-1234 Farallon Escarpment / Rittenburg Bank bathymetry and backscatter | Sharper offshore multibeam patches west of San Francisco, including a 10 m Farallon Escarpment grid and a 2 m Rittenburg Bank grid. Backscatter now adds measured acoustic texture to those offshore patches, not just nearshore CSMP areas. |
+| USGS OFR 2014-1234 Farallon Escarpment / Rittenburg Bank bathymetry, backscatter, and seafloor character | Sharper offshore multibeam patches west of San Francisco, including a 10 m Farallon Escarpment grid and a 2 m Rittenburg Bank grid. Backscatter adds measured acoustic texture, and seafloor-character maps add interpreted bottom classes for those offshore patches. |
 | USGS DS684 DEM 4, 2 m San Francisco Bar tile | Better local detail around Ocean Beach, the Golden Gate, Marin Headlands, and the San Francisco Bar. This drives the present, 5k, and 10k slices where it has enough depth coverage. |
 | NOAA ETOPO 2022, 15 arc-second grid | Fallback broad source kept in the raw data references. CRM is now preferred for the app because it is about 5x finer for this region. |
 
@@ -44,7 +44,9 @@ Local source/work files:
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-*/Backscatter*.zip`
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-*/*Backscatter*.tif`
 - `data/paleo-coastlines/raw/usgs-farallon-escarpment/USGS_escarpment_bathy_10m.asc`
+- `data/paleo-coastlines/raw/usgs-farallon-escarpment/fe3classnad83.tif`
 - `data/paleo-coastlines/raw/usgs-rittenburg-bank/usgs_rittenburgbank_bathy_2m.asc`
+- `data/paleo-coastlines/raw/usgs-rittenburg-bank/rb3classnad83.tif`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF.zip`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF/DEM_4_GeoTIFF.tif`
 - `data/paleo-coastlines/work/noaa_crm_vol7_contours_raw.geojson`
@@ -146,12 +148,14 @@ Generated terrain files:
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_composite.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_sonar.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_hybrid.png`
+- `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_character.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_elevation.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_color.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_relief.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_composite.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_sonar.png`
 - `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_hybrid.png`
+- `public/data/paleo-coastlines/terrain/usgs_rittenburg_bank_character.png`
 - `public/data/paleo-coastlines/terrain/dem4_elevation.png`
 - `public/data/paleo-coastlines/terrain/dem4_color.png`
 - `public/data/paleo-coastlines/terrain/dem4_relief.png`
@@ -166,6 +170,8 @@ The `*_composite.png` files power the `Survey` surface style. They combine depth
 The `*_sonar.png` files are generated from USGS/CSMP acoustic backscatter where that data exists. In plain English: backscatter is how strongly the seafloor reflected the survey sound signal. Hard rock, sand, mud, and rough bottom can show up differently, so this gives the surface a much more detailed "ocean survey" look. It does not change the 3D height shape; the height still comes from the bathymetry DEM. The app keeps `Sonar` as a separate surface style and falls back to shaded relief for terrain sources without backscatter.
 
 The `*_hybrid.png` files are the default `Hybrid` surface style for USGS/CSMP blocks with acoustic backscatter. They bake sonar intensity on top of the Survey texture. In plain English: where sonar exists, Hybrid shows both measured seafloor reflectivity and DEM-derived shape detail; where sonar does not exist, the app falls back to Survey so the map remains continuous.
+
+The `*_character.png` files power the `Bottom` surface style for the Farallon Escarpment and Rittenburg Bank OFR 2014-1234 patches. They use interpreted USGS seafloor-character classes: `1` means smoother sediment, `2` means mixed sediment and rock, and `3` means more rugose rock or boulder-like bottom. In plain English: this is a mapped bottom-type layer draped over the 3D terrain. It does not change the actual height mesh.
 
 The vertical scale is exaggerated 4x so the shelf, ridges, and small protruding islands are easier to see. The waterline slider moves the transparent water plane independently of the selected scientific time slice, so you can scrub sea level and watch terrain start to emerge.
 
@@ -189,7 +195,7 @@ The uncertainty toggle shows extra contour lines around each estimate. These ban
 ## Data Limits
 
 - USGS/CSMP DS 781 is high resolution, but the blocks are mostly nearshore and state-water focused. They do not form one seamless full-ocean DEM.
-- USGS OFR 2014-1234 improves the Farallon Escarpment and Rittenburg Bank areas with bathymetry and backscatter, but it is still patch coverage, not full Farallones-region coverage.
+- USGS OFR 2014-1234 improves the Farallon Escarpment and Rittenburg Bank areas with bathymetry, backscatter, and seafloor character, but it is still patch coverage, not full Farallones-region coverage.
 - USGS DS684 DEM 4 is high resolution, but it is only one tile. It improves the Golden Gate and nearby coast; it is not full Bay-plus-Farallones coverage.
 - NOAA CRM is much coarser than the USGS tile, but it covers the offshore shelf and Farallones at about 3 arc-second resolution.
 - NOAA ETOPO is coarser still, but remains a fallback global relief source if CRM access changes.
