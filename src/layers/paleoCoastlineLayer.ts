@@ -6,6 +6,7 @@ import type {
   PaleoRenderContext,
   PaleoTerrainConfig,
   PaleoTimeSlice,
+  TerrainDetailLevel,
 } from "../types";
 
 interface WaterPlaneFeature {
@@ -94,6 +95,26 @@ function probeFeaturesForWaterLevel(
   return probe.contours.features.filter((feature) => feature.properties.elevation_m === level);
 }
 
+function isBroadTerrain(terrain: PaleoTerrainConfig): boolean {
+  return terrain.sourceId.includes("crm") || terrain.sourceId.includes("etopo");
+}
+
+function meshMaxErrorForTerrain(
+  terrain: PaleoTerrainConfig,
+  terrainIndex: number,
+  detail: TerrainDetailLevel,
+): number {
+  if (detail === "fast") {
+    return isBroadTerrain(terrain) || terrainIndex === 0 ? 6 : 2.5;
+  }
+
+  if (detail === "survey") {
+    return isBroadTerrain(terrain) || terrainIndex === 0 ? 1.2 : 0.35;
+  }
+
+  return isBroadTerrain(terrain) || terrainIndex === 0 ? 2.5 : 0.8;
+}
+
 export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: PaleoRenderContext) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
@@ -117,7 +138,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
       texture: terrain.texture,
       bounds: terrain.bounds,
       elevationDecoder: terrain.elevationDecoder,
-      meshMaxError: index === 0 ? 4 : 1.5,
+      meshMaxError: meshMaxErrorForTerrain(terrain, index, context.terrainDetail),
       wireframe: false,
       material: {
         ambient: 0.45,

@@ -128,6 +128,8 @@ The `*_elevation.png` files encode height in RGB, not grayscale. In plain Englis
 
 The vertical scale is exaggerated 4x so the shelf, ridges, and small protruding islands are easier to see. The waterline slider moves the transparent water plane independently of the selected scientific time slice, so you can scrub sea level and watch terrain start to emerge.
 
+The terrain mesh control changes deck.gl's `meshMaxError` setting. In plain English: lower values keep more small bumps and ridges from the elevation image, while higher values trade some detail for speed. The default `Survey` setting uses tighter mesh error values for the USGS/CSMP and Farallon multibeam patches than for the broad NOAA background surface.
+
 The slider also draws the nearest 5 m contour as a bright probe line. This probe is not a dated coastline reconstruction. It is a visual helper for the question: "if the water were at this height, which terrain edge would meet the water?" The probe interval is deliberately 5 m for the first pass so the single browser JSON stays manageable.
 
 ## Time Slices

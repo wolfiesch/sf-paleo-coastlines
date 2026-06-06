@@ -1,4 +1,5 @@
 export type PaleoTimeSliceId = "present" | "5k_years_ago" | "10k_years_ago" | "20k_years_ago";
+export type TerrainDetailLevel = "fast" | "detailed" | "survey";
 
 export interface PaleoTerrainConfig {
   sourceId: string;
@@ -94,4 +95,5 @@ export interface PaleoRenderContext {
   paleoTimeSliceId: PaleoTimeSliceId;
   showPaleoUncertainty: boolean;
   paleoWaterLevelMeters: number | null;
+  terrainDetail: TerrainDetailLevel;
 }

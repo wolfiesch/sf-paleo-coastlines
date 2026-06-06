@@ -1,5 +1,5 @@
 import { Database, Gauge, Pause, Play, RotateCcw, Waves } from "lucide-react";
-import type { PaleoTimeSlice, PaleoTimeSliceId } from "../types";
+import type { PaleoTimeSlice, PaleoTimeSliceId, TerrainDetailLevel } from "../types";
 
 interface PaleoCoastlineControlsProps {
   slices: PaleoTimeSlice[];
@@ -7,12 +7,20 @@ interface PaleoCoastlineControlsProps {
   showUncertainty: boolean;
   waterLevelMeters: number | null;
   isPlaying: boolean;
+  terrainDetail: TerrainDetailLevel;
   onSliceChange: (id: PaleoTimeSliceId) => void;
   onToggleUncertainty: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
   onResetWaterLevel: () => void;
+  onTerrainDetailChange: (level: TerrainDetailLevel) => void;
 }
+
+const TERRAIN_DETAIL_OPTIONS: { id: TerrainDetailLevel; label: string; title: string }[] = [
+  { id: "fast", label: "Fast", title: "Lower mesh density" },
+  { id: "detailed", label: "Detailed", title: "Balanced mesh density" },
+  { id: "survey", label: "Survey", title: "Highest mesh density" },
+];
 
 const FALLBACK_SLICES: PaleoTimeSlice[] = [
   {
@@ -59,17 +67,20 @@ export function PaleoCoastlineControls({
   showUncertainty,
   waterLevelMeters,
   isPlaying,
+  terrainDetail,
   onSliceChange,
   onToggleUncertainty,
   onWaterLevelChange,
   onTogglePlayback,
   onResetWaterLevel,
+  onTerrainDetailChange,
 }: PaleoCoastlineControlsProps) {
   const options = slices.length ? slices : FALLBACK_SLICES;
   const activeSlice = options.find((slice) => slice.id === activeSliceId) ?? options[0];
   const activeWaterLevel = waterLevelMeters ?? activeSlice.seaLevelMeters;
   const probeLevel = Math.max(-120, Math.min(0, nearestProbeLevel(activeWaterLevel)));
   const terrainStackSummary = terrainSummary(activeSlice);
+  const activeTerrainDetail = TERRAIN_DETAIL_OPTIONS.find((option) => option.id === terrainDetail);
 
   return (
     <section className="pointer-events-auto w-full rounded-lg border border-cyan-400/20 bg-gray-950/92 p-3 shadow-2xl backdrop-blur-md">
@@ -172,6 +183,34 @@ export function PaleoCoastlineControls({
           </div>
         </div>
       </label>
+
+      <div className="mb-3 rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-[11px] uppercase leading-4 text-gray-500">Terrain mesh</span>
+          <span className="font-mono text-[11px] leading-4 text-cyan-100">{activeTerrainDetail?.label}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
+          {TERRAIN_DETAIL_OPTIONS.map((option) => {
+            const active = option.id === terrainDetail;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onTerrainDetailChange(option.id)}
+                className={`min-h-8 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                  active
+                    ? "bg-cyan-300 text-gray-950"
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                }`}
+                aria-pressed={active}
+                title={option.title}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="space-y-2 border-t border-gray-800/70 pt-3 text-xs leading-4 text-gray-400">
         <div className="flex gap-2">
