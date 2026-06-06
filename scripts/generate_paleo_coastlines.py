@@ -50,7 +50,7 @@ CUDEM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_elev
 CUDEM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_color.png"
 CUDEM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_relief.png"
 CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_composite.png"
-NOS_BAG_DIR = RAW_DIR / "noaa-nos-h12109"
+NOS_BAG_DEFAULT_DIR = RAW_DIR / "noaa-nos-bag"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
 DS684_TIF = DS684_DIR / "DEM_4_GeoTIFF" / "DEM_4_GeoTIFF.tif"
@@ -154,6 +154,7 @@ NOS_BAG_BLOCKS: list[dict[str, Any]] = [
         "sourceName": "NOAA/NOS H12109 Bathymetric Attributed Grid, 1 m, MLLW, Gulf of the Farallones / Golden Gate approach",
         "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12109.html",
         "role": "High-resolution NOAA BAG survey inset for the shallow part of the Golden Gate approach.",
+        "folder": "noaa-nos-h12109",
         "fileName": "H12109_MB_1m_MLLW_1of2.bag",
         "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/BAG/H12109_MB_1m_MLLW_1of2.bag",
         "terrainStem": "noaa_nos_h12109_1m",
@@ -173,6 +174,7 @@ NOS_BAG_BLOCKS: list[dict[str, Any]] = [
         "sourceName": "NOAA/NOS H12109 Bathymetric Attributed Grid, 2 m, MLLW, Gulf of the Farallones / Golden Gate approach",
         "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12109.html",
         "role": "High-resolution NOAA BAG survey inset for the deeper part of the Golden Gate approach.",
+        "folder": "noaa-nos-h12109",
         "fileName": "H12109_MB_2m_MLLW_2of2.bag",
         "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/BAG/H12109_MB_2m_MLLW_2of2.bag",
         "terrainStem": "noaa_nos_h12109_2m",
@@ -185,6 +187,86 @@ NOS_BAG_BLOCKS: list[dict[str, Any]] = [
         "minDegreesLength": 0.0015,
         "sourceNoData": 1_000_000.0,
         "note": "NOAA NOS H12109 2 m BAG survey patch in MLLW, adding detailed deeper Golden Gate approach bathymetry.",
+    },
+    {
+        "sourceId": "noaa_nos_h12110_1m_bag",
+        "sourceLabel": "NOAA NOS H12110, 1 m BAG south Golden Gate approach bathymetry",
+        "sourceName": "NOAA/NOS H12110 Bathymetric Attributed Grid, 1 m, MLLW, south Golden Gate approach",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12110.html",
+        "role": "High-resolution NOAA BAG survey inset for the southern shallow part of the Golden Gate approach.",
+        "folder": "noaa-nos-h12110",
+        "fileName": "H12110_MB_1m_MLLW_1of2.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12110/BAG/H12110_MB_1m_MLLW_1of2.bag",
+        "terrainStem": "noaa_nos_h12110_1m",
+        "terrainSize": 1536,
+        "terrainMinimum": -28.0,
+        "terrainMaximum": -16.0,
+        "contourMinimum": -25.0,
+        "contourMaximum": -20.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12110 1 m BAG survey patch in MLLW, adding shallow southern Golden Gate approach bathymetry.",
+    },
+    {
+        "sourceId": "noaa_nos_h12110_2m_bag",
+        "sourceLabel": "NOAA NOS H12110, 2 m BAG south Golden Gate approach bathymetry",
+        "sourceName": "NOAA/NOS H12110 Bathymetric Attributed Grid, 2 m, MLLW, south Golden Gate approach",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12110.html",
+        "role": "High-resolution NOAA BAG survey inset for the deeper southern Golden Gate approach.",
+        "folder": "noaa-nos-h12110",
+        "fileName": "H12110_MB_2m_MLLW_2of2.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12110/BAG/H12110_MB_2m_MLLW_2of2.bag",
+        "terrainStem": "noaa_nos_h12110_2m",
+        "terrainSize": 1536,
+        "terrainMinimum": -60.0,
+        "terrainMaximum": -15.0,
+        "contourMinimum": -50.0,
+        "contourMaximum": -20.0,
+        "contourSimplify": 5,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12110 2 m BAG survey patch in MLLW, adding detailed deeper southern Golden Gate approach bathymetry.",
+    },
+    {
+        "sourceId": "noaa_nos_h12111_1m_bag",
+        "sourceLabel": "NOAA NOS H12111, 1 m BAG north Golden Gate approach bathymetry",
+        "sourceName": "NOAA/NOS H12111 Bathymetric Attributed Grid, 1 m, MLLW, north Golden Gate approach",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12111.html",
+        "role": "High-resolution NOAA BAG survey inset for the shallow northern Golden Gate approach.",
+        "folder": "noaa-nos-h12111",
+        "fileName": "H12111_MB_1m_MLLW_1of2.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/BAG/H12111_MB_1m_MLLW_1of2.bag",
+        "terrainStem": "noaa_nos_h12111_1m",
+        "terrainSize": 1536,
+        "terrainMinimum": -30.0,
+        "terrainMaximum": 2.0,
+        "contourMinimum": -20.0,
+        "contourMaximum": 0.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12111 1 m BAG survey patch in MLLW, adding shallow northern Golden Gate approach bathymetry.",
+    },
+    {
+        "sourceId": "noaa_nos_h12111_2m_bag",
+        "sourceLabel": "NOAA NOS H12111, 2 m BAG north Golden Gate approach bathymetry",
+        "sourceName": "NOAA/NOS H12111 Bathymetric Attributed Grid, 2 m, MLLW, north Golden Gate approach",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12111.html",
+        "role": "High-resolution NOAA BAG survey inset for the deeper northern Golden Gate approach.",
+        "folder": "noaa-nos-h12111",
+        "fileName": "H12111_MB_2m_MLLW_2of2.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/BAG/H12111_MB_2m_MLLW_2of2.bag",
+        "terrainStem": "noaa_nos_h12111_2m",
+        "terrainSize": 1536,
+        "terrainMinimum": -40.0,
+        "terrainMaximum": -10.0,
+        "contourMinimum": -30.0,
+        "contourMaximum": -15.0,
+        "contourSimplify": 5,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12111 2 m BAG survey patch in MLLW, adding detailed deeper northern Golden Gate approach bathymetry.",
     },
 ]
 
@@ -637,8 +719,12 @@ def bathymetry_block_dir(block: dict[str, Any]) -> Path:
     return RAW_DIR / str(block["folder"])
 
 
+def nos_bag_block_dir(block: dict[str, Any]) -> Path:
+    return RAW_DIR / str(block.get("folder", NOS_BAG_DEFAULT_DIR.name))
+
+
 def nos_bag_dataset(block: dict[str, Any]) -> Path:
-    return NOS_BAG_DIR / str(block["fileName"])
+    return nos_bag_block_dir(block) / str(block["fileName"])
 
 
 def nos_bag_contours_raw(block: dict[str, Any]) -> Path:
@@ -2027,7 +2113,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             **item,
             "generatedAt": generated_at,
             "sourceModel": source_label(estimate_source_id),
-            "datumNote": "NOAA BAG H12109 uses MLLW; NOAA CUDEM, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
+            "datumNote": "NOAA BAG surveys use MLLW; NOAA CUDEM, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
             "uncertaintyNote": "Lines show only sea-level uncertainty. They do not model erosion, sediment, marsh growth, tectonic motion, or river-channel migration.",
             "terrain": terrain[0],
             "terrains": terrain,
@@ -2039,7 +2125,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added NOAA/NOS H12109 BAG survey patches at 1 m and 2 m resolution, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added NOAA/NOS H12109, H12110, and H12111 BAG survey patches at 1 m and 2 m resolution, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),

@@ -37,6 +37,10 @@ in float terrainReveal_heightZ;
       terrainReveal_heightZ = geometry.worldPosition.z;
     `,
     "fs:DECKGL_FILTER_COLOR": /* glsl */ `
+      if (color.a < 0.05) {
+        discard;
+      }
+
       if (terrainReveal.enabled > 0.5) {
         float aboveWater = smoothstep(terrainReveal.waterLevelZ - 0.4, terrainReveal.waterLevelZ + 1.2, terrainReveal_heightZ);
         float nearWaterline = 1.0 - smoothstep(
