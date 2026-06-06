@@ -14,6 +14,8 @@ estimated coastline
 
 The checked-in browser data now uses two broad elevation sources plus several sharper NOAA and USGS patches:
 
+For the source-by-source quality audit, resolution notes, datum cautions, and next data chases, see `docs/survey-inventory.md`. The browser-readable JSON version is `public/data/paleo-coastlines/survey_inventory.json`.
+
 | Source | Why it is used |
 |---|---|
 | NOAA CRM Vol. 7, 3 arc-second grid | Broad Bay/offshore coverage toward the Farallones. This keeps the full map continuous when detailed survey patches have gaps. |
@@ -79,6 +81,12 @@ Local source/work files:
 
 ```sh
 pnpm paleo-coastlines:generate
+```
+
+To rebuild the lightweight source-quality audit without regenerating terrain:
+
+```sh
+pnpm paleo-coastlines:inventory
 ```
 
 The script downloads missing source files, runs `gdal_contour`, simplifies the broad NOAA contour lines for browser use, reprojects the USGS output to WGS84, converts NOAA's 0-360 longitude values into normal west-longitude values, filters tiny contour fragments, and writes browser-ready GeoJSON plus browser-ready terrain PNGs.

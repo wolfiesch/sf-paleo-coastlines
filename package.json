@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "paleo-coastlines:generate": "python3 scripts/generate_paleo_coastlines.py"
+    "paleo-coastlines:generate": "python3 scripts/generate_paleo_coastlines.py",
+    "paleo-coastlines:inventory": "python3 scripts/build_survey_inventory.py --with-gdalinfo"
   },
   "dependencies": {
     "@deck.gl/geo-layers": "^9.2.11",
