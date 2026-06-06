@@ -78,6 +78,22 @@ function depthContourWidth(feature: PickedPaleoFeature, activeWaterLevel: number
   return Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.25 : 0.7;
 }
 
+function shorelineGlowColor(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner"): [number, number, number, number] {
+  const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
+  const distance = Math.abs(offsetMeters);
+  const fade = Math.max(0, 1 - distance / 4.5);
+  const baseAlpha = strength === "outer" ? 62 : 130;
+  const alpha = Math.round(baseAlpha * fade);
+  if (offsetMeters > 0) return [255, 221, 104, alpha];
+  return strength === "outer" ? [88, 228, 255, alpha] : [232, 255, 255, alpha];
+}
+
+function shorelineGlowWidth(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner"): number {
+  const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
+  const fade = Math.max(0, 1 - distance / 4.5);
+  return strength === "outer" ? 12 + fade * 6 : 5 + fade * 4;
+}
+
 function selectedSlice(data: PaleoTimeSlice[], context: PaleoRenderContext): PaleoTimeSlice | null {
   return data.find((item) => item.id === context.paleoTimeSliceId)
     ?? data.find((item) => item.id === "20k_years_ago")
@@ -189,10 +205,10 @@ function extractPositions(coordinates: unknown): number[][] {
   return coordinates.flatMap((item) => extractPositions(item));
 }
 
-function elevatedFeature(feature: PaleoCoastlineFeature, terrain: PaleoTerrainConfig | null): PaleoCoastlineFeature {
+function elevatedFeature(feature: PaleoCoastlineFeature, terrain: PaleoTerrainConfig | null, zOffsetOverride?: number): PaleoCoastlineFeature {
   if (!terrain) return feature;
 
-  const zOffset = feature.properties.line_role === "waterline_probe" ? 1.8 : 1.2;
+  const zOffset = zOffsetOverride ?? (feature.properties.line_role === "waterline_probe" ? 1.8 : 1.2);
   const zMeters = feature.properties.elevation_m * terrain.verticalExaggeration + zOffset;
   return {
     ...feature,
@@ -253,6 +269,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     ...activeProbeFeatures,
     ...(context.showPaleoUncertainty ? slice.uncertainty.features : []),
   ].map((feature) => elevatedFeature(feature, terrain));
+  const shorelineGlowFeatures = activeProbeFeatures.map((feature) => elevatedFeature(feature, terrain, 3.2));
   const depthContourFeatures = rawProbeFeatures.map((feature) => elevatedFeature(feature, terrain));
 
   const terrainLayers = terrainStackForSlice(slice).map((terrain, index) =>
@@ -276,6 +293,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
           terrainRevealBandMeters: isBroadTerrain(terrain) ? 28 : 44,
           terrainRevealEnabled: true,
           terrainRevealStrength: isBroadTerrain(terrain) ? 0.24 : 0.42,
+          terrainRevealSubmergedStrength: isBroadTerrain(terrain) ? 0.14 : 0.26,
           terrainRevealWaterLevelZ: activeWaterLevel * terrain.verticalExaggeration,
         },
       },
@@ -308,6 +326,36 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     lineWidthMinPixels: 0.5,
     getLineColor: (feature) => depthContourColor(feature, activeWaterLevel),
     getLineWidth: (feature) => depthContourWidth(feature, activeWaterLevel),
+  });
+
+  const shorelineGlowOuterLayer = new GeoJsonLayer<PaleoCoastlineProperties>({
+    id: "paleo-waterline-glow-outer",
+    data: {
+      type: "FeatureCollection",
+      features: shorelineGlowFeatures,
+    } as never,
+    pickable: false,
+    stroked: true,
+    filled: false,
+    lineWidthUnits: "pixels",
+    lineWidthMinPixels: 1,
+    getLineColor: (feature) => shorelineGlowColor(feature, activeWaterLevel, "outer"),
+    getLineWidth: (feature) => shorelineGlowWidth(feature, activeWaterLevel, "outer"),
+  });
+
+  const shorelineGlowInnerLayer = new GeoJsonLayer<PaleoCoastlineProperties>({
+    id: "paleo-waterline-glow-inner",
+    data: {
+      type: "FeatureCollection",
+      features: shorelineGlowFeatures,
+    } as never,
+    pickable: false,
+    stroked: true,
+    filled: false,
+    lineWidthUnits: "pixels",
+    lineWidthMinPixels: 1,
+    getLineColor: (feature) => shorelineGlowColor(feature, activeWaterLevel, "inner"),
+    getLineWidth: (feature) => shorelineGlowWidth(feature, activeWaterLevel, "inner"),
   });
 
   const emergenceLayer = new ScatterplotLayer<EmergencePoint>({
@@ -347,7 +395,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     highlightColor: [255, 255, 255, 180],
   });
 
-  return [...terrainLayers, waterLayer, depthContourLayer, coastlineLayer, emergenceLayer];
+  return [...terrainLayers, waterLayer, depthContourLayer, shorelineGlowOuterLayer, shorelineGlowInnerLayer, coastlineLayer, emergenceLayer];
 }
 
 export function getPaleoTooltip(object: unknown) {

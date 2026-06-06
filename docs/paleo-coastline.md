@@ -107,6 +107,7 @@ transparent water plane
 nearest 5 m probe contour
         bright line showing the closest terrain/water intersection
         plus nearby depth contours for shape-reading
+        plus a glow around the active wet/dry edge
 ```
 
 Generated terrain files:
@@ -168,7 +169,7 @@ The terrain mesh control changes deck.gl's `meshMaxError` setting. In plain Engl
 
 The slider also draws the nearest 5 m contour as a bright waterline and nearby 5 m contours as thinner depth lines. These lines are not dated coastline reconstructions. They are visual helpers for the question: "if the water were at this height, which terrain edge would meet the water, and what nearby seafloor shape surrounds it?" The probe interval is deliberately 5 m for the first pass so the browser payload stays manageable.
 
-The terrain surface also uses a small shader-based reveal tint near the active waterline. In plain English: terrain just above the current scrubbed water level gets a warm exposed-land tint, while the source terrain texture stays underneath. This is a visual reading aid, not an added erosion, sediment, or vegetation model.
+The terrain surface also uses a shader-based reveal tint near the active waterline. In plain English: terrain just above the current scrubbed water level gets a warm exposed-land tint, terrain just below the level gets a cool submerged tint, and the source terrain texture stays underneath. The active waterline also gets a soft glow so the exact wet/dry edge remains readable over busy survey textures. These are visual reading aids, not added erosion, sediment, vegetation, or hydrodynamic models.
 
 ## Time Slices
 
