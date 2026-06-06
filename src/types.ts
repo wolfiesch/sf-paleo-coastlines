@@ -63,6 +63,33 @@ export interface PaleoTimeSlice {
   uncertainty: PaleoFeatureCollection;
 }
 
+export interface PaleoTimeSliceManifestItem extends PaleoTimeSlice {
+  sliceDataUrl: string;
+}
+
+export interface PaleoManifest {
+  generatedAt: string;
+  studyBounds: {
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+  };
+  slices: PaleoTimeSliceManifestItem[];
+  waterlineProbe: {
+    levelsMeters: number[];
+    intervalMeters: number;
+    description: string;
+    levelDataUrls: Record<string, string>;
+  };
+  waterlineProbeUrl: string;
+  metadataUrl: string;
+  legacyAllInOneUrl: string;
+}
+
+export type PaleoWaterlineProbe = NonNullable<PaleoTimeSlice["waterlineProbe"]>;
+export type PaleoWaterlineProbeIndex = PaleoManifest["waterlineProbe"];
+
 export interface PaleoRenderContext {
   paleoTimeSliceId: PaleoTimeSliceId;
   showPaleoUncertainty: boolean;

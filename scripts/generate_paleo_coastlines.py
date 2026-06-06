@@ -27,6 +27,8 @@ RAW_DIR = ROOT / "data" / "paleo-coastlines" / "raw"
 WORK_DIR = ROOT / "data" / "paleo-coastlines" / "work"
 PUBLIC_DIR = ROOT / "public" / "data" / "paleo-coastlines"
 TERRAIN_PUBLIC_DIR = PUBLIC_DIR / "terrain"
+SLICES_PUBLIC_DIR = PUBLIC_DIR / "slices"
+WATERLINE_PROBE_PUBLIC_DIR = PUBLIC_DIR / "waterline-probe"
 
 RAW_NETCDF = RAW_DIR / "etopo_2022_sf_bay_coast_15s.nc"
 CONTOURS_RAW = WORK_DIR / "etopo_2022_contours_raw.geojson"
@@ -1075,10 +1077,82 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
 
 def write_outputs(payload: list[dict[str, Any]], metadata: dict[str, Any]) -> None:
     PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
+    SLICES_PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
+    if WATERLINE_PROBE_PUBLIC_DIR.exists():
+        shutil.rmtree(WATERLINE_PROBE_PUBLIC_DIR)
+    WATERLINE_PROBE_PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
+
+    def public_url(path: Path) -> str:
+        return "/" + str(path.relative_to(ROOT / "public"))
+
+    def write_compact_json(path: Path, value: Any) -> None:
+        path.write_text(json.dumps(value, separators=(",", ":")) + "\n")
+
     (PUBLIC_DIR / "paleo_coastlines.json").write_text(json.dumps(payload, separators=(",", ":")) + "\n")
     (PUBLIC_DIR / "paleo_coastline_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
+    manifest_slices = []
+    waterline_probe = None
+    for item in payload:
+        slice_payload = {key: value for key, value in item.items() if key != "waterlineProbe"}
+        slice_path = SLICES_PUBLIC_DIR / f"{item['id']}.json"
+        write_compact_json(slice_path, slice_payload)
+
+        if item.get("waterlineProbe"):
+            waterline_probe = item["waterlineProbe"]
+
+        manifest_item = {
+            key: value
+            for key, value in item.items()
+            if key not in {"coastline", "uncertainty", "waterlineProbe"}
+        }
+        manifest_item["coastline"] = {"type": "FeatureCollection", "features": []}
+        manifest_item["uncertainty"] = {"type": "FeatureCollection", "features": []}
+        manifest_item["sliceDataUrl"] = public_url(slice_path)
+        manifest_slices.append(manifest_item)
+
+    if waterline_probe is None:
+        raise SystemExit("No waterline probe was generated.")
+
+    waterline_probe_path = PUBLIC_DIR / "waterline_probe.json"
+    write_compact_json(waterline_probe_path, waterline_probe)
+
+    level_data_urls = {}
+    probe_features = waterline_probe["contours"]["features"]
+    for level in waterline_probe["levelsMeters"]:
+        level_key = str(rounded_level(level))
+        slug = level_key.replace("-", "minus_").replace(".", "_")
+        level_path = WATERLINE_PROBE_PUBLIC_DIR / f"{slug}.json"
+        level_collection = {
+            "type": "FeatureCollection",
+            "features": [
+                feature
+                for feature in probe_features
+                if rounded_level(feature["properties"]["elevation_m"]) == rounded_level(level)
+            ],
+        }
+        write_compact_json(level_path, level_collection)
+        level_data_urls[level_key] = public_url(level_path)
+
+    manifest = {
+        "generatedAt": metadata["generatedAt"],
+        "studyBounds": metadata["studyBounds"],
+        "slices": manifest_slices,
+        "waterlineProbe": {
+            "levelsMeters": waterline_probe["levelsMeters"],
+            "intervalMeters": waterline_probe["intervalMeters"],
+            "description": waterline_probe["description"],
+            "levelDataUrls": level_data_urls,
+        },
+        "waterlineProbeUrl": public_url(waterline_probe_path),
+        "metadataUrl": public_url(PUBLIC_DIR / "paleo_coastline_metadata.json"),
+        "legacyAllInOneUrl": public_url(PUBLIC_DIR / "paleo_coastlines.json"),
+    }
+    write_compact_json(PUBLIC_DIR / "paleo_manifest.json", manifest)
+
     print(f"Wrote {PUBLIC_DIR / 'paleo_coastlines.json'}")
+    print(f"Wrote {PUBLIC_DIR / 'paleo_manifest.json'}")
+    print(f"Wrote {waterline_probe_path}")
     print(f"Wrote {PUBLIC_DIR / 'paleo_coastline_metadata.json'}")
 
 
