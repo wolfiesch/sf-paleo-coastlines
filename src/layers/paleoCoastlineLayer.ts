@@ -118,6 +118,7 @@ function meshMaxErrorForTerrain(
 
 function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode): string {
   if (mode === "color") return terrain.textures?.depthColor ?? terrain.texture;
+  if (mode === "sonar") return terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
   return terrain.textures?.shadedRelief ?? terrain.texture;
 }
 

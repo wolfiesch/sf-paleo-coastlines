@@ -58,7 +58,7 @@ function App() {
   const [waterLevelMeters, setWaterLevelMeters] = useState<number | null>(-120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
-  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("relief");
+  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("sonar");
 
   useEffect(() => {
     let cancelled = false;

@@ -18,6 +18,7 @@ The checked-in browser data now uses one broad elevation source plus several sha
 |---|---|
 | NOAA CRM Vol. 7, 3 arc-second grid | Broad Bay/offshore coverage toward the Farallones. This keeps the full map continuous when detailed survey patches have gaps. |
 | USGS/CSMP DS 781, 2 m coastal bathymetry blocks | Sharper nearshore ocean-floor detail for Bolinas, San Francisco, Pacifica, and Half Moon Bay. These blocks improve the coastal shelf, but they do not cover the full offshore region. |
+| USGS/CSMP DS 781 acoustic backscatter blocks | Sonar intensity texture for the same coastal bathymetry blocks. This makes rocky bottom, sediment patterns, and survey texture visible on top of the 3D surface. It is used as a visual texture, not as elevation. |
 | USGS OFR 2014-1234 Farallon Escarpment / Rittenburg Bank bathymetry | Sharper offshore multibeam patches west of San Francisco, including a 10 m Farallon Escarpment grid and a 2 m Rittenburg Bank grid. These are the current best detail improvements farther out toward the Farallon region. |
 | USGS DS684 DEM 4, 2 m San Francisco Bar tile | Better local detail around Ocean Beach, the Golden Gate, Marin Headlands, and the San Francisco Bar. This drives the present, 5k, and 10k slices where it has enough depth coverage. |
 | NOAA ETOPO 2022, 15 arc-second grid | Fallback broad source kept in the raw data references. CRM is now preferred for the app because it is about 5x finer for this region. |
@@ -40,6 +41,8 @@ Local source/work files:
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-sf/Bathymetry_OffshoreSanFrancisco.tif`
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-pacifica/Bathymetry_OffshorePacifica.tif`
 - `data/paleo-coastlines/raw/usgs-csmp-offshore-half-moon-bay/Bathymetry_OffshoreHalfMoonBay.tif`
+- `data/paleo-coastlines/raw/usgs-csmp-offshore-*/Backscatter*.zip`
+- `data/paleo-coastlines/raw/usgs-csmp-offshore-*/*Backscatter*.tif`
 - `data/paleo-coastlines/raw/usgs-farallon-escarpment/USGS_escarpment_bathy_10m.asc`
 - `data/paleo-coastlines/raw/usgs-rittenburg-bank/usgs_rittenburgbank_bathy_2m.asc`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF.zip`
@@ -113,15 +116,19 @@ Generated terrain files:
 - `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_color.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_relief.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_sonar.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_color.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_relief.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_sf_sonar.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_color.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_relief.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_sonar.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_color.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_relief.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_sonar.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_elevation.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_color.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_relief.png`
@@ -134,7 +141,9 @@ Generated terrain files:
 
 The `*_elevation.png` files encode height in RGB, not grayscale. In plain English: each pixel gets three color channels to store the height number, which preserves much finer vertical detail than a single 0-255 grayscale value.
 
-The `*_relief.png` files blend the depth color ramp with DEM-derived light and shadow. They are the default app texture because they make ridges, banks, channels, and small seafloor texture easier to see. The original `*_color.png` files remain available through the surface-style control.
+The `*_relief.png` files blend the depth color ramp with DEM-derived light and shadow. They make ridges, banks, channels, and small seafloor texture easier to see. The original `*_color.png` files remain available through the surface-style control.
+
+The `*_sonar.png` files are generated from USGS/CSMP acoustic backscatter where that data exists. In plain English: backscatter is how strongly the seafloor reflected the survey sound signal. Hard rock, sand, mud, and rough bottom can show up differently, so this gives the surface a much more detailed "ocean survey" look. It does not change the 3D height shape; the height still comes from the bathymetry DEM. The app now defaults to `Sonar` surface style and falls back to shaded relief for terrain sources without backscatter.
 
 The vertical scale is exaggerated 4x so the shelf, ridges, and small protruding islands are easier to see. The waterline slider moves the transparent water plane independently of the selected scientific time slice, so you can scrub sea level and watch terrain start to emerge.
 

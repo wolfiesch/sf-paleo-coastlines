@@ -107,6 +107,13 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
         "zipName": "Bathymetry_OffshoreBolinas.zip",
         "zipUrl": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/Bathymetry_OffshoreBolinas.zip",
         "datasetName": "Bathymetry_OffshoreBolinas.tif",
+        "backscatterZipNames": [
+            "BackscatterA_8101_2004_OffshoreBolinas.zip",
+            "BackscatterB_8101_2007_OffshoreBolinas.zip",
+            "BackscatterC_7125_OffshoreBolinas.zip",
+            "BackscatterD_Snippets_OffshoreBolinas.zip",
+            "BackscatterE_Swath_OffshoreBolinas.zip",
+        ],
         "terrainStem": "csmp_offshore_bolinas",
         "terrainSize": 1536,
         "terrainMinimum": -130.0,
@@ -127,6 +134,12 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
         "zipName": "Bathymetry_OffshoreSanFrancisco.zip",
         "zipUrl": CSMP_OFFSHORE_SF_URL,
         "datasetName": "Bathymetry_OffshoreSanFrancisco.tif",
+        "backscatterZipNames": [
+            "BackscatterA_8101_2004_OffshoreSanFrancisco.zip",
+            "BackscatterB_8101_2007_OffshoreSanFrancisco.zip",
+            "BackscatterC_8101_2008_OffshoreSanFrancisco.zip",
+            "BackscatterD_7125_2006_OffshoreSanFrancisco.zip",
+        ],
         "terrainStem": "csmp_offshore_sf",
         "terrainSize": 2048,
         "terrainMinimum": -120.0,
@@ -147,6 +160,10 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
         "zipName": "Bathymetry_OffshorePacifica.zip",
         "zipUrl": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data/Bathymetry_OffshorePacifica.zip",
         "datasetName": "Bathymetry_OffshorePacifica.tif",
+        "backscatterZipNames": [
+            "BackscatterA_8101_OffshorePacifica.zip",
+            "BackscatterB_7125_OffshorePacifica.zip",
+        ],
         "terrainStem": "csmp_offshore_pacifica",
         "terrainSize": 1536,
         "terrainMinimum": -130.0,
@@ -167,6 +184,10 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
         "zipName": "Bathymetry_OffshoreHalfMoonBay.zip",
         "zipUrl": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data/Bathymetry_OffshoreHalfMoonBay.zip",
         "datasetName": "Bathymetry_OffshoreHalfMoonBay.tif",
+        "backscatterZipNames": [
+            "BackscatterA_8101_OffshoreHalfMoonBay.zip",
+            "BackscatterB_7125_OffshoreHalfMoonBay.zip",
+        ],
         "terrainStem": "csmp_offshore_half_moon_bay",
         "terrainSize": 1536,
         "terrainMinimum": -130.0,
@@ -400,11 +421,35 @@ def bathymetry_block_relief_texture_png(block: dict[str, Any]) -> Path:
     return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_relief.png"
 
 
+def bathymetry_block_sonar_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_sonar.png"
+
+
+def bathymetry_block_backscatter_zip(block: dict[str, Any], zip_name: str) -> Path:
+    return bathymetry_block_dir(block) / zip_name
+
+
+def bathymetry_block_backscatter_dataset(block: dict[str, Any], zip_name: str) -> Path:
+    return bathymetry_block_dir(block) / zip_name.replace(".zip", ".tif")
+
+
+def bathymetry_block_backscatter_url(block: dict[str, Any], zip_name: str) -> str:
+    return f"{str(block['sourceUrl']).rsplit('/', 1)[0]}/data/{zip_name}"
+
+
+def bathymetry_block_backscatter_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_backscatter_wgs84.tif"
+
+
 def download_bathymetry_block(block: dict[str, Any]) -> None:
     download_url(str(block["zipUrl"]), bathymetry_block_zip(block))
-    if bathymetry_block_dataset(block).exists():
-        return
-    run(["unzip", "-o", str(bathymetry_block_zip(block)), "-d", str(bathymetry_block_dir(block))])
+    if not bathymetry_block_dataset(block).exists():
+        run(["unzip", "-o", str(bathymetry_block_zip(block)), "-d", str(bathymetry_block_dir(block))])
+
+    for zip_name in block.get("backscatterZipNames", []):
+        download_url(bathymetry_block_backscatter_url(block, str(zip_name)), bathymetry_block_backscatter_zip(block, str(zip_name)))
+        if not bathymetry_block_backscatter_dataset(block, str(zip_name)).exists():
+            run(["unzip", "-o", str(bathymetry_block_backscatter_zip(block, str(zip_name))), "-d", str(bathymetry_block_dir(block))])
 
 
 def download_bathymetry_blocks() -> None:
@@ -587,6 +632,72 @@ def relief_shade(
     return max(0.0, min(1.0, shade * 0.5 + 0.5)), slope
 
 
+def raw_pixel_value(raw: Any) -> float:
+    if isinstance(raw, tuple):
+        values = [float(value) for value in raw[:3] if isinstance(value, (int, float)) and math.isfinite(float(value))]
+        return sum(values) / len(values) if values else float("nan")
+    return float(raw)
+
+
+def percentile(sorted_values: list[float], amount: float) -> float:
+    if not sorted_values:
+        return 0.0
+    index = max(0, min(len(sorted_values) - 1, round((len(sorted_values) - 1) * amount)))
+    return sorted_values[index]
+
+
+def sonar_color(intensity: float) -> tuple[int, int, int]:
+    intensity = max(0.0, min(1.0, intensity))
+    if intensity < 0.55:
+        amount = intensity / 0.55
+        low = (12, 27, 44)
+        mid = (38, 112, 126)
+        return tuple(clamp_byte(low[channel] + (mid[channel] - low[channel]) * amount) for channel in range(3))
+
+    amount = (intensity - 0.55) / 0.45
+    mid = (38, 112, 126)
+    high = (236, 214, 158)
+    return tuple(clamp_byte(mid[channel] + (high[channel] - mid[channel]) * amount) for channel in range(3))
+
+
+def write_sonar_texture_png(backscatter_path: Path, relief_texture_path: Path, output_path: Path) -> None:
+    backscatter = Image.open(backscatter_path)
+    relief = Image.open(relief_texture_path).convert("RGBA")
+    if backscatter.size != relief.size:
+        backscatter = backscatter.resize(relief.size, Image.Resampling.BILINEAR)
+
+    raw_values = [raw_pixel_value(raw) for raw in backscatter.getdata()]
+    valid_values = sorted(value for value in raw_values if math.isfinite(value) and 0 < value < 255)
+    low = percentile(valid_values, 0.02)
+    high = percentile(valid_values, 0.98)
+    if high <= low:
+        high = low + 1.0
+
+    output_pixels: list[tuple[int, int, int, int]] = []
+    relief_pixels = list(relief.getdata())
+    for raw_value, relief_pixel in zip(raw_values, relief_pixels):
+        relief_r, relief_g, relief_b, relief_a = relief_pixel
+        if not math.isfinite(raw_value) or raw_value <= 0 or raw_value >= 255:
+            output_pixels.append((relief_r, relief_g, relief_b, relief_a))
+            continue
+
+        normalized = max(0.0, min(1.0, (raw_value - low) / (high - low)))
+        normalized = math.pow(normalized, 0.82)
+        sonar_r, sonar_g, sonar_b = sonar_color(normalized)
+        relief_luma = (0.2126 * relief_r + 0.7152 * relief_g + 0.0722 * relief_b) / 255.0
+        shade = 0.72 + relief_luma * 0.46
+        output_pixels.append((
+            clamp_byte((sonar_r * shade * 0.72) + (relief_r * 0.28)),
+            clamp_byte((sonar_g * shade * 0.72) + (relief_g * 0.28)),
+            clamp_byte((sonar_b * shade * 0.72) + (relief_b * 0.28)),
+            relief_a,
+        ))
+
+    output = Image.new("RGBA", relief.size)
+    output.putdata(output_pixels)
+    output.save(output_path)
+
+
 def write_terrain_pngs_from_wgs84(
     source_path: Path,
     elevation_path: Path,
@@ -647,6 +758,7 @@ def terrain_metadata(
     elevation_png: Path,
     texture_png: Path,
     relief_texture_png: Path,
+    sonar_texture_png: Path | None,
     minimum: float,
     maximum: float,
     note: str,
@@ -663,15 +775,19 @@ def terrain_metadata(
     def public_url(path: Path) -> str:
         return "/" + str(path.relative_to(ROOT / "public"))
 
+    textures = {
+        "depthColor": public_url(texture_png),
+        "shadedRelief": public_url(relief_texture_png),
+    }
+    if sonar_texture_png is not None and sonar_texture_png.exists():
+        textures["sonarBackscatter"] = public_url(sonar_texture_png)
+
     return {
         "sourceId": source_id,
         "sourceLabel": source_label_value,
         "elevationData": public_url(elevation_png),
         "texture": public_url(texture_png),
-        "textures": {
-            "depthColor": public_url(texture_png),
-            "shadedRelief": public_url(relief_texture_png),
-        },
+        "textures": textures,
         "bounds": [round(west, 7), round(south, 7), round(east, 7), round(north, 7)],
         "heightRangeMeters": [minimum, maximum],
         "verticalExaggeration": TERRAIN_VERTICAL_EXAGGERATION,
@@ -717,10 +833,64 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_ELEVATION_PNG,
         DS684_TERRAIN_TEXTURE_PNG,
         DS684_TERRAIN_RELIEF_TEXTURE_PNG,
+        None,
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
         "Higher-resolution 2 m terrain inset for the Golden Gate, Ocean Beach, Marin Headlands, and San Francisco Bar.",
     )
+
+
+def generate_bathymetry_block_sonar_texture(block: dict[str, Any]) -> Path | None:
+    zip_names = [str(zip_name) for zip_name in block.get("backscatterZipNames", [])]
+    if not zip_names:
+        return None
+
+    datasets = [
+        bathymetry_block_backscatter_dataset(block, zip_name)
+        for zip_name in zip_names
+        if bathymetry_block_backscatter_dataset(block, zip_name).exists()
+    ]
+    if not datasets:
+        return None
+
+    terrain_info = json.loads(subprocess.check_output(["gdalinfo", "-json", str(bathymetry_block_terrain_wgs84(block))]))
+    transform = terrain_info["geoTransform"]
+    width = terrain_info["size"][0]
+    height = terrain_info["size"][1]
+    west = transform[0]
+    north = transform[3]
+    east = west + transform[1] * width
+    south = north + transform[5] * height
+
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-te",
+        str(west),
+        str(south),
+        str(east),
+        str(north),
+        "-ts",
+        str(width),
+        str(height),
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-dstnodata",
+        "-9999",
+        *[str(dataset) for dataset in datasets],
+        str(bathymetry_block_backscatter_wgs84(block)),
+    ])
+    write_sonar_texture_png(
+        bathymetry_block_backscatter_wgs84(block),
+        bathymetry_block_relief_texture_png(block),
+        bathymetry_block_sonar_texture_png(block),
+    )
+    return bathymetry_block_sonar_texture_png(block)
 
 
 def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
@@ -748,6 +918,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
     )
+    sonar_texture = generate_bathymetry_block_sonar_texture(block)
     return terrain_metadata(
         str(block["sourceId"]),
         source_label(str(block["sourceId"])),
@@ -755,6 +926,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         bathymetry_block_elevation_png(block),
         bathymetry_block_texture_png(block),
         bathymetry_block_relief_texture_png(block),
+        sonar_texture,
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
         str(block["note"]),
@@ -796,6 +968,7 @@ def generate_etopo_terrain_asset() -> dict[str, Any]:
         ETOPO_TERRAIN_ELEVATION_PNG,
         ETOPO_TERRAIN_TEXTURE_PNG,
         ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
+        None,
         ETOPO_TERRAIN_MIN_M,
         ETOPO_TERRAIN_MAX_M,
         "Broad Bay-to-Farallones terrain surface. It is coarser than the USGS tile, but it reaches the offshore shelf and Farallon Islands.",
@@ -830,6 +1003,7 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
         CRM_TERRAIN_ELEVATION_PNG,
         CRM_TERRAIN_TEXTURE_PNG,
         CRM_TERRAIN_RELIEF_TEXTURE_PNG,
+        None,
         CRM_TERRAIN_MIN_M,
         CRM_TERRAIN_MAX_M,
         "NOAA CRM Vol. 7 broad Bay-to-Farallones terrain surface at 3 arc-second resolution. It is coarser than the USGS tile, but about 5x finer than ETOPO 2022 for this view.",
@@ -859,6 +1033,8 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         bathymetry_block_elevation_png(block).unlink(missing_ok=True)
         bathymetry_block_texture_png(block).unlink(missing_ok=True)
         bathymetry_block_relief_texture_png(block).unlink(missing_ok=True)
+        bathymetry_block_backscatter_wgs84(block).unlink(missing_ok=True)
+        bathymetry_block_sonar_texture_png(block).unlink(missing_ok=True)
 
     return [
         generate_crm_terrain_asset(),
@@ -1141,6 +1317,12 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 str(bathymetry_block_dataset(block).relative_to(ROOT))
                 for block in BATHYMETRY_BLOCKS
             ],
+            *[
+                str(bathymetry_block_backscatter_dataset(block, str(zip_name)).relative_to(ROOT))
+                for block in BATHYMETRY_BLOCKS
+                for zip_name in block.get("backscatterZipNames", [])
+                if bathymetry_block_backscatter_dataset(block, str(zip_name)).exists()
+            ],
             str(DS684_TIF.relative_to(ROOT)),
         ],
         "browserDataset": "public/data/paleo-coastlines/paleo_coastlines.json",
@@ -1155,7 +1337,9 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                     bathymetry_block_elevation_png(block),
                     bathymetry_block_texture_png(block),
                     bathymetry_block_relief_texture_png(block),
+                    bathymetry_block_sonar_texture_png(block),
                 )
+                if path.exists()
             ],
             str(DS684_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(DS684_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
