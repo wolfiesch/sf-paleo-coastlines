@@ -20,6 +20,8 @@ interface PickedPaleoFeature {
   properties: PaleoCoastlineProperties;
 }
 
+type GeoJsonCoordinates = number[] | GeoJsonCoordinates[];
+
 function lineRoleLabel(role: PaleoCoastlineProperties["line_role"]): string {
   if (role === "lower_sea_level_bound") return "Lower sea-level bound";
   if (role === "higher_sea_level_bound") return "Higher sea-level bound";
@@ -27,15 +29,29 @@ function lineRoleLabel(role: PaleoCoastlineProperties["line_role"]): string {
   return "Best estimate";
 }
 
-function getLineColor(feature: PickedPaleoFeature): [number, number, number, number] {
-  if (feature.properties.line_role === "waterline_probe") return [255, 255, 255, 245];
+function probeLineColor(feature: PickedPaleoFeature, activeWaterLevel: number): [number, number, number, number] {
+  const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
+  const fade = Math.max(0, 1 - Math.abs(offsetMeters) / 20);
+  const alpha = Math.round(80 + fade * 165);
+
+  if (Math.abs(offsetMeters) <= 2.5) return [255, 255, 255, 250];
+  if (offsetMeters > 0) return [255, 220, 118, alpha];
+  return [62, 214, 255, Math.max(70, alpha - 20)];
+}
+
+function getLineColor(feature: PickedPaleoFeature, activeWaterLevel: number): [number, number, number, number] {
+  if (feature.properties.line_role === "waterline_probe") return probeLineColor(feature, activeWaterLevel);
   if (feature.properties.line_role === "estimate") return [70, 220, 238, 235];
   if (feature.properties.line_role === "lower_sea_level_bound") return [114, 184, 255, 125];
   return [255, 207, 92, 125];
 }
 
-function getLineWidth(feature: PickedPaleoFeature): number {
-  if (feature.properties.line_role === "waterline_probe") return 2.5;
+function getLineWidth(feature: PickedPaleoFeature, activeWaterLevel: number): number {
+  if (feature.properties.line_role === "waterline_probe") {
+    const offsetMeters = Math.abs(feature.properties.elevation_m - activeWaterLevel);
+    if (offsetMeters <= 2.5) return 3.4;
+    return offsetMeters <= 10 ? 1.8 : 1.15;
+  }
   return feature.properties.line_role === "estimate" ? 3 : 1.5;
 }
 
@@ -93,7 +109,7 @@ function probeFeaturesForWaterLevel(
   const level = nearestProbeLevel(waterLevelMeters, probe.levelsMeters);
   if (level == null) return [];
 
-  return probe.contours.features.filter((feature) => feature.properties.elevation_m === level);
+  return probe.contours.features.filter((feature) => Math.abs(feature.properties.elevation_m - level) <= 15);
 }
 
 function isBroadTerrain(terrain: PaleoTerrainConfig): boolean {
@@ -122,6 +138,33 @@ function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode
   return terrain.textures?.shadedRelief ?? terrain.texture;
 }
 
+function addZToCoordinates(coordinates: unknown, zMeters: number): unknown {
+  if (!Array.isArray(coordinates)) return coordinates;
+  if (
+    coordinates.length >= 2
+    && typeof coordinates[0] === "number"
+    && typeof coordinates[1] === "number"
+  ) {
+    return [coordinates[0], coordinates[1], zMeters];
+  }
+
+  return (coordinates as GeoJsonCoordinates[]).map((item) => addZToCoordinates(item, zMeters));
+}
+
+function elevatedFeature(feature: PaleoCoastlineFeature, terrain: PaleoTerrainConfig | null): PaleoCoastlineFeature {
+  if (!terrain) return feature;
+
+  const zOffset = feature.properties.line_role === "waterline_probe" ? 1.8 : 1.2;
+  const zMeters = feature.properties.elevation_m * terrain.verticalExaggeration + zOffset;
+  return {
+    ...feature,
+    geometry: {
+      ...feature.geometry,
+      coordinates: addZToCoordinates(feature.geometry.coordinates, zMeters),
+    },
+  };
+}
+
 export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: PaleoRenderContext) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
@@ -136,7 +179,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     ...slice.coastline.features,
     ...probeFeaturesForWaterLevel(data, slice, activeWaterLevel),
     ...(context.showPaleoUncertainty ? slice.uncertainty.features : []),
-  ];
+  ].map((feature) => elevatedFeature(feature, primaryTerrainForSlice(slice)));
 
   const terrainLayers = terrainStackForSlice(slice).map((terrain, index) =>
     new TerrainLayer({
@@ -163,8 +206,8 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     filled: true,
     stroked: true,
     getPolygon: (item) => item.polygon,
-    getFillColor: [30, 125, 185, 88],
-    getLineColor: [170, 240, 255, 170],
+    getFillColor: [24, 112, 166, 76],
+    getLineColor: [188, 248, 255, 185],
     getLineWidth: 2,
     lineWidthUnits: "pixels",
   });
@@ -180,8 +223,8 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     filled: false,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 1,
-    getLineColor,
-    getLineWidth,
+    getLineColor: (feature) => getLineColor(feature, activeWaterLevel),
+    getLineWidth: (feature) => getLineWidth(feature, activeWaterLevel),
     autoHighlight: true,
     highlightColor: [255, 255, 255, 180],
   });

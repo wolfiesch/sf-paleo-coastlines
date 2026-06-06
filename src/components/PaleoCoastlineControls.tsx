@@ -170,7 +170,7 @@ export function PaleoCoastlineControls({
         <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
           <div className="min-w-0">
             <div className="truncate text-xs text-gray-300">{waterlineStage(activeWaterLevel)}</div>
-            <div className="font-mono text-[11px] leading-4 text-gray-500">probe contour {probeLevel} m</div>
+            <div className="font-mono text-[11px] leading-4 text-gray-500">probe band {probeLevel - 15} to {probeLevel + 15} m</div>
           </div>
           <div className="flex shrink-0 gap-1">
             <button
@@ -192,6 +192,20 @@ export function PaleoCoastlineControls({
               <RotateCcw size={14} />
             </button>
           </div>
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-4 rounded-full bg-white" />
+            Waterline
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-4 rounded-full bg-amber-300" />
+            Exposed
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-4 rounded-full bg-cyan-300" />
+            Submerged
+          </span>
         </div>
       </label>
 

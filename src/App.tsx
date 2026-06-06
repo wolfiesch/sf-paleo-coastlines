@@ -26,11 +26,6 @@ const START_VIEW: MapViewState = {
   bearing: -32,
 };
 
-const EMPTY_FEATURE_COLLECTION: PaleoFeatureCollection = {
-  type: "FeatureCollection",
-  features: [],
-};
-
 function nearestProbeLevel(level: number, levels: number[]): number | null {
   if (!levels.length) return null;
 
@@ -41,6 +36,14 @@ function nearestProbeLevel(level: number, levels: number[]): number | null {
 
 function probeLevelKey(level: number): string {
   return (Math.round(level * 10) / 10).toFixed(1);
+}
+
+function nearbyProbeLevels(activeLevel: number | null, levels: number[]): number[] {
+  if (activeLevel == null || !levels.length) return [];
+  const nearest = nearestProbeLevel(activeLevel, levels);
+  if (nearest == null) return [];
+
+  return levels.filter((level) => Math.abs(level - nearest) <= 15);
 }
 
 function App() {
@@ -150,30 +153,45 @@ function App() {
     waterlineProbeIndex?.levelsMeters ?? [],
   ), [activeSliceId, loadedSlices, sliceCatalog, waterLevelMeters, waterlineProbeIndex]);
 
-  useEffect(() => {
-    if (!waterlineProbeIndex || activeProbeLevel == null) return;
-    const levelKey = probeLevelKey(activeProbeLevel);
-    if (loadedProbeLevels[levelKey]) return;
+  const activeProbeLevels = useMemo(() => nearbyProbeLevels(
+    activeProbeLevel,
+    waterlineProbeIndex?.levelsMeters ?? [],
+  ), [activeProbeLevel, waterlineProbeIndex]);
 
-    const url = waterlineProbeIndex.levelDataUrls[levelKey];
-    if (!url) return;
+  useEffect(() => {
+    if (!waterlineProbeIndex || !activeProbeLevels.length) return;
+    const probeIndex = waterlineProbeIndex;
+    const missingLevels = activeProbeLevels.filter((level) => {
+      const levelKey = probeLevelKey(level);
+      return probeIndex.levelDataUrls[levelKey] && !loadedProbeLevels[levelKey];
+    });
+    if (!missingLevels.length) return;
+
     let cancelled = false;
 
-    async function loadProbeLevel() {
-      setLoadingProbeLevel(levelKey);
+    async function loadProbeLevels() {
+      const activeKey = activeProbeLevel == null ? probeLevelKey(missingLevels[0]) : probeLevelKey(activeProbeLevel);
+      setLoadingProbeLevel(activeKey);
       try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Failed to load waterline probe ${levelKey} m: ${response.status}`);
-        }
-        const payload = await response.json() as PaleoFeatureCollection;
+        const entries = await Promise.all(missingLevels.map(async (level) => {
+          const levelKey = probeLevelKey(level);
+          const response = await fetch(probeIndex.levelDataUrls[levelKey]);
+          if (!response.ok) {
+            throw new Error(`Failed to load waterline probe ${levelKey} m: ${response.status}`);
+          }
+          const payload = await response.json() as PaleoFeatureCollection;
+          return [levelKey, payload] as const;
+        }));
         if (!cancelled) {
-          setLoadedProbeLevels((current) => ({ ...current, [levelKey]: payload }));
+          setLoadedProbeLevels((current) => ({
+            ...current,
+            ...Object.fromEntries(entries),
+          }));
           setError(null);
         }
       } catch (cause) {
         if (!cancelled) {
-          setError(cause instanceof Error ? cause.message : `Failed to load waterline probe ${levelKey} m.`);
+          setError(cause instanceof Error ? cause.message : "Failed to load nearby waterline probes.");
         }
       } finally {
         if (!cancelled) {
@@ -182,12 +200,12 @@ function App() {
       }
     }
 
-    void loadProbeLevel();
+    void loadProbeLevels();
 
     return () => {
       cancelled = true;
     };
-  }, [activeProbeLevel, loadedProbeLevels, waterlineProbeIndex]);
+  }, [activeProbeLevel, activeProbeLevels, loadedProbeLevels, waterlineProbeIndex]);
 
   const activeSlice = useMemo(
     () => {
@@ -197,17 +215,24 @@ function App() {
         ?? null;
       if (!slice || !waterlineProbeIndex) return slice;
       const levelKey = activeProbeLevel == null ? "" : probeLevelKey(activeProbeLevel);
+      const probeFeatures = activeProbeLevels.flatMap((level) => {
+        const loadedLevel = loadedProbeLevels[probeLevelKey(level)];
+        return loadedLevel?.features ?? [];
+      });
       return {
         ...slice,
         waterlineProbe: {
           levelsMeters: waterlineProbeIndex.levelsMeters,
           intervalMeters: waterlineProbeIndex.intervalMeters,
           description: waterlineProbeIndex.description,
-          contours: loadedProbeLevels[levelKey] ?? EMPTY_FEATURE_COLLECTION,
+          contours: {
+            type: "FeatureCollection",
+            features: probeFeatures.length ? probeFeatures : loadedProbeLevels[levelKey]?.features ?? [],
+          } satisfies PaleoFeatureCollection,
         },
       };
     },
-    [activeProbeLevel, activeSliceId, loadedProbeLevels, loadedSlices, sliceCatalog, waterlineProbeIndex],
+    [activeProbeLevel, activeProbeLevels, activeSliceId, loadedProbeLevels, loadedSlices, sliceCatalog, waterlineProbeIndex],
   );
 
   const renderSlices = useMemo(() => (activeSlice ? [activeSlice] : []), [activeSlice]);
