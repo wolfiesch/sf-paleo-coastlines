@@ -770,16 +770,17 @@ def normalize_lon(value: float) -> float:
     return value - 360 if value > 180 else value
 
 
-def transform_coordinates(coords: Any) -> Any:
+def transform_coordinates(coords: Any, normalize_360_lon: bool) -> Any:
     if (
         isinstance(coords, list)
         and len(coords) >= 2
         and isinstance(coords[0], (int, float))
         and isinstance(coords[1], (int, float))
     ):
-        return [round(normalize_lon(float(coords[0])), 6), round(float(coords[1]), 6)]
+        lon = normalize_lon(float(coords[0])) if normalize_360_lon else float(coords[0])
+        return [round(lon, 6), round(float(coords[1]), 6)]
     if isinstance(coords, list):
-        return [transform_coordinates(item) for item in coords]
+        return [transform_coordinates(item, normalize_360_lon) for item in coords]
     return coords
 
 
@@ -819,7 +820,7 @@ def clone_feature(feature: dict[str, Any], properties: dict[str, Any], normalize
         "properties": properties,
         "geometry": {
             "type": geometry["type"],
-            "coordinates": transform_coordinates(coordinates) if normalize_360_lon else coordinates,
+            "coordinates": transform_coordinates(coordinates, normalize_360_lon),
         },
     }
 
@@ -1074,7 +1075,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
 
 def write_outputs(payload: list[dict[str, Any]], metadata: dict[str, Any]) -> None:
     PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
-    (PUBLIC_DIR / "paleo_coastlines.json").write_text(json.dumps(payload, indent=2) + "\n")
+    (PUBLIC_DIR / "paleo_coastlines.json").write_text(json.dumps(payload, separators=(",", ":")) + "\n")
     (PUBLIC_DIR / "paleo_coastline_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
     print(f"Wrote {PUBLIC_DIR / 'paleo_coastlines.json'}")

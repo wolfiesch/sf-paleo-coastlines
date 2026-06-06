@@ -58,6 +58,8 @@ pnpm paleo-coastlines:generate
 
 The script downloads missing source files, runs `gdal_contour`, simplifies the broad NOAA contour lines for browser use, reprojects the USGS output to WGS84, converts NOAA's 0-360 longitude values into normal west-longitude values, filters tiny contour fragments, and writes browser-ready GeoJSON plus browser-ready terrain PNGs.
 
+The browser GeoJSON is written as compact JSON with coordinates rounded to 6 decimal places. That keeps sub-meter coordinate precision for this area while cutting a lot of unnecessary browser download size.
+
 The important idea is:
 
 ```text
