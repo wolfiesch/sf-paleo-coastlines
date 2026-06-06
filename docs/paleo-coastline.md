@@ -106,6 +106,7 @@ transparent water plane
         v
 nearest 5 m probe contour
         bright line showing the closest terrain/water intersection
+        plus nearby depth contours for shape-reading
 ```
 
 Generated terrain files:
@@ -119,21 +120,25 @@ Generated terrain files:
 - `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_relief.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_composite.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_sonar.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_bolinas_hybrid.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_color.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_relief.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_composite.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_sf_sonar.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_sf_hybrid.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_color.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_relief.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_composite.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_sonar.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_pacifica_hybrid.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_elevation.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_color.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_relief.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_composite.png`
 - `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_sonar.png`
+- `public/data/paleo-coastlines/terrain/csmp_offshore_half_moon_bay_hybrid.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_elevation.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_color.png`
 - `public/data/paleo-coastlines/terrain/usgs_farallon_escarpment_relief.png`
@@ -151,15 +156,17 @@ The `*_elevation.png` files encode height in RGB, not grayscale. In plain Englis
 
 The `*_relief.png` files blend the depth color ramp with DEM-derived light and shadow. They make ridges, banks, channels, and small seafloor texture easier to see. The original `*_color.png` files remain available through the surface-style control.
 
-The `*_composite.png` files are the default `Survey` surface style. They combine depth color, shaded relief, local slope, roughness, and a simple ridge-or-hollow signal calculated from neighboring height pixels. In plain English: this is still the same terrain height data, but the texture makes small banks, channels, scarps, rocky patches, and newly exposed ridges easier to read at a glance.
+The `*_composite.png` files power the `Survey` surface style. They combine depth color, shaded relief, local slope, roughness, and a simple ridge-or-hollow signal calculated from neighboring height pixels. In plain English: this is still the same terrain height data, but the texture makes small banks, channels, scarps, rocky patches, and newly exposed ridges easier to read at a glance.
 
 The `*_sonar.png` files are generated from USGS/CSMP acoustic backscatter where that data exists. In plain English: backscatter is how strongly the seafloor reflected the survey sound signal. Hard rock, sand, mud, and rough bottom can show up differently, so this gives the surface a much more detailed "ocean survey" look. It does not change the 3D height shape; the height still comes from the bathymetry DEM. The app keeps `Sonar` as a separate surface style and falls back to shaded relief for terrain sources without backscatter.
+
+The `*_hybrid.png` files are the default `Hybrid` surface style for USGS/CSMP blocks with acoustic backscatter. They bake sonar intensity on top of the Survey texture. In plain English: where sonar exists, Hybrid shows both measured seafloor reflectivity and DEM-derived shape detail; where sonar does not exist, the app falls back to Survey so the map remains continuous.
 
 The vertical scale is exaggerated 4x so the shelf, ridges, and small protruding islands are easier to see. The waterline slider moves the transparent water plane independently of the selected scientific time slice, so you can scrub sea level and watch terrain start to emerge.
 
 The terrain mesh control changes deck.gl's `meshMaxError` setting. In plain English: lower values keep more small bumps and ridges from the elevation image, while higher values trade some detail for speed. The default `Survey` setting uses tighter mesh error values for the USGS/CSMP and Farallon multibeam patches than for the broad NOAA background surface.
 
-The slider also draws the nearest 5 m contour as a bright probe line. This probe is not a dated coastline reconstruction. It is a visual helper for the question: "if the water were at this height, which terrain edge would meet the water?" The probe interval is deliberately 5 m for the first pass so the single browser JSON stays manageable.
+The slider also draws the nearest 5 m contour as a bright waterline and nearby 5 m contours as thinner depth lines. These lines are not dated coastline reconstructions. They are visual helpers for the question: "if the water were at this height, which terrain edge would meet the water, and what nearby seafloor shape surrounds it?" The probe interval is deliberately 5 m for the first pass so the browser payload stays manageable.
 
 The terrain surface also uses a small shader-based reveal tint near the active waterline. In plain English: terrain just above the current scrubbed water level gets a warm exposed-land tint, while the source terrain texture stays underneath. This is a visual reading aid, not an added erosion, sediment, or vegetation model.
 

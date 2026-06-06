@@ -28,6 +28,8 @@ interface EmergencePoint {
 
 type GeoJsonCoordinates = number[] | GeoJsonCoordinates[];
 
+const DEPTH_CONTOUR_BAND_METERS = 30;
+
 function lineRoleLabel(role: PaleoCoastlineProperties["line_role"]): string {
   if (role === "lower_sea_level_bound") return "Lower sea-level bound";
   if (role === "higher_sea_level_bound") return "Higher sea-level bound";
@@ -59,6 +61,21 @@ function getLineWidth(feature: PickedPaleoFeature, activeWaterLevel: number): nu
     return offsetMeters <= 10 ? 1.8 : 1.15;
   }
   return feature.properties.line_role === "estimate" ? 3 : 1.5;
+}
+
+function depthContourColor(feature: PickedPaleoFeature, activeWaterLevel: number): [number, number, number, number] {
+  const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
+  const distance = Math.abs(offsetMeters);
+  const fade = Math.max(0, 1 - distance / DEPTH_CONTOUR_BAND_METERS);
+  if (distance <= 2.5) return [255, 255, 255, 235];
+  if (offsetMeters > 0) return [255, 218, 96, Math.round(72 + fade * 92)];
+  return [42, 125, 176, Math.round(56 + fade * 86)];
+}
+
+function depthContourWidth(feature: PickedPaleoFeature, activeWaterLevel: number): number {
+  const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
+  if (distance <= 2.5) return 2.8;
+  return Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.25 : 0.7;
 }
 
 function selectedSlice(data: PaleoTimeSlice[], context: PaleoRenderContext): PaleoTimeSlice | null {
@@ -115,7 +132,7 @@ function probeFeaturesForWaterLevel(
   const level = nearestProbeLevel(waterLevelMeters, probe.levelsMeters);
   if (level == null) return [];
 
-  return probe.contours.features.filter((feature) => Math.abs(feature.properties.elevation_m - level) <= 15);
+  return probe.contours.features.filter((feature) => Math.abs(feature.properties.elevation_m - level) <= DEPTH_CONTOUR_BAND_METERS);
 }
 
 function isBroadTerrain(terrain: PaleoTerrainConfig): boolean {
@@ -140,6 +157,7 @@ function meshMaxErrorForTerrain(
 
 function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode): string {
   if (mode === "color") return terrain.textures?.depthColor ?? terrain.texture;
+  if (mode === "hybrid") return terrain.textures?.surveySonarHybrid ?? terrain.textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
   if (mode === "sonar") return terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
   if (mode === "survey") return terrain.textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
   return terrain.textures?.shadedRelief ?? terrain.texture;
@@ -228,12 +246,14 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
 
   const terrain = primaryTerrainForSlice(slice);
   const rawProbeFeatures = probeFeaturesForWaterLevel(data, slice, activeWaterLevel);
+  const activeProbeFeatures = rawProbeFeatures.filter((feature) => Math.abs(feature.properties.elevation_m - activeWaterLevel) <= 2.5);
   const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel);
   const features = [
     ...slice.coastline.features,
-    ...rawProbeFeatures,
+    ...activeProbeFeatures,
     ...(context.showPaleoUncertainty ? slice.uncertainty.features : []),
   ].map((feature) => elevatedFeature(feature, terrain));
+  const depthContourFeatures = rawProbeFeatures.map((feature) => elevatedFeature(feature, terrain));
 
   const terrainLayers = terrainStackForSlice(slice).map((terrain, index) =>
     new TerrainLayer({
@@ -275,6 +295,21 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     lineWidthUnits: "pixels",
   });
 
+  const depthContourLayer = new GeoJsonLayer<PaleoCoastlineProperties>({
+    id: "paleo-depth-contours",
+    data: {
+      type: "FeatureCollection",
+      features: depthContourFeatures,
+    } as never,
+    pickable: false,
+    stroked: true,
+    filled: false,
+    lineWidthUnits: "pixels",
+    lineWidthMinPixels: 0.5,
+    getLineColor: (feature) => depthContourColor(feature, activeWaterLevel),
+    getLineWidth: (feature) => depthContourWidth(feature, activeWaterLevel),
+  });
+
   const emergenceLayer = new ScatterplotLayer<EmergencePoint>({
     id: "paleo-emergence-glints",
     data: emergencePoints,
@@ -312,7 +347,7 @@ export function createPaleoCoastlineLayers(data: PaleoTimeSlice[], context: Pale
     highlightColor: [255, 255, 255, 180],
   });
 
-  return [...terrainLayers, waterLayer, coastlineLayer, emergenceLayer];
+  return [...terrainLayers, waterLayer, depthContourLayer, coastlineLayer, emergenceLayer];
 }
 
 export function getPaleoTooltip(object: unknown) {

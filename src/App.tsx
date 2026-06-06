@@ -43,7 +43,7 @@ function nearbyProbeLevels(activeLevel: number | null, levels: number[]): number
   const nearest = nearestProbeLevel(activeLevel, levels);
   if (nearest == null) return [];
 
-  return levels.filter((level) => Math.abs(level - nearest) <= 15);
+  return levels.filter((level) => Math.abs(level - nearest) <= 30);
 }
 
 function App() {
@@ -61,7 +61,7 @@ function App() {
   const [waterLevelMeters, setWaterLevelMeters] = useState<number | null>(-120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
-  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("survey");
+  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("hybrid");
 
   useEffect(() => {
     let cancelled = false;

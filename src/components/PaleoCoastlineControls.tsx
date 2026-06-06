@@ -25,6 +25,7 @@ const TERRAIN_DETAIL_OPTIONS: { id: TerrainDetailLevel; label: string; title: st
 ];
 
 const TERRAIN_TEXTURE_OPTIONS: { id: TerrainTextureMode; label: string; title: string }[] = [
+  { id: "hybrid", label: "Hybrid", title: "Survey texture plus acoustic backscatter where sonar exists" },
   { id: "survey", label: "Survey", title: "Slope, roughness, ridge, and hollow detail blended with depth color" },
   { id: "relief", label: "Relief", title: "Depth color plus DEM-derived light and shadow" },
   { id: "sonar", label: "Sonar", title: "Acoustic backscatter where available, relief elsewhere" },
@@ -171,7 +172,7 @@ export function PaleoCoastlineControls({
         <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
           <div className="min-w-0">
             <div className="truncate text-xs text-gray-300">{waterlineStage(activeWaterLevel)}</div>
-            <div className="font-mono text-[11px] leading-4 text-gray-500">probe band {probeLevel - 15} to {probeLevel + 15} m</div>
+            <div className="font-mono text-[11px] leading-4 text-gray-500">contour band {probeLevel - 30} to {probeLevel + 30} m</div>
           </div>
           <div className="flex shrink-0 gap-1">
             <button
@@ -194,7 +195,7 @@ export function PaleoCoastlineControls({
             </button>
           </div>
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
+        <div className="mt-2 grid grid-cols-4 gap-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-4 rounded-full bg-white" />
             Waterline
@@ -206,6 +207,10 @@ export function PaleoCoastlineControls({
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-4 rounded-full bg-cyan-300" />
             Submerged
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-4 rounded-full bg-sky-700" />
+            Depth
           </span>
         </div>
       </label>
@@ -236,9 +241,9 @@ export function PaleoCoastlineControls({
             );
           })}
         </div>
-        <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-800/80 pt-2">
+        <div className="mt-2 border-t border-gray-800/80 pt-2">
           <span className="text-[11px] uppercase leading-4 text-gray-500">Surface style</span>
-          <div className="grid w-60 grid-cols-4 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
+          <div className="mt-1 grid grid-cols-5 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
             {TERRAIN_TEXTURE_OPTIONS.map((option) => {
               const active = option.id === terrainTextureMode;
               return (

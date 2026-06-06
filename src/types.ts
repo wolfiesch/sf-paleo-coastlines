@@ -1,6 +1,6 @@
 export type PaleoTimeSliceId = "present" | "5k_years_ago" | "10k_years_ago" | "20k_years_ago";
 export type TerrainDetailLevel = "fast" | "detailed" | "survey";
-export type TerrainTextureMode = "survey" | "sonar" | "relief" | "color";
+export type TerrainTextureMode = "hybrid" | "survey" | "sonar" | "relief" | "color";
 
 export interface PaleoTerrainConfig {
   sourceId: string;
@@ -11,6 +11,7 @@ export interface PaleoTerrainConfig {
     depthColor: string;
     shadedRelief: string;
     surveyComposite?: string;
+    surveySonarHybrid?: string;
     sonarBackscatter?: string;
   };
   bounds: [number, number, number, number];

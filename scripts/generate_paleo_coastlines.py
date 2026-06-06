@@ -432,6 +432,10 @@ def bathymetry_block_sonar_texture_png(block: dict[str, Any]) -> Path:
     return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_sonar.png"
 
 
+def bathymetry_block_hybrid_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_hybrid.png"
+
+
 def bathymetry_block_backscatter_zip(block: dict[str, Any], zip_name: str) -> Path:
     return bathymetry_block_dir(block) / zip_name
 
@@ -853,6 +857,7 @@ def terrain_metadata(
     relief_texture_png: Path,
     composite_texture_png: Path,
     sonar_texture_png: Path | None,
+    hybrid_texture_png: Path | None,
     minimum: float,
     maximum: float,
     note: str,
@@ -876,6 +881,8 @@ def terrain_metadata(
     }
     if sonar_texture_png is not None and sonar_texture_png.exists():
         textures["sonarBackscatter"] = public_url(sonar_texture_png)
+    if hybrid_texture_png is not None and hybrid_texture_png.exists():
+        textures["surveySonarHybrid"] = public_url(hybrid_texture_png)
 
     return {
         "sourceId": source_id,
@@ -931,16 +938,17 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_RELIEF_TEXTURE_PNG,
         DS684_TERRAIN_COMPOSITE_TEXTURE_PNG,
         None,
+        None,
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
         "Higher-resolution 2 m terrain inset for the Golden Gate, Ocean Beach, Marin Headlands, and San Francisco Bar.",
     )
 
 
-def generate_bathymetry_block_sonar_texture(block: dict[str, Any]) -> Path | None:
+def generate_bathymetry_block_sonar_texture(block: dict[str, Any]) -> tuple[Path | None, Path | None]:
     zip_names = [str(zip_name) for zip_name in block.get("backscatterZipNames", [])]
     if not zip_names:
-        return None
+        return None, None
 
     datasets = [
         bathymetry_block_backscatter_dataset(block, zip_name)
@@ -948,7 +956,7 @@ def generate_bathymetry_block_sonar_texture(block: dict[str, Any]) -> Path | Non
         if bathymetry_block_backscatter_dataset(block, zip_name).exists()
     ]
     if not datasets:
-        return None
+        return None, None
 
     terrain_info = json.loads(subprocess.check_output(["gdalinfo", "-json", str(bathymetry_block_terrain_wgs84(block))]))
     transform = terrain_info["geoTransform"]
@@ -987,7 +995,12 @@ def generate_bathymetry_block_sonar_texture(block: dict[str, Any]) -> Path | Non
         bathymetry_block_relief_texture_png(block),
         bathymetry_block_sonar_texture_png(block),
     )
-    return bathymetry_block_sonar_texture_png(block)
+    write_sonar_texture_png(
+        bathymetry_block_backscatter_wgs84(block),
+        bathymetry_block_composite_texture_png(block),
+        bathymetry_block_hybrid_texture_png(block),
+    )
+    return bathymetry_block_sonar_texture_png(block), bathymetry_block_hybrid_texture_png(block)
 
 
 def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
@@ -1016,7 +1029,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
     )
-    sonar_texture = generate_bathymetry_block_sonar_texture(block)
+    sonar_texture, hybrid_texture = generate_bathymetry_block_sonar_texture(block)
     return terrain_metadata(
         str(block["sourceId"]),
         source_label(str(block["sourceId"])),
@@ -1026,6 +1039,7 @@ def generate_bathymetry_block_terrain_asset(block: dict[str, Any]) -> dict[str, 
         bathymetry_block_relief_texture_png(block),
         bathymetry_block_composite_texture_png(block),
         sonar_texture,
+        hybrid_texture,
         float(block["terrainMinimum"]),
         float(block["terrainMaximum"]),
         str(block["note"]),
@@ -1070,6 +1084,7 @@ def generate_etopo_terrain_asset() -> dict[str, Any]:
         ETOPO_TERRAIN_RELIEF_TEXTURE_PNG,
         ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG,
         None,
+        None,
         ETOPO_TERRAIN_MIN_M,
         ETOPO_TERRAIN_MAX_M,
         "Broad Bay-to-Farallones terrain surface. It is coarser than the USGS tile, but it reaches the offshore shelf and Farallon Islands.",
@@ -1107,6 +1122,7 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
         CRM_TERRAIN_RELIEF_TEXTURE_PNG,
         CRM_TERRAIN_COMPOSITE_TEXTURE_PNG,
         None,
+        None,
         CRM_TERRAIN_MIN_M,
         CRM_TERRAIN_MAX_M,
         "NOAA CRM Vol. 7 broad Bay-to-Farallones terrain surface at 3 arc-second resolution. It is coarser than the USGS tile, but about 5x finer than ETOPO 2022 for this view.",
@@ -1142,6 +1158,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         bathymetry_block_composite_texture_png(block).unlink(missing_ok=True)
         bathymetry_block_backscatter_wgs84(block).unlink(missing_ok=True)
         bathymetry_block_sonar_texture_png(block).unlink(missing_ok=True)
+        bathymetry_block_hybrid_texture_png(block).unlink(missing_ok=True)
 
     return [
         generate_crm_terrain_asset(),
@@ -1447,6 +1464,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                     bathymetry_block_relief_texture_png(block),
                     bathymetry_block_composite_texture_png(block),
                     bathymetry_block_sonar_texture_png(block),
+                    bathymetry_block_hybrid_texture_png(block),
                 )
                 if path.exists()
             ],
