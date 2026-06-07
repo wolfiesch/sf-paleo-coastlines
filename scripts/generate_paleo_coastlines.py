@@ -1932,6 +1932,8 @@ def terrain_metadata(
     if character_texture_png is not None and character_texture_png.exists():
         textures["seafloorCharacter"] = public_url(character_texture_png)
 
+    source_kind = terrain_source_kind(source_id)
+
     return {
         "sourceId": source_id,
         "sourceLabel": source_label_value,
@@ -1940,6 +1942,9 @@ def terrain_metadata(
         "textures": textures,
         "bounds": [round(west, 7), round(south, 7), round(east, 7), round(north, 7)],
         "heightRangeMeters": [minimum, maximum],
+        "qualityTier": source_kind["qualityTier"],
+        "renderPriority": source_kind["renderPriority"],
+        "resolutionMeters": source_kind["resolutionMeters"],
         "verticalExaggeration": TERRAIN_VERTICAL_EXAGGERATION,
         "elevationDecoder": {
             "rScaler": ((maximum - minimum) / 16_777_215.0) * 65_536 * TERRAIN_VERTICAL_EXAGGERATION,
@@ -1949,6 +1954,24 @@ def terrain_metadata(
         },
         "note": note,
     }
+
+
+def terrain_source_kind(source_id: str) -> dict[str, Any]:
+    if source_id.startswith("noaa_crm") or source_id.startswith("noaa_cudem") or source_id.startswith("etopo"):
+        return {"qualityTier": "broad", "renderPriority": 10, "resolutionMeters": None}
+    if source_id.startswith("noaa_ocm_area_a_interferometric"):
+        return {"qualityTier": "bay_mosaic", "renderPriority": 40, "resolutionMeters": 1}
+    if source_id.startswith("usgs_sf_bay_1m") or source_id.startswith("noaa_ocm_area_a"):
+        return {"qualityTier": "source_survey", "renderPriority": 70, "resolutionMeters": 1}
+    if source_id.startswith("noaa_nos"):
+        resolution = 1 if "_1m" in source_id else 2 if "_2m" in source_id else None
+        return {"qualityTier": "source_survey", "renderPriority": 80, "resolutionMeters": resolution}
+    if source_id.startswith("usgs_csmp") or source_id.startswith("usgs_ds684"):
+        return {"qualityTier": "nearshore_detail", "renderPriority": 85, "resolutionMeters": 2}
+    if "farallon" in source_id or "rittenburg" in source_id:
+        resolution = 2 if "rittenburg" in source_id else 10 if "farallon_escarpment" in source_id else None
+        return {"qualityTier": "offshore_survey", "renderPriority": 90, "resolutionMeters": resolution}
+    return {"qualityTier": "reference", "renderPriority": 50, "resolutionMeters": None}
 
 
 def generate_usgs_terrain_asset() -> dict[str, Any]:

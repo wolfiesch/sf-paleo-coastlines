@@ -2,6 +2,7 @@ export type PaleoTimeSliceId = "present" | "5k_years_ago" | "10k_years_ago" | "2
 export type TerrainDetailLevel = "fast" | "detailed" | "survey";
 export type TerrainTextureMode = "bottom" | "hybrid" | "survey" | "sonar" | "relief" | "color";
 export type SceneProfile = "study" | "relief" | "emergence";
+export type TerrainQualityTier = "broad" | "bay_mosaic" | "source_survey" | "nearshore_detail" | "offshore_survey" | "reference";
 
 export interface PaleoTerrainConfig {
   sourceId: string;
@@ -18,6 +19,9 @@ export interface PaleoTerrainConfig {
   };
   bounds: [number, number, number, number];
   heightRangeMeters: [number, number];
+  qualityTier?: TerrainQualityTier;
+  renderPriority?: number;
+  resolutionMeters?: number | null;
   verticalExaggeration: number;
   elevationDecoder: {
     rScaler: number;
