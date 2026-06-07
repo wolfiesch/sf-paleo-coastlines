@@ -30,6 +30,15 @@ GENERATOR_PATH = ROOT / "scripts" / "generate_paleo_coastlines.py"
 
 NEXT_DATA_CANDIDATES: list[dict[str, Any]] = [
     {
+        "id": "usgs_2023_sf_lidar_dem",
+        "label": "2023 USGS Lidar DEM: San Francisco, CA",
+        "sourceFamily": "USGS 3DEP / The National Map",
+        "sourceUrl": "https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/OPR/Projects/CA_SanFrancisco_B23/CA_SanFrancisco_1_B23/TIFF/",
+        "priority": "highest",
+        "reason": "High-resolution modern land DEM that sharpens San Francisco terrain and shoreline relief in the 3D waterline view.",
+        "nextAction": "Keep active as a land/shoreline detail source, then compare overlap against DS684, CUDEM, and local datum conversions before using it for exact sea-level claims.",
+    },
+    {
         "id": "usgs_coned_sf_bay_2m",
         "label": "USGS CoNED San Francisco Bay 2 m topobathymetric DEM",
         "sourceFamily": "USGS CoNED",
@@ -135,6 +144,8 @@ def source_family(source_id: str) -> str:
         return "USGS/CSMP DS 781"
     if source_id.startswith("usgs_sf_bay_1m"):
         return "USGS SF Bay 1 m DEM"
+    if source_id.startswith("usgs_2023_sf_lidar"):
+        return "USGS 3DEP / The National Map"
     if source_id.startswith("usgs_farallon") or source_id.startswith("usgs_rittenburg"):
         return "USGS OFR 2014-1234"
     if source_id.startswith("usgs_ds684"):
@@ -165,6 +176,8 @@ def datum_note(source_id: str) -> str:
         return "MLLW; useful for Bay-floor visual detail, but needs tidal-datum conversion before exact sea-level alignment with NAVD88 sources."
     if source_id.startswith("usgs_sf_bay_1m"):
         return "NAVD88; best first-fit datum among the candidate Bay DEM files, but still compare overlap against CUDEM, DS684, and MLLW BAG patches."
+    if source_id.startswith("usgs_2023_sf_lidar"):
+        return "NAVD88-style land DEM; useful for above-water terrain detail, but compare overlap against DS684, CUDEM, and tidal-datum sources before exact waterline alignment."
     return "NAVD88-style or source-projected DEM; verify against local datum before exact contours."
 
 
@@ -272,6 +285,9 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
                 paths.append(folder / block["zipName"])
             return paths
 
+    if source_id == "usgs_2023_sf_lidar_dem":
+        return module.usgs_2023_sf_lidar_dem_tiles()
+
     if source_id == "noaa_crm_vol7_3as":
         paths.append(module.CRM_TIF)
     elif source_id == "noaa_cudem_1_9as":
@@ -297,6 +313,8 @@ def source_url(module: Any, source_id: str) -> str | None:
         return "https://www.ncei.noaa.gov/products/coastal-relief-model"
     if source_id == "noaa_cudem_1_9as":
         return "https://coast.noaa.gov/htdata/raster2/elevation/NCEI_ninth_Topobathy_2014_8483/"
+    if source_id == "usgs_2023_sf_lidar_dem":
+        return "https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/OPR/Projects/CA_SanFrancisco_B23/CA_SanFrancisco_1_B23/TIFF/"
     if source_id == "usgs_ds684_dem4":
         return "https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/"
     return None
@@ -370,6 +388,8 @@ def source_record(module: Any, terrain: dict[str, Any], with_gdalinfo: bool) -> 
         limitations.append("nearshore/state-water patch, not seamless offshore coverage")
     if source_id.startswith("usgs_sf_bay_1m"):
         limitations.append("modern interpreted Bay DEM; does not model paleo sediment, marsh, erosion, or river-channel change")
+    if source_id.startswith("usgs_2023_sf_lidar"):
+        limitations.append("modern land LiDAR; improves above-water and shoreline relief, not offshore bathymetry")
     if source_id.startswith("usgs_farallon") or source_id.startswith("usgs_rittenburg"):
         limitations.append("excellent multibeam patch, but geographically small")
     if source_id.startswith("best_available"):

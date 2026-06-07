@@ -69,6 +69,13 @@ DS684_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "dem4_elevation.png"
 DS684_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "dem4_color.png"
 DS684_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "dem4_relief.png"
 DS684_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "dem4_composite.png"
+USGS_2023_SF_LIDAR_DEM_DIR = RAW_DIR / "usgs-2023-sf-lidar-dem"
+USGS_2023_SF_LIDAR_DEM_VRT = WORK_DIR / "usgs_2023_sf_lidar_dem.vrt"
+USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84 = WORK_DIR / "usgs_2023_sf_lidar_dem_terrain_wgs84.tif"
+USGS_2023_SF_LIDAR_DEM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "usgs_2023_sf_lidar_dem_elevation.png"
+USGS_2023_SF_LIDAR_DEM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_2023_sf_lidar_dem_color.png"
+USGS_2023_SF_LIDAR_DEM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_2023_sf_lidar_dem_relief.png"
+USGS_2023_SF_LIDAR_DEM_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_2023_sf_lidar_dem_composite.png"
 ETOPO_TERRAIN_WGS84 = WORK_DIR / "etopo_2022_bay_farallones_terrain_wgs84.tif"
 ETOPO_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_elevation.png"
 ETOPO_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones_color.png"
@@ -77,8 +84,13 @@ ETOPO_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "etopo_bay_farallones
 CRM_TERRAIN_SIZE = 1536
 CUDEM_TERRAIN_SIZE = 4096
 DS684_TERRAIN_SIZE = 768
+USGS_2023_SF_LIDAR_DEM_TERRAIN_SIZE = 5120
 DS684_TERRAIN_MIN_M = -130.0
 DS684_TERRAIN_MAX_M = 400.0
+USGS_2023_SF_LIDAR_DEM_TERRAIN_MIN_M = -15.0
+USGS_2023_SF_LIDAR_DEM_TERRAIN_MAX_M = 500.0
+USGS_2023_SF_LIDAR_DEM_NODATA_M = -9999.0
+USGS_2023_SF_LIDAR_DEM_VALID_MIN_M = -100.0
 ETOPO_TERRAIN_MIN_M = -2500.0
 ETOPO_TERRAIN_MAX_M = 1000.0
 CRM_TERRAIN_MIN_M = -2500.0
@@ -1319,6 +1331,64 @@ def download_noaa_ocm_area_a_interferometric_tiles() -> None:
         download_url(f"{prefix}/{tile_id}_1m.tif", noaa_ocm_area_a_interferometric_dataset(tile_id))
 
 
+def usgs_2023_sf_lidar_dem_tiles() -> list[Path]:
+    return sorted(USGS_2023_SF_LIDAR_DEM_DIR.glob("USGS_OPR_CA_SanFrancisco_B23_*.tif"))
+
+
+def active_usgs_2023_sf_lidar_dem() -> bool:
+    return bool(usgs_2023_sf_lidar_dem_tiles())
+
+
+def build_usgs_2023_sf_lidar_dem_vrt() -> None:
+    tiles = usgs_2023_sf_lidar_dem_tiles()
+    if not tiles:
+        raise SystemExit(
+            "USGS 2023 SF LiDAR DEM tiles are missing. "
+            "Run `pnpm paleo-coastlines:usgs-2023-sf-dem --download` first."
+        )
+    run([
+        "gdalbuildvrt",
+        "-q",
+        "-overwrite",
+        "-srcnodata",
+        "-999999",
+        "-vrtnodata",
+        "-9999",
+        str(USGS_2023_SF_LIDAR_DEM_VRT),
+        *[str(tile) for tile in tiles],
+    ])
+
+
+def clean_usgs_2023_sf_lidar_dem_nodata() -> None:
+    temp_output = USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84.with_name(
+        f"{USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84.stem}_cleaned.tif"
+    )
+    for sidecar in (
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84.with_suffix(f"{USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84.suffix}.aux.xml"),
+        temp_output.with_suffix(f"{temp_output.suffix}.aux.xml"),
+    ):
+        sidecar.unlink(missing_ok=True)
+    run([
+        "gdal_calc.py",
+        "--quiet",
+        "-A",
+        str(USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84),
+        "--outfile",
+        str(temp_output),
+        "--calc",
+        f"where(A<{USGS_2023_SF_LIDAR_DEM_VALID_MIN_M},{USGS_2023_SF_LIDAR_DEM_NODATA_M},A)",
+        "--NoDataValue",
+        str(USGS_2023_SF_LIDAR_DEM_NODATA_M),
+        "--type",
+        "Float32",
+        "--format",
+        "GTiff",
+        "--overwrite",
+    ])
+    temp_output.replace(USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84)
+    temp_output.with_suffix(f"{temp_output.suffix}.aux.xml").unlink(missing_ok=True)
+
+
 def build_noaa_ocm_area_a_interferometric_vrt() -> None:
     run([
         "gdalbuildvrt",
@@ -2116,6 +2186,8 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
     if source_id.startswith("noaa_nos"):
         resolution = 1 if "_1m" in source_id else 2 if "_2m" in source_id else None
         return {"qualityTier": "source_survey", "renderPriority": 80, "resolutionMeters": resolution}
+    if source_id.startswith("usgs_2023_sf_lidar"):
+        return {"qualityTier": "nearshore_detail", "renderPriority": 82, "resolutionMeters": 1}
     if source_id.startswith("usgs_csmp") or source_id.startswith("usgs_ds684"):
         return {"qualityTier": "nearshore_detail", "renderPriority": 85, "resolutionMeters": 2}
     if "farallon" in source_id or "rittenburg" in source_id:
@@ -2165,6 +2237,56 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
         "Higher-resolution 2 m terrain inset for the Golden Gate, Ocean Beach, Marin Headlands, and San Francisco Bar.",
+    )
+
+
+def generate_usgs_2023_sf_lidar_dem_terrain_asset() -> dict[str, Any]:
+    build_usgs_2023_sf_lidar_dem_vrt()
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-ts",
+        str(USGS_2023_SF_LIDAR_DEM_TERRAIN_SIZE),
+        "0",
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-srcnodata",
+        "-999999",
+        "-dstnodata",
+        "-9999",
+        str(USGS_2023_SF_LIDAR_DEM_VRT),
+        str(USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84),
+    ])
+    clean_usgs_2023_sf_lidar_dem_nodata()
+    write_terrain_pngs_from_wgs84(
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_ELEVATION_PNG,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_TEXTURE_PNG,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_RELIEF_TEXTURE_PNG,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_MIN_M,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_MAX_M,
+        20,
+    )
+    return terrain_metadata(
+        "usgs_2023_sf_lidar_dem",
+        source_label("usgs_2023_sf_lidar_dem"),
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_ELEVATION_PNG,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_TEXTURE_PNG,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_RELIEF_TEXTURE_PNG,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        None,
+        None,
+        None,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_MIN_M,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_MAX_M,
+        "USGS 2023 San Francisco 1 m LiDAR DEM land inset. It sharpens above-water terrain and shoreline relief near San Francisco, but it is not an offshore bathymetry survey.",
     )
 
 
@@ -2697,6 +2819,11 @@ def best_available_fusion_input_records() -> list[tuple[str, Path]]:
             )
             for block in NOS_BAG_BLOCKS
         ],
+        *(
+            [(82, 30, "usgs_2023_sf_lidar_dem", USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84)]
+            if active_usgs_2023_sf_lidar_dem()
+            else []
+        ),
         *[
             (
                 85 if not ("farallon" in str(block["sourceId"]) or "rittenburg" in str(block["sourceId"])) else 90,
@@ -2725,6 +2852,8 @@ def source_quality_category(source_id: str) -> str:
         return "NOAA OCM survey"
     if source_id.startswith("noaa_nos"):
         return "NOAA BAG survey"
+    if source_id.startswith("usgs_2023_sf_lidar"):
+        return "USGS land LiDAR"
     if source_id.startswith("usgs_csmp") or source_id.startswith("usgs_ds684"):
         return "USGS nearshore"
     if "farallon" in source_id or "rittenburg" in source_id:
@@ -2740,6 +2869,7 @@ def source_quality_color(category: str) -> tuple[int, int, int]:
         "CUDEM support": (43, 104, 142),
         "NOAA OCM survey": (42, 202, 170),
         "NOAA BAG survey": (74, 218, 255),
+        "USGS land LiDAR": (236, 241, 222),
         "USGS nearshore": (248, 207, 82),
         "USGS offshore": (188, 126, 255),
         "USGS Bay DEM": (105, 245, 163),
@@ -2757,6 +2887,7 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
         "CUDEM support",
         "NOAA OCM survey",
         "NOAA BAG survey",
+        "USGS land LiDAR",
         "USGS nearshore",
         "USGS offshore",
         "USGS Bay DEM",
@@ -2921,6 +3052,8 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     for target in (
         DS684_TERRAIN_WGS84,
+        USGS_2023_SF_LIDAR_DEM_VRT,
+        USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84,
         CRM_TERRAIN_WGS84,
         CUDEM_TERRAIN_WGS84,
         ETOPO_TERRAIN_WGS84,
@@ -2949,6 +3082,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         *[generate_usgs_sf_bay_1m_terrain_asset(block) for block in active_usgs_sf_bay_1m_blocks()],
         *[generate_noaa_ocm_area_a_terrain_asset(block) for block in NOAA_OCM_AREA_A_BLOCKS],
         *[generate_nos_bag_terrain_asset(block) for block in NOS_BAG_BLOCKS],
+        *([generate_usgs_2023_sf_lidar_dem_terrain_asset()] if active_usgs_2023_sf_lidar_dem() else []),
         *[generate_bathymetry_block_terrain_asset(block) for block in BATHYMETRY_BLOCKS],
         generate_usgs_terrain_asset(),
     ]
@@ -3133,6 +3267,8 @@ SOURCE_LABELS = {
 def source_label(source_id: str) -> str:
     if source_id == "usgs_ds684_dem4":
         return "USGS DS684 DEM 4, 2 m San Francisco Bar / Ocean Beach tile"
+    if source_id == "usgs_2023_sf_lidar_dem":
+        return "USGS 2023 San Francisco 1 m LiDAR DEM"
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
     if source_id == "best_available_gate_shelf_fusion":
@@ -3282,7 +3418,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             **item,
             "generatedAt": generated_at,
             "sourceModel": source_label(estimate_source_id),
-            "datumNote": "NOAA BAG and NOAA OCM source-survey tiles use survey-specific vertical references; NOAA CUDEM, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
+            "datumNote": "NOAA BAG and NOAA OCM source-survey tiles use survey-specific vertical references; NOAA CUDEM, USGS 2023 land LiDAR, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
             "uncertaintyNote": "Lines show only sea-level uncertainty. They do not model erosion, sediment, marsh growth, tectonic motion, or river-channel migration.",
             "terrain": terrain[0],
             "terrains": terrain,
@@ -3294,7 +3430,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
@@ -3313,6 +3449,10 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             *[
                 str(usgs_sf_bay_1m_dataset(block).relative_to(ROOT))
                 for block in bay_dem_blocks
+            ],
+            *[
+                str(tile.relative_to(ROOT))
+                for tile in usgs_2023_sf_lidar_dem_tiles()
             ],
             *[
                 str(bathymetry_block_backscatter_dataset(block, str(zip_name)).relative_to(ROOT))
@@ -3393,6 +3533,12 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 )
                 if path.exists()
             ],
+            *([
+                str(USGS_2023_SF_LIDAR_DEM_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
+                str(USGS_2023_SF_LIDAR_DEM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
+                str(USGS_2023_SF_LIDAR_DEM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
+                str(USGS_2023_SF_LIDAR_DEM_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            ] if active_usgs_2023_sf_lidar_dem() else []),
             str(DS684_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(DS684_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(DS684_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),

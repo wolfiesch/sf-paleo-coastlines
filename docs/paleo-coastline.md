@@ -14,7 +14,7 @@ estimated coastline
 
 The checked-in browser data now uses two broad elevation sources plus several sharper NOAA and USGS patches:
 
-For the source-by-source quality audit, resolution notes, datum cautions, and next data chases, see `docs/survey-inventory.md`. The browser-readable JSON version is `public/data/paleo-coastlines/survey_inventory.json`. For the high-detail Bay DEM acquisition path, see `docs/usgs-sf-bay-1m-dem.md` and `public/data/paleo-coastlines/usgs_sf_bay_1m_dem_manifest.json`. For the Bay DEM source-survey polygons, see `docs/usgs-sf-bay-source-footprints.md`.
+For the source-by-source quality audit, resolution notes, datum cautions, and next data chases, see `docs/survey-inventory.md`. The browser-readable JSON version is `public/data/paleo-coastlines/survey_inventory.json`. For the high-detail Bay DEM acquisition path, see `docs/usgs-sf-bay-1m-dem.md` and `public/data/paleo-coastlines/usgs_sf_bay_1m_dem_manifest.json`. For the 2023 San Francisco land LiDAR DEM path, see `docs/usgs-2023-sf-lidar-dem.md` and `public/data/paleo-coastlines/usgs_2023_sf_lidar_dem_manifest.json`. For the Bay DEM source-survey polygons, see `docs/usgs-sf-bay-source-footprints.md`.
 
 | Source | Why it is used |
 |---|---|
@@ -25,6 +25,7 @@ For the source-by-source quality audit, resolution notes, datum cautions, and ne
 | USGS/CSMP DS 781, 2 m coastal bathymetry blocks | Sharper nearshore ocean-floor detail from Tomales Point and Point Reyes down through Bolinas, San Francisco, Pacifica, Half Moon Bay, and San Gregorio. These blocks improve the coastal shelf, but they do not cover the full offshore region. |
 | USGS/CSMP DS 781 acoustic backscatter and seafloor-character blocks | Sonar intensity and interpreted bottom-type textures for the same coastal bathymetry blocks. This makes rocky bottom, sediment patterns, and smoother versus more rugose bottom easier to see on top of the 3D surface. These are visual/context textures, not elevation. |
 | USGS OFR 2014-1234 Farallon Escarpment / Rittenburg Bank bathymetry, backscatter, and seafloor character | Sharper offshore multibeam patches west of San Francisco, including a 10 m Farallon Escarpment grid and a 2 m Rittenburg Bank grid. Backscatter adds measured acoustic texture, and seafloor-character maps add interpreted bottom classes for those offshore patches. |
+| USGS 2023 San Francisco 1 m LiDAR DEM | High-resolution modern land terrain around San Francisco. This sharpens hills, bluffs, and shoreline edges above the waterline, but it is not a new offshore bathymetry survey. |
 | USGS DS684 DEM 4, 2 m San Francisco Bar tile | Better local detail around Ocean Beach, the Golden Gate, Marin Headlands, and the San Francisco Bar. This drives the present, 5k, and 10k slices where it has enough depth coverage. |
 | NOAA ETOPO 2022, 15 arc-second grid | Fallback broad source kept in the raw data references. CRM is now preferred for the app because it is about 5x finer for this region. |
 
@@ -61,6 +62,7 @@ Local source/work files:
 - `data/paleo-coastlines/raw/usgs-farallon-escarpment/fe3classnad83.tif`
 - `data/paleo-coastlines/raw/usgs-rittenburg-bank/usgs_rittenburgbank_bathy_2m.asc`
 - `data/paleo-coastlines/raw/usgs-rittenburg-bank/rb3classnad83.tif`
+- `data/paleo-coastlines/raw/usgs-2023-sf-lidar-dem/USGS_OPR_CA_SanFrancisco_B23_*.tif`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF.zip`
 - `data/paleo-coastlines/raw/usgs-ds684/DEM_4_GeoTIFF/DEM_4_GeoTIFF.tif`
 - `data/paleo-coastlines/work/noaa_crm_vol7_contours_raw.geojson`
@@ -98,6 +100,14 @@ pnpm paleo-coastlines:bay-source-footprints
 ```
 
 This layer is a data-quality overlay, not a new terrain surface. In plain English: it shows which source surveys fed the USGS 1 m Bay DEM, including survey year, source agency, sensor type, resolution, datum, and whether interpolation was needed.
+
+To acquire the 2023 USGS San Francisco land LiDAR DEM:
+
+```bash
+pnpm paleo-coastlines:usgs-2023-sf-dem --download
+```
+
+This source is a land-height upgrade. In plain English: it makes the San Francisco side of the model more detailed where the waterline exposes modern land, but it does not add new measured ocean-floor depth.
 
 The script downloads missing source files, runs `gdal_contour`, simplifies the broad NOAA contour lines for browser use, reprojects the USGS output to WGS84, converts NOAA's 0-360 longitude values into normal west-longitude values, filters tiny contour fragments, and writes browser-ready GeoJSON plus browser-ready terrain PNGs.
 
@@ -142,6 +152,10 @@ USGS/CSMP coastal seafloor patches
         v
 USGS Farallon Escarpment / Rittenburg Bank patches
         sharper surveyed ocean floor farther offshore
+        |
+        v
+USGS 2023 San Francisco land LiDAR DEM
+        sharper modern land terrain around SF
         |
         v
 USGS DS684 local inset
@@ -190,7 +204,7 @@ The vertical scale is exaggerated 4x so the shelf, ridges, and small protruding 
 
 The terrain mesh control changes deck.gl's `meshMaxError` setting. In plain English: lower values keep more small bumps and ridges from the elevation image, while higher values trade some detail for speed. The default `Survey` setting now uses very tight mesh error values for the NOAA Area A 1 m Bay mosaic, the USGS SF Bay 1 m DEM inset, the NOAA BAG patches, and the USGS/CSMP/Farallon multibeam patches. This is intentionally heavier because the current sprint prioritizes detail over speed.
 
-The generated browser terrain images are intentionally larger than the first MVP while staying inside common WebGL texture limits. The best-available fused surface is exported at 8192 pixels wide, the NOAA Area A 1 m mosaic at 5120 pixels wide, the individual NOAA Area A source-survey tiles at 3072 pixels wide, and the USGS SF Bay 1 m DEM insets at 4096 pixels wide when present. In plain English: we are preserving more of the raw DEM detail before the browser turns it into a 3D surface, but keeping each single image small enough for the browser to draw reliably.
+The generated browser terrain images are intentionally larger than the first MVP while staying inside common WebGL texture limits. The best-available fused surface is exported at 8192 pixels wide, the NOAA Area A 1 m mosaic at 5120 pixels wide, the 2023 USGS San Francisco land LiDAR terrain at 5120 pixels wide when present, the individual NOAA Area A source-survey tiles at 3072 pixels wide, and the USGS SF Bay 1 m DEM insets at 4096 pixels wide when present. In plain English: we are preserving more of the raw DEM detail before the browser turns it into a 3D surface, but keeping each single image small enough for the browser to draw reliably.
 
 The scene control changes only how the terrain is drawn. `Study` is calmer for reading labels and sources, `Relief` increases height, light, and shadow, and `Emerge` makes the active waterline and newly exposed terrain more obvious. In plain English: this is like changing the lighting and vertical emphasis on a physical model. It does not change the sea-level estimate or the source elevation data.
 
@@ -217,6 +231,7 @@ The uncertainty toggle shows extra contour lines around each estimate. These ban
 - NOAA/NOS Farallon-region BAG surveys improve island-adjacent and sanctuary-priority offshore bathymetry, but they are still survey patches. In plain English: the Farallones view is becoming much more interesting, but we should still expect visible data-footprint edges where detailed surveys start and stop.
 - NOAA OCM Area B/C Bay survey metadata exists and would likely help north/south Bay detail, but the official InPort records currently expose no public downloadable distribution. In plain English: it is a real lead, but not an actionable app input until we find a working NOAA/NCEI download path.
 - USGS OFR 2014-1234 improves the Farallon Escarpment and Rittenburg Bank areas with bathymetry, backscatter, and seafloor character, but it is still patch coverage, not full Farallones-region coverage.
+- USGS 2023 San Francisco LiDAR improves modern land detail. It does not tell us what the offshore shelf looked like, and it does not reconstruct paleo landforms that may have changed since the last glacial lowstand.
 - USGS DS684 DEM 4 is high resolution, but it is only one tile. It improves the Golden Gate and nearby coast; it is not full Bay-plus-Farallones coverage.
 - NOAA/NOS BAG surveys add very detailed Golden Gate and Farallon-region bathymetry, but they use MLLW. In plain English: they are excellent shape data, but we should not overclaim exact sea-level alignment until we do a proper local datum conversion.
 - NOAA CUDEM is much sharper than CRM where California 1/9 arc-second tiles exist, but the clipped source still has tile limits and should be treated as a broad inset, not a complete far-offshore survey.
@@ -255,6 +270,7 @@ Primary references:
 - USGS Data Series 781 Offshore of Half Moon Bay catalog: https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data_catalog_OffshoreHalfMoonBay.html
 - USGS Data Series 781 Offshore of San Gregorio catalog: https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/data_catalog_OffshoreSanGregorio.html
 - USGS OFR 2014-1234 Farallon Escarpment and Rittenburg Bank: https://pubs.usgs.gov/of/2014/1234/datacatalog.html
+- USGS 2023 San Francisco 1 m LiDAR DEM S3 index: https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/OPR/Projects/CA_SanFrancisco_B23/CA_SanFrancisco_1_B23/TIFF/
 - USGS Data Series 684 DEM GeoTIFF files: https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/
 - USGS CoNED SF Bay: https://www.usgs.gov/special-topics/coastal-national-elevation-database-applications-project/science/topobathymetric-0
 - USGS SF Bay bathymetry DEM: https://www.usgs.gov/data/high-resolution-1-m-digital-elevation-model-dem-san-francisco-bay-california-created-using

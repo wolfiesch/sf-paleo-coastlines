@@ -33,7 +33,7 @@ interface TerrainFootprint {
   sourceId: string;
   sourceLabel: string;
   note: string;
-  category: "noaaBag" | "noaaOcm" | "usgsCsmp" | "usgsOffshore" | "usgsGoldenGate" | "other";
+  category: "noaaBag" | "noaaOcm" | "usgsCsmp" | "usgsOffshore" | "usgsLandLidar" | "usgsGoldenGate" | "other";
   qualityTier: TerrainQualityTier;
   bounds: [number, number, number, number];
   heightRangeMeters: [number, number];
@@ -375,6 +375,7 @@ function terrainMaterial(terrain: PaleoTerrainConfig, profile: SceneProfileConfi
 function terrainFootprintCategory(terrain: PaleoTerrainConfig): TerrainFootprint["category"] {
   if (terrain.sourceId.includes("noaa_ocm_area_a")) return "noaaOcm";
   if (terrain.sourceId.includes("noaa_nos")) return "noaaBag";
+  if (terrain.sourceId.includes("2023_sf_lidar")) return "usgsLandLidar";
   if (terrain.sourceId.includes("sf_bay_1m")) return "usgsGoldenGate";
   if (terrain.sourceId.includes("csmp")) return "usgsCsmp";
   if (terrain.sourceId.includes("farallon") || terrain.sourceId.includes("rittenburg")) return "usgsOffshore";
@@ -387,12 +388,14 @@ function terrainFootprintColor(category: TerrainFootprint["category"], alpha: nu
   if (category === "noaaOcm") return [70, 245, 190, alpha];
   if (category === "usgsCsmp") return [255, 208, 92, alpha];
   if (category === "usgsOffshore") return [190, 124, 255, alpha];
+  if (category === "usgsLandLidar") return [236, 241, 222, alpha];
   if (category === "usgsGoldenGate") return [110, 255, 170, alpha];
   return [235, 244, 255, alpha];
 }
 
 function shortTerrainLabel(terrain: TerrainFootprint): string {
   if (terrain.sourceId.includes("best_available_gate_shelf")) return "Best available";
+  if (terrain.sourceId.includes("2023_sf_lidar")) return "SF LiDAR";
   if (terrain.sourceId.includes("noaa_ocm_area_a_interferometric")) return "Area A mosaic";
   const ocmSurveyId = terrain.sourceId.match(/noaa_ocm_area_a_([a-z]{2}1b\d{2})_1m/);
   if (ocmSurveyId) return ocmSurveyId[1].toUpperCase();
