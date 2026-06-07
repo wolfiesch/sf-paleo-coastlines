@@ -137,6 +137,10 @@ def normalized_file_url(item_id: str, file_record: dict[str, Any]) -> str:
     return url
 
 
+def normalized_file_name(file_record: dict[str, Any]) -> str:
+    return str(file_record.get("name") or "").replace("..", ".")
+
+
 def is_primary_dem_file(file_record: dict[str, Any]) -> bool:
     name = str(file_record.get("name", "")).lower()
     if not (name.endswith(".tif") or name.endswith(".zip")):
@@ -146,7 +150,7 @@ def is_primary_dem_file(file_record: dict[str, Any]) -> bool:
 
 
 def local_download_path(record: dict[str, Any], file_record: dict[str, Any]) -> Path:
-    raw_name = str(file_record["name"]).replace("..", ".")
+    raw_name = normalized_file_name(file_record)
     return RAW_DIR / record["datum"].lower() / record["section"] / raw_name
 
 
@@ -159,6 +163,36 @@ def human_size(size: int | float | None) -> str:
             return f"{value:.1f} {unit}" if unit != "B" else f"{value:.0f} B"
         value /= 1024
     return f"{value:.1f} TB"
+
+
+def parse_gb(value: float) -> int:
+    return int(value * 1024 * 1024 * 1024)
+
+
+def available_bytes_for(path: Path) -> int:
+    path.mkdir(parents=True, exist_ok=True)
+    return shutil.disk_usage(path).free
+
+
+def require_free_space(target: Path, expected_size: int | None, minimum_free_gb: float | None) -> None:
+    if minimum_free_gb is not None:
+        required = parse_gb(minimum_free_gb)
+        reason = f"user-requested minimum of {minimum_free_gb:g} GB"
+    elif expected_size is not None:
+        # Leave room for the .part file, a later unzip, and generated terrain derivatives.
+        required = int(expected_size * 3.0 + parse_gb(1.5))
+        reason = "download, validation copy, later unzip, and generated derivatives"
+    else:
+        required = parse_gb(5.0)
+        reason = "unknown source file size"
+
+    available = available_bytes_for(target.parent)
+    if available < required:
+        raise RuntimeError(
+            f"Not enough free disk space for {target.name}: "
+            f"available {human_size(available)}, need about {human_size(required)} for {reason}. "
+            "Free space first or rerun with a smaller section."
+        )
 
 
 def item_record(seed: dict[str, str]) -> dict[str, Any]:
@@ -180,7 +214,7 @@ def item_record(seed: dict[str, str]) -> dict[str, Any]:
         return fallback_item_record(seed, cause)
     files = [
         {
-            "name": file.get("name"),
+            "name": normalized_file_name(file),
             "sizeBytes": file.get("size"),
             "sizeHuman": human_size(file.get("size")),
             "url": normalized_file_url(seed["itemId"], file),
@@ -347,12 +381,19 @@ def existing_file_is_usable(target: Path, expected_size: int | None) -> bool:
     return not prefix.startswith(b"<!doctype html") and not prefix.startswith(b"<html")
 
 
-def download_file(url: str, target: Path, force: bool, expected_size: int | None) -> None:
+def download_file(
+    url: str,
+    target: Path,
+    force: bool,
+    expected_size: int | None,
+    minimum_free_gb: float | None,
+) -> None:
     if not force and existing_file_is_usable(target, expected_size):
         print(f"Using existing file: {target.relative_to(ROOT)}")
         return
 
     target.parent.mkdir(parents=True, exist_ok=True)
+    require_free_space(target, expected_size, minimum_free_gb)
     part_path = target.with_name(f"{target.name}.part")
 
     if shutil.which("curl") is not None:
@@ -426,6 +467,12 @@ def main() -> int:
     parser.add_argument("--section", choices=["north", "central", "south", "all"], default="all")
     parser.add_argument("--download", action="store_true", help="Download selected primary DEM files.")
     parser.add_argument("--force", action="store_true", help="Redownload files even when local targets exist.")
+    parser.add_argument(
+        "--minimum-free-gb",
+        type=float,
+        default=None,
+        help="Require this many GB free before each download. Defaults to a dynamic safety margin based on file size.",
+    )
     args = parser.parse_args()
 
     seeds = selected_records(args.datum, args.section)
@@ -455,7 +502,7 @@ def main() -> int:
                 if not file.get("url") or not file.get("name"):
                     continue
                 target = local_download_path(item, file)
-                download_file(str(file["url"]), target, args.force, file.get("sizeBytes"))
+                download_file(str(file["url"]), target, args.force, file.get("sizeBytes"), args.minimum_free_gb)
         for item in items:
             item["localPrimaryPresent"] = [(ROOT / path).exists() for path in item["localPrimaryPaths"]]
         write_json(OUT_JSON, payload)
