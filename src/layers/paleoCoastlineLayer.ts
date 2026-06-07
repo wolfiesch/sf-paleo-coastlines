@@ -392,6 +392,7 @@ function terrainFootprintColor(category: TerrainFootprint["category"], alpha: nu
 }
 
 function shortTerrainLabel(terrain: TerrainFootprint): string {
+  if (terrain.sourceId.includes("best_available_gate_shelf")) return "Best available";
   if (terrain.sourceId.includes("noaa_ocm_area_a_interferometric")) return "Area A mosaic";
   const ocmSurveyId = terrain.sourceId.match(/noaa_ocm_area_a_([a-z]{2}1b\d{2})_1m/);
   if (ocmSurveyId) return ocmSurveyId[1].toUpperCase();
@@ -422,7 +423,7 @@ function shortTerrainLabel(terrain: TerrainFootprint): string {
 
 function terrainTierLabel(tier: TerrainQualityTier): string {
   if (tier === "broad") return "broad support surface";
-  if (tier === "bay_mosaic") return "broad 1 m Bay mosaic";
+  if (tier === "bay_mosaic") return "high-detail support mosaic";
   if (tier === "source_survey") return "source survey";
   if (tier === "nearshore_detail") return "nearshore detail patch";
   if (tier === "offshore_survey") return "offshore survey patch";

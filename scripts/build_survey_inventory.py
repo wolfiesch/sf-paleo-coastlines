@@ -114,6 +114,8 @@ def write_json(path: Path, payload: Any) -> None:
 
 
 def source_family(source_id: str) -> str:
+    if source_id.startswith("best_available"):
+        return "Derived fused terrain"
     if source_id.startswith("noaa_ocm_area_a_interferometric"):
         return "NOAA OCM acoustic bathymetry"
     if source_id.startswith("noaa_ocm_area_a"):
@@ -138,6 +140,8 @@ def source_family(source_id: str) -> str:
 
 
 def datum_note(source_id: str) -> str:
+    if source_id.startswith("best_available"):
+        return "Mixed-source visual fusion; useful for continuity, but not a single vertical datum."
     if source_id.startswith("noaa_ocm_area_a_interferometric"):
         return "NOAA OCM interferometric source-survey vertical reference; use as visual/detail evidence, but compare against multibeam, USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment."
     if source_id.startswith("noaa_ocm_area_a"):
@@ -155,6 +159,8 @@ def datum_note(source_id: str) -> str:
 
 def approximate_native_resolution_m(source_id: str, label: str) -> float | None:
     text = f"{source_id} {label}".lower()
+    if source_id.startswith("best_available"):
+        return 20.0
     if "1 m" in text or "_1m" in text:
         return 1.0
     if "2 m" in text or "_2m" in text:
@@ -184,6 +190,9 @@ def resolution_label(source_id: str, label: str) -> str:
 
 
 def detail_score(source_id: str, label: str, textures: dict[str, Any]) -> int:
+    if source_id.startswith("best_available"):
+        return 4
+
     value = approximate_native_resolution_m(source_id, label)
     score = 2
     if "vr" in source_id:
@@ -214,6 +223,9 @@ def footprint_area_sqkm(bounds: list[float]) -> float:
 
 def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
     paths: list[Path] = []
+    if source_id.startswith("best_available"):
+        return paths
+
     for block in module.NOS_BAG_BLOCKS:
         if block["sourceId"] == source_id:
             paths.append(module.RAW_DIR / block["folder"] / block["fileName"])
@@ -261,6 +273,9 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
 
 
 def source_url(module: Any, source_id: str) -> str | None:
+    if source_id.startswith("best_available"):
+        return None
+
     if source_id == module.NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceId"]:
         return str(module.NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceUrl"])
 
@@ -346,6 +361,8 @@ def source_record(module: Any, terrain: dict[str, Any], with_gdalinfo: bool) -> 
         limitations.append("modern interpreted Bay DEM; does not model paleo sediment, marsh, erosion, or river-channel change")
     if source_id.startswith("usgs_farallon") or source_id.startswith("usgs_rittenburg"):
         limitations.append("excellent multibeam patch, but geographically small")
+    if source_id.startswith("best_available"):
+        limitations.append("derived support mosaic; improves continuity but does not add new measurements")
 
     return {
         "id": source_id,
@@ -380,6 +397,8 @@ def quality_tier(score: int) -> str:
 
 
 def next_action_for_source(source_id: str, score: int) -> str:
+    if source_id.startswith("best_available"):
+        return "Use as the clean support surface beneath raw survey patches; next improve it with datum-aware blending and CoNED/USGS Bay DEM inputs."
     if source_id.startswith("noaa_crm"):
         return "Keep as continuity base, but replace visually/scientifically wherever CoNED, CUDEM, BAG, or CSMP exists."
     if source_id.startswith("noaa_cudem"):

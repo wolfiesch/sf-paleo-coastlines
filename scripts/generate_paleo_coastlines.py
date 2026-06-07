@@ -51,6 +51,12 @@ CUDEM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_elev
 CUDEM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_color.png"
 CUDEM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_relief.png"
 CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_composite.png"
+BEST_AVAILABLE_TERRAIN_VRT = WORK_DIR / "best_available_gate_shelf_terrain.vrt"
+BEST_AVAILABLE_TERRAIN_WGS84 = WORK_DIR / "best_available_gate_shelf_terrain_wgs84.tif"
+BEST_AVAILABLE_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_elevation.png"
+BEST_AVAILABLE_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_color.png"
+BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_relief.png"
+BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_composite.png"
 NOS_BAG_DEFAULT_DIR = RAW_DIR / "noaa-nos-bag"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
@@ -78,6 +84,15 @@ CRM_TERRAIN_MIN_M = -2500.0
 CRM_TERRAIN_MAX_M = 1000.0
 CUDEM_TERRAIN_MIN_M = -2500.0
 CUDEM_TERRAIN_MAX_M = 1200.0
+BEST_AVAILABLE_TERRAIN_SIZE = 6144
+BEST_AVAILABLE_TERRAIN_MIN_M = -1000.0
+BEST_AVAILABLE_TERRAIN_MAX_M = 500.0
+BEST_AVAILABLE_BOUNDS = {
+    "west": -123.55,
+    "south": 37.35,
+    "east": -122.15,
+    "north": 38.15,
+}
 TERRAIN_VERTICAL_EXAGGERATION = 4.0
 TERRAIN_COLOR_STOPS = [
     (-1000.0, (18, 8, 48)),
@@ -2068,6 +2083,8 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
         return {"qualityTier": "broad", "renderPriority": 10, "resolutionMeters": None}
     if source_id.startswith("noaa_cudem"):
         return {"qualityTier": "broad", "renderPriority": 20, "resolutionMeters": None}
+    if source_id.startswith("best_available"):
+        return {"qualityTier": "bay_mosaic", "renderPriority": 35, "resolutionMeters": 20}
     if source_id.startswith("noaa_ocm_area_a_interferometric"):
         return {"qualityTier": "bay_mosaic", "renderPriority": 40, "resolutionMeters": 1}
     if source_id.startswith("usgs_sf_bay_1m") or source_id.startswith("noaa_ocm_area_a"):
@@ -2528,6 +2545,8 @@ def generate_crm_terrain_asset() -> dict[str, Any]:
         "gdalwarp",
         "-q",
         "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
         "-ts",
         str(CRM_TERRAIN_SIZE),
         "0",
@@ -2603,6 +2622,140 @@ def generate_cudem_terrain_asset() -> dict[str, Any]:
     )
 
 
+def fusion_resolution_rank(source_id: str) -> int:
+    if "_1m" in source_id:
+        return 30
+    if "_2m" in source_id:
+        return 20
+    if "_4m" in source_id:
+        return 12
+    if "vr" in source_id:
+        return 10
+    if "_10m" in source_id or "farallon_escarpment" in source_id:
+        return 8
+    return 0
+
+
+def best_available_fusion_inputs() -> list[Path]:
+    ordered_sources: list[tuple[int, int, str, Path]] = [
+        (10, 0, "noaa_crm_vol7_3as", CRM_TERRAIN_WGS84),
+        (20, 0, "noaa_cudem_1_9as", CUDEM_TERRAIN_WGS84),
+        (
+            40,
+            0,
+            str(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceId"]),
+            noaa_ocm_area_a_interferometric_terrain_wgs84(),
+        ),
+        *[
+            (
+                70,
+                fusion_resolution_rank(str(block["sourceId"])),
+                str(block["sourceId"]),
+                usgs_sf_bay_1m_terrain_wgs84(block),
+            )
+            for block in active_usgs_sf_bay_1m_blocks()
+        ],
+        *[
+            (
+                70,
+                fusion_resolution_rank(str(block["sourceId"])),
+                str(block["sourceId"]),
+                noaa_ocm_area_a_terrain_wgs84(block),
+            )
+            for block in NOAA_OCM_AREA_A_BLOCKS
+        ],
+        *[
+            (
+                80,
+                fusion_resolution_rank(str(block["sourceId"])),
+                str(block["sourceId"]),
+                nos_bag_terrain_wgs84(block),
+            )
+            for block in NOS_BAG_BLOCKS
+        ],
+        *[
+            (
+                85 if not ("farallon" in str(block["sourceId"]) or "rittenburg" in str(block["sourceId"])) else 90,
+                fusion_resolution_rank(str(block["sourceId"])),
+                str(block["sourceId"]),
+                bathymetry_block_terrain_wgs84(block),
+            )
+            for block in BATHYMETRY_BLOCKS
+        ],
+        (95, 20, "usgs_ds684_dem4", DS684_TERRAIN_WGS84),
+    ]
+    ordered_sources.sort(key=lambda item: (item[0], item[1], item[2]))
+    return [path for _, _, _, path in ordered_sources if path.exists()]
+
+
+def generate_best_available_terrain_asset() -> dict[str, Any]:
+    inputs = best_available_fusion_inputs()
+    if len(inputs) < 2:
+        raise SystemExit("Best-available terrain fusion needs at least two prepared WGS84 terrain sources.")
+
+    run([
+        "gdalbuildvrt",
+        "-q",
+        "-overwrite",
+        "-allow_projection_difference",
+        "-srcnodata",
+        "-9999",
+        "-vrtnodata",
+        "-9999",
+        str(BEST_AVAILABLE_TERRAIN_VRT),
+        *[str(path) for path in inputs],
+    ])
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-te",
+        str(BEST_AVAILABLE_BOUNDS["west"]),
+        str(BEST_AVAILABLE_BOUNDS["south"]),
+        str(BEST_AVAILABLE_BOUNDS["east"]),
+        str(BEST_AVAILABLE_BOUNDS["north"]),
+        "-ts",
+        str(BEST_AVAILABLE_TERRAIN_SIZE),
+        "0",
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-srcnodata",
+        "-9999",
+        "-dstnodata",
+        "-9999",
+        str(BEST_AVAILABLE_TERRAIN_VRT),
+        str(BEST_AVAILABLE_TERRAIN_WGS84),
+    ])
+    write_terrain_pngs_from_wgs84(
+        BEST_AVAILABLE_TERRAIN_WGS84,
+        BEST_AVAILABLE_TERRAIN_ELEVATION_PNG,
+        BEST_AVAILABLE_TERRAIN_TEXTURE_PNG,
+        BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG,
+        BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        BEST_AVAILABLE_TERRAIN_MIN_M,
+        BEST_AVAILABLE_TERRAIN_MAX_M,
+    )
+    return terrain_metadata(
+        "best_available_gate_shelf_fusion",
+        source_label("best_available_gate_shelf_fusion"),
+        BEST_AVAILABLE_TERRAIN_WGS84,
+        BEST_AVAILABLE_TERRAIN_ELEVATION_PNG,
+        BEST_AVAILABLE_TERRAIN_TEXTURE_PNG,
+        BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG,
+        BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        None,
+        None,
+        None,
+        BEST_AVAILABLE_TERRAIN_MIN_M,
+        BEST_AVAILABLE_TERRAIN_MAX_M,
+        "Derived best-available terrain fusion for the Golden Gate, San Francisco Bar, nearshore shelf, and Farallones approach. It stacks CRM/CUDEM continuity first, then available NOAA OCM, NOAA BAG, USGS/CSMP, Farallon/Rittenburg, and DS684 survey surfaces where they exist. This is a visual continuity layer, not a new measured survey.",
+    )
+
+
 def generate_terrain_assets() -> list[dict[str, Any]]:
     TERRAIN_PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
     WORK_DIR.mkdir(parents=True, exist_ok=True)
@@ -2611,6 +2764,8 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         CRM_TERRAIN_WGS84,
         CUDEM_TERRAIN_WGS84,
         ETOPO_TERRAIN_WGS84,
+        BEST_AVAILABLE_TERRAIN_VRT,
+        BEST_AVAILABLE_TERRAIN_WGS84,
         noaa_ocm_area_a_interferometric_contour_grid_wgs84(),
         noaa_ocm_area_a_interferometric_terrain_wgs84(),
     ):
@@ -2627,7 +2782,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
     for block in active_usgs_sf_bay_1m_blocks():
         usgs_sf_bay_1m_terrain_wgs84(block).unlink(missing_ok=True)
 
-    return [
+    terrain = [
         generate_crm_terrain_asset(),
         generate_cudem_terrain_asset(),
         generate_noaa_ocm_area_a_interferometric_terrain_asset(),
@@ -2637,6 +2792,8 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         *[generate_bathymetry_block_terrain_asset(block) for block in BATHYMETRY_BLOCKS],
         generate_usgs_terrain_asset(),
     ]
+    terrain.append(generate_best_available_terrain_asset())
+    return terrain
 
 
 def normalize_lon(value: float) -> float:
@@ -2818,6 +2975,8 @@ def source_label(source_id: str) -> str:
         return "USGS DS684 DEM 4, 2 m San Francisco Bar / Ocean Beach tile"
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
+    if source_id == "best_available_gate_shelf_fusion":
+        return "Best-available fused Golden Gate-to-Farallones terrain"
     if source_id == "composite_high_resolution_local":
         return "Composite high-resolution CUDEM, NOAA BAG, local bathymetry, and topobathymetry"
     if source_id == "noaa_cudem_1_9as":
@@ -2975,7 +3134,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, and H12111 Golden Gate BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
@@ -3018,6 +3177,10 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(CUDEM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(CUDEM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
             str(CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
             str(noaa_ocm_area_a_interferometric_elevation_png().relative_to(ROOT)),
             str(noaa_ocm_area_a_interferometric_texture_png().relative_to(ROOT)),
             str(noaa_ocm_area_a_interferometric_relief_texture_png().relative_to(ROOT)),
