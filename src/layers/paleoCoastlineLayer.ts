@@ -1,4 +1,4 @@
-import { GeoJsonLayer, LineLayer, PolygonLayer, ScatterplotLayer, TextLayer } from "deck.gl";
+import { GeoJsonLayer, PolygonLayer, ScatterplotLayer, TextLayer } from "deck.gl";
 import { TerrainLayer } from "@deck.gl/geo-layers";
 import type {
   BaySourceFootprintCollection,
@@ -15,19 +15,6 @@ import type {
   TerrainTextureMode,
 } from "../types";
 import { terrainRevealExtension } from "./terrainRevealExtension";
-
-interface WaterPlaneFeature {
-  label: string;
-  seaLevelMeters: number;
-  polygon: [number, number, number][];
-}
-
-interface WaterSheenLine {
-  source: [number, number, number];
-  target: [number, number, number];
-  alpha: number;
-  width: number;
-}
 
 interface PickedPaleoFeature {
   properties: PaleoCoastlineProperties;
@@ -66,7 +53,6 @@ type GeoJsonCoordinates = number[] | GeoJsonCoordinates[];
 
 const DEPTH_CONTOUR_BAND_METERS = 30;
 const Z_BANDS = {
-  waterPlane: -1.5,
   probeContour: 18,
   coastline: 22,
   shorelineGlow: 26,
@@ -83,10 +69,7 @@ const ANNOTATION_PARAMETERS = {
 
 interface SceneProfileConfig {
   verticalScale: number;
-  waterAlpha: number;
   waterDepthFogStrength: number;
-  waterLineAlpha: number;
-  waterSheenAlpha: number;
   terrainAmbient: number;
   terrainDiffuse: number;
   terrainShininess: number;
@@ -102,10 +85,7 @@ interface SceneProfileConfig {
 const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
   study: {
     verticalScale: 0.95,
-    waterAlpha: 84,
     waterDepthFogStrength: 0.08,
-    waterLineAlpha: 155,
-    waterSheenAlpha: 42,
     terrainAmbient: 0.5,
     terrainDiffuse: 0.55,
     terrainShininess: 12,
@@ -119,10 +99,7 @@ const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
   },
   relief: {
     verticalScale: 1.22,
-    waterAlpha: 58,
     waterDepthFogStrength: 0.14,
-    waterLineAlpha: 205,
-    waterSheenAlpha: 54,
     terrainAmbient: 0.34,
     terrainDiffuse: 0.86,
     terrainShininess: 26,
@@ -136,10 +113,7 @@ const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
   },
   emergence: {
     verticalScale: 1.12,
-    waterAlpha: 42,
     waterDepthFogStrength: 0.11,
-    waterLineAlpha: 235,
-    waterSheenAlpha: 66,
     terrainAmbient: 0.38,
     terrainDiffuse: 0.78,
     terrainShininess: 22,
@@ -262,58 +236,6 @@ function primaryTerrainForSlice(slice: PaleoTimeSlice): PaleoTerrainConfig | nul
   return terrainStackForSlice(slice)[0] ?? null;
 }
 
-function waterPlaneForSlice(slice: PaleoTimeSlice, profile: SceneProfileConfig): WaterPlaneFeature[] {
-  const terrain = primaryTerrainForSlice(slice);
-  if (!terrain) return [];
-
-  const [west, south, east, north] = terrain.bounds;
-  const elevation = terrainZ(terrain, slice.seaLevelMeters, profile, Z_BANDS.waterPlane);
-
-  return [{
-    label: slice.label,
-    seaLevelMeters: slice.seaLevelMeters,
-    polygon: [
-      [west, south, elevation],
-      [east, south, elevation],
-      [east, north, elevation],
-      [west, north, elevation],
-      [west, south, elevation],
-    ],
-  }];
-}
-
-function waterSheenLinesForSlice(slice: PaleoTimeSlice, profile: SceneProfileConfig): WaterSheenLine[] {
-  const terrain = primaryTerrainForSlice(slice);
-  if (!terrain) return [];
-
-  const [west, south, east, north] = terrain.bounds;
-  const zMeters = terrainZ(terrain, slice.seaLevelMeters, profile, Z_BANDS.probeContour + 4);
-  const width = east - west;
-  const height = north - south;
-  const lineCount = 26;
-  const lines: WaterSheenLine[] = [];
-
-  for (let index = 0; index < lineCount; index += 1) {
-    const ratio = index / Math.max(1, lineCount - 1);
-    const jitter = Math.sin(index * 12.9898) * 0.022;
-    const y = south + height * ratio + jitter;
-    const segmentStart = 0.06 + ((index * 13) % 47) / 100;
-    const segmentLength = 0.24 + ((index * 7) % 19) / 100;
-    const xStart = west + width * Math.min(segmentStart, 0.72);
-    const xEnd = west + width * Math.min(segmentStart + segmentLength, 0.96);
-    const diagonal = height * (0.035 + ((index * 5) % 9) / 420);
-
-    lines.push({
-      source: [xStart, Math.max(south, Math.min(north, y - diagonal)), zMeters],
-      target: [xEnd, Math.max(south, Math.min(north, y + diagonal)), zMeters],
-      alpha: Math.round(profile.waterSheenAlpha * (0.24 + (index % 5) * 0.1)),
-      width: index % 6 === 0 ? 1.25 : 0.8,
-    });
-  }
-
-  return lines;
-}
-
 function nearestProbeLevel(level: number, levels: number[]): number | null {
   if (!levels.length) return null;
 
@@ -368,20 +290,20 @@ function terrainVisualLiftMeters(terrain: PaleoTerrainConfig): number {
   const tier = terrainQualityTier(terrain);
   const sourceJitter = stableSourceOffsetMeters(terrain.sourceId);
   if (terrain.sourceId.includes("crm")) return 0;
-  if (terrain.sourceId.includes("cudem")) return 26;
-  if (tier === "bay_mosaic") return 58 + sourceJitter;
+  if (terrain.sourceId.includes("cudem")) return 4;
+  if (tier === "bay_mosaic") return 8 + sourceJitter;
   if (tier === "source_survey") return sourceSurveyLiftMeters(terrain) + sourceJitter;
-  if (tier === "nearshore_detail") return 118 + sourceJitter;
-  if (tier === "offshore_survey") return 136 + sourceJitter;
-  return 42 + sourceJitter;
+  if (tier === "nearshore_detail") return 20 + sourceJitter;
+  if (tier === "offshore_survey") return 24 + sourceJitter;
+  return 6 + sourceJitter;
 }
 
 function sourceSurveyLiftMeters(terrain: PaleoTerrainConfig): number {
-  if (terrain.sourceId.includes("noaa_nos") && terrain.sourceId.includes("_2m")) return 78;
-  if (terrain.sourceId.includes("noaa_nos") && terrain.sourceId.includes("_1m")) return 94;
-  if (terrain.sourceId.includes("noaa_nos")) return 88;
-  if (terrain.sourceId.includes("noaa_ocm_area_a")) return 102;
-  return 90;
+  if (terrain.sourceId.includes("noaa_nos") && terrain.sourceId.includes("_2m")) return 12;
+  if (terrain.sourceId.includes("noaa_nos") && terrain.sourceId.includes("_1m")) return 16;
+  if (terrain.sourceId.includes("noaa_nos")) return 14;
+  if (terrain.sourceId.includes("noaa_ocm_area_a")) return 18;
+  return 14;
 }
 
 function stableSourceOffsetMeters(sourceId: string): number {
@@ -389,7 +311,7 @@ function stableSourceOffsetMeters(sourceId: string): number {
   for (let index = 0; index < sourceId.length; index += 1) {
     hash = (hash * 31 + sourceId.charCodeAt(index)) % 997;
   }
-  return (hash % 13) * 0.7;
+  return (hash % 13) * 0.18;
 }
 
 function terrainDepthBiasParameters(terrain: PaleoTerrainConfig) {
@@ -783,11 +705,6 @@ export function createPaleoCoastlineLayers(
   if (!slice) return [];
 
   const activeWaterLevel = context.paleoWaterLevelMeters ?? slice.seaLevelMeters;
-  const waterSlice = {
-    ...slice,
-    seaLevelMeters: activeWaterLevel,
-  };
-
   const terrain = primaryTerrainForSlice(slice);
   const profile = sceneConfig(context.sceneProfile);
   const rawProbeFeatures = probeFeaturesForWaterLevel(data, slice, activeWaterLevel);
@@ -831,34 +748,6 @@ export function createPaleoCoastlineLayers(
         },
       },
     });
-  });
-
-  const waterLayer = new PolygonLayer<WaterPlaneFeature>({
-    id: "paleo-water",
-    data: waterPlaneForSlice(waterSlice, profile),
-    pickable: false,
-    filled: true,
-    stroked: true,
-    getPolygon: (item) => item.polygon,
-    getFillColor: [24, 112, 166, profile.waterAlpha],
-    getLineColor: [188, 248, 255, profile.waterLineAlpha],
-    getLineWidth: 2,
-    lineWidthUnits: "pixels",
-    parameters: {
-      depthWriteEnabled: false,
-    },
-  });
-
-  const waterSheenLayer = new LineLayer<WaterSheenLine>({
-    id: "paleo-water-sheen",
-    data: waterSheenLinesForSlice(waterSlice, profile),
-    pickable: false,
-    getSourcePosition: (item) => item.source,
-    getTargetPosition: (item) => item.target,
-    getColor: (item) => [190, 245, 255, item.alpha],
-    getWidth: (item) => item.width,
-    widthUnits: "pixels",
-    parameters: ANNOTATION_PARAMETERS,
   });
 
   const terrainFootprintFillLayer = new PolygonLayer<TerrainFootprint>({
@@ -1023,8 +912,6 @@ export function createPaleoCoastlineLayers(
 
   return [
     ...terrainLayers,
-    waterLayer,
-    waterSheenLayer,
     terrainFootprintFillLayer,
     terrainFootprintLabelLayer,
     baySourceFootprintLayer,
