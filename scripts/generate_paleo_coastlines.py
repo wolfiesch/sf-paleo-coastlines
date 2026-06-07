@@ -270,6 +270,106 @@ NOS_BAG_BLOCKS: list[dict[str, Any]] = [
         "note": "NOAA NOS H12111 2 m BAG survey patch in MLLW, adding detailed deeper northern Golden Gate approach bathymetry.",
     },
     {
+        "sourceId": "noaa_nos_h12112_1m_bag",
+        "sourceLabel": "NOAA NOS H12112, 1 m BAG outer Golden Gate bathymetry",
+        "sourceName": "NOAA/NOS H12112 Bathymetric Attributed Grid, 1 m, MLLW, Gulf of the Farallones / vicinity of Golden Gate",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12112.html",
+        "role": "High-resolution NOAA BAG survey inset for the outer Golden Gate and Gulf of the Farallones approach.",
+        "folder": "noaa-nos-h12112",
+        "fileName": "H12112_MB_1m_MLLW_1of3.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/BAG/H12112_MB_1m_MLLW_1of3.bag",
+        "terrainStem": "noaa_nos_h12112_1m",
+        "terrainSize": 1536,
+        "terrainMinimum": -45.0,
+        "terrainMaximum": 2.0,
+        "contourMinimum": -40.0,
+        "contourMaximum": 0.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12112 1 m BAG survey patch in MLLW, filling a high-detail outer Golden Gate / Gulf of the Farallones gap.",
+    },
+    {
+        "sourceId": "noaa_nos_h12112_2m_bag",
+        "sourceLabel": "NOAA NOS H12112, 2 m BAG outer Golden Gate bathymetry",
+        "sourceName": "NOAA/NOS H12112 Bathymetric Attributed Grid, 2 m, MLLW, Gulf of the Farallones / vicinity of Golden Gate",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12112.html",
+        "role": "High-resolution NOAA BAG survey inset for deeper outer Golden Gate approach terrain.",
+        "folder": "noaa-nos-h12112",
+        "fileName": "H12112_MB_2m_MLLW_2of3.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/BAG/H12112_MB_2m_MLLW_2of3.bag",
+        "terrainStem": "noaa_nos_h12112_2m",
+        "terrainSize": 1024,
+        "terrainMinimum": -80.0,
+        "terrainMaximum": -8.0,
+        "contourMinimum": -75.0,
+        "contourMaximum": -10.0,
+        "contourSimplify": 5,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12112 2 m BAG survey patch in MLLW, adding deeper outer Golden Gate / Gulf of the Farallones bathymetry detail.",
+    },
+    {
+        "sourceId": "noaa_nos_h12112_4m_bag",
+        "sourceLabel": "NOAA NOS H12112, 4 m BAG outer Golden Gate bathymetry",
+        "sourceName": "NOAA/NOS H12112 Bathymetric Attributed Grid, 4 m, MLLW, Gulf of the Farallones / vicinity of Golden Gate",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12112.html",
+        "role": "High-resolution NOAA BAG survey inset for the deepest H12112 outer approach patch.",
+        "folder": "noaa-nos-h12112",
+        "fileName": "H12112_MB_4m_MLLW_3of3.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/BAG/H12112_MB_4m_MLLW_3of3.bag",
+        "terrainStem": "noaa_nos_h12112_4m",
+        "terrainSize": 768,
+        "terrainMinimum": -150.0,
+        "terrainMaximum": -25.0,
+        "contourMinimum": -140.0,
+        "contourMaximum": -30.0,
+        "contourSimplify": 8,
+        "minDegreesLength": 0.0025,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12112 4 m BAG survey patch in MLLW, adding deeper Gulf of the Farallones bathymetry continuity.",
+    },
+    {
+        "sourceId": "noaa_nos_h12113_1m_bag",
+        "sourceLabel": "NOAA NOS H12113, 1 m BAG Lake Merced to Shelter Cove bathymetry",
+        "sourceName": "NOAA/NOS H12113 Bathymetric Attributed Grid, 1 m, MLLW, Gulf of the Farallones / Lake Merced to Shelter Cove",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12113.html",
+        "role": "High-resolution NOAA BAG survey inset south of the Golden Gate along the Gulf of the Farallones shelf.",
+        "folder": "noaa-nos-h12113",
+        "fileName": "H12113_MB_1m_MLLW_1of2.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12113/BAG/H12113_MB_1m_MLLW_1of2.bag",
+        "terrainStem": "noaa_nos_h12113_1m",
+        "terrainSize": 1536,
+        "terrainMinimum": -55.0,
+        "terrainMaximum": 2.0,
+        "contourMinimum": -50.0,
+        "contourMaximum": 0.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12113 1 m BAG survey patch in MLLW, adding high-detail shelf bathymetry south of the Golden Gate.",
+    },
+    {
+        "sourceId": "noaa_nos_h12113_2m_bag",
+        "sourceLabel": "NOAA NOS H12113, 2 m BAG Lake Merced to Shelter Cove bathymetry",
+        "sourceName": "NOAA/NOS H12113 Bathymetric Attributed Grid, 2 m, MLLW, Gulf of the Farallones / Lake Merced to Shelter Cove",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12113.html",
+        "role": "High-resolution NOAA BAG survey inset for the deeper H12113 shelf patch south of the Golden Gate.",
+        "folder": "noaa-nos-h12113",
+        "fileName": "H12113_MB_2m_MLLW_2of2.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12113/BAG/H12113_MB_2m_MLLW_2of2.bag",
+        "terrainStem": "noaa_nos_h12113_2m",
+        "terrainSize": 1024,
+        "terrainMinimum": -120.0,
+        "terrainMaximum": -8.0,
+        "contourMinimum": -115.0,
+        "contourMaximum": -10.0,
+        "contourSimplify": 6,
+        "minDegreesLength": 0.002,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H12113 2 m BAG survey patch in MLLW, improving deeper shelf continuity south of the Golden Gate.",
+    },
+    {
         "sourceId": "noaa_nos_h11965_vr_bag",
         "sourceLabel": "NOAA NOS H11965, VR BAG Farallon Islands bathymetry",
         "sourceName": "NOAA/NOS H11965 Variable Resolution Bathymetric Attributed Grid, MLLW, Farallon Islands",
@@ -1040,9 +1140,10 @@ def prepare_noaa_cudem_subset() -> None:
 
 
 def download_usgs_ds684_dem4() -> None:
-    download_url(DS684_DEM4_URL, DS684_ZIP)
     if DS684_TIF.exists():
+        print(f"Using existing source file: {DS684_TIF}")
         return
+    download_url(DS684_DEM4_URL, DS684_ZIP)
     run(["unzip", "-o", str(DS684_ZIP), "-d", str(DS684_DIR)])
 
 
@@ -1278,19 +1379,25 @@ def bathymetry_block_character_wgs84(block: dict[str, Any]) -> Path:
 
 
 def download_bathymetry_block(block: dict[str, Any]) -> None:
-    download_url(str(block["zipUrl"]), bathymetry_block_zip(block))
     if not bathymetry_block_dataset(block).exists():
+        download_url(str(block["zipUrl"]), bathymetry_block_zip(block))
         run(["unzip", "-o", str(bathymetry_block_zip(block)), "-d", str(bathymetry_block_dir(block))])
+    else:
+        print(f"Using existing source file: {bathymetry_block_dataset(block)}")
 
     for zip_name in block.get("backscatterZipNames", []):
-        download_url(bathymetry_block_backscatter_url(block, str(zip_name)), bathymetry_block_backscatter_zip(block, str(zip_name)))
         if not bathymetry_block_backscatter_dataset(block, str(zip_name)).exists():
+            download_url(bathymetry_block_backscatter_url(block, str(zip_name)), bathymetry_block_backscatter_zip(block, str(zip_name)))
             run(["unzip", "-o", str(bathymetry_block_backscatter_zip(block, str(zip_name))), "-d", str(bathymetry_block_dir(block))])
+        else:
+            print(f"Using existing source file: {bathymetry_block_backscatter_dataset(block, str(zip_name))}")
 
     if block.get("characterZipName"):
-        download_url(bathymetry_block_character_url(block), bathymetry_block_character_zip(block))
         if not bathymetry_block_character_dataset(block).exists():
+            download_url(bathymetry_block_character_url(block), bathymetry_block_character_zip(block))
             run(["unzip", "-o", str(bathymetry_block_character_zip(block)), "-d", str(bathymetry_block_dir(block))])
+        else:
+            print(f"Using existing source file: {bathymetry_block_character_dataset(block)}")
 
 
 def download_bathymetry_blocks() -> None:

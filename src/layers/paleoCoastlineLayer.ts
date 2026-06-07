@@ -398,6 +398,8 @@ function shortTerrainLabel(terrain: TerrainFootprint): string {
   if (terrain.sourceId.includes("h12109")) return "H12109";
   if (terrain.sourceId.includes("h12110")) return "H12110";
   if (terrain.sourceId.includes("h12111")) return "H12111";
+  if (terrain.sourceId.includes("h12112")) return "H12112";
+  if (terrain.sourceId.includes("h12113")) return "H12113";
   if (terrain.sourceId.includes("h11965")) return "H11965";
   if (terrain.sourceId.includes("h13334")) return "H13334";
   if (terrain.sourceId.includes("w00477")) return "W00477";

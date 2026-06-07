@@ -23,6 +23,10 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS H12110, 2 m BAG south Golden Gate approach bathymetry | NOAA NOS BAG | 2 m | 414.9 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12111, 1 m BAG north Golden Gate approach bathymetry | NOAA NOS BAG | 1 m | 494.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12111, 2 m BAG north Golden Gate approach bathymetry | NOAA NOS BAG | 2 m | 239.6 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H12112, 1 m BAG outer Golden Gate bathymetry | NOAA NOS BAG | 1 m | 221.9 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H12112, 2 m BAG outer Golden Gate bathymetry | NOAA NOS BAG | 2 m | 245.0 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H12113, 1 m BAG Lake Merced to Shelter Cove bathymetry | NOAA NOS BAG | 1 m | 186.3 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H12113, 2 m BAG Lake Merced to Shelter Cove bathymetry | NOAA NOS BAG | 2 m | 230.0 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA OCM Area A CA1B08, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 0.3 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
 | NOAA OCM Area A CA1B09, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 4.5 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
 | NOAA OCM Area A CA1B22, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 8.5 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
@@ -41,6 +45,7 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS W00477, VR BAG Greater Farallones bathymetry 4 | NOAA NOS BAG | variable-resolution BAG | 179.8 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00614, VR BAG sanctuary bathymetry | NOAA NOS BAG | variable-resolution BAG | 19009.5 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | NOAA CRM | 90 m | 36536.5 | 2 | broad support surface | Broad sea-level/geoid-style reference; useful for continuity, not local datum precision. |
+| NOAA NOS H12112, 4 m BAG outer Golden Gate bathymetry | NOAA NOS BAG | unknown | 220.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 
 ## Highest-Value Next Data Chases
 
