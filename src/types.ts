@@ -1,6 +1,6 @@
 export type PaleoTimeSliceId = "present" | "5k_years_ago" | "10k_years_ago" | "20k_years_ago";
 export type TerrainDetailLevel = "fast" | "detailed" | "survey";
-export type TerrainTextureMode = "bottom" | "hybrid" | "survey" | "sonar" | "relief" | "color";
+export type TerrainTextureMode = "bottom" | "hybrid" | "survey" | "source" | "sonar" | "relief" | "color";
 export type SceneProfile = "study" | "relief" | "emergence";
 export type TerrainQualityTier = "broad" | "bay_mosaic" | "source_survey" | "nearshore_detail" | "offshore_survey" | "reference";
 
@@ -16,6 +16,7 @@ export interface PaleoTerrainConfig {
     surveySonarHybrid?: string;
     sonarBackscatter?: string;
     seafloorCharacter?: string;
+    sourceConfidence?: string;
   };
   bounds: [number, number, number, number];
   heightRangeMeters: [number, number];

@@ -43,6 +43,7 @@ const TERRAIN_TEXTURE_OPTIONS: { id: TerrainTextureMode; label: string; title: s
   { id: "bottom", label: "Bottom", title: "Interpreted seafloor type where USGS character maps exist" },
   { id: "hybrid", label: "Hybrid", title: "Survey texture plus acoustic backscatter where sonar exists" },
   { id: "survey", label: "Survey", title: "Slope, roughness, ridge, and hollow detail blended with depth color" },
+  { id: "source", label: "Source", title: "Source quality classes for the fused best-available terrain" },
   { id: "relief", label: "Relief", title: "Depth color plus DEM-derived light and shadow" },
   { id: "sonar", label: "Sonar", title: "Acoustic backscatter where available, relief elsewhere" },
   { id: "color", label: "Color", title: "Depth color without baked terrain shading" },

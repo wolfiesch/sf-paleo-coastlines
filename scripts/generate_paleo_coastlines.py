@@ -57,6 +57,7 @@ BEST_AVAILABLE_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate
 BEST_AVAILABLE_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_color.png"
 BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_relief.png"
 BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_composite.png"
+BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_source_quality.png"
 NOS_BAG_DEFAULT_DIR = RAW_DIR / "noaa-nos-bag"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
@@ -85,6 +86,7 @@ CRM_TERRAIN_MAX_M = 1000.0
 CUDEM_TERRAIN_MIN_M = -2500.0
 CUDEM_TERRAIN_MAX_M = 1200.0
 BEST_AVAILABLE_TERRAIN_SIZE = 6144
+BEST_AVAILABLE_SOURCE_TEXTURE_SIZE = 2048
 BEST_AVAILABLE_TERRAIN_MIN_M = -1000.0
 BEST_AVAILABLE_TERRAIN_MAX_M = 500.0
 BEST_AVAILABLE_BOUNDS = {
@@ -2029,6 +2031,7 @@ def terrain_metadata(
     minimum: float,
     maximum: float,
     note: str,
+    source_confidence_texture_png: Path | None = None,
 ) -> dict[str, Any]:
     info = json.loads(subprocess.check_output(["gdalinfo", "-json", str(wgs84_tif)]))
     transform = info["geoTransform"]
@@ -2053,6 +2056,8 @@ def terrain_metadata(
         textures["surveySonarHybrid"] = public_url(hybrid_texture_png)
     if character_texture_png is not None and character_texture_png.exists():
         textures["seafloorCharacter"] = public_url(character_texture_png)
+    if source_confidence_texture_png is not None and source_confidence_texture_png.exists():
+        textures["sourceConfidence"] = public_url(source_confidence_texture_png)
 
     source_kind = terrain_source_kind(source_id)
 
@@ -2636,7 +2641,7 @@ def fusion_resolution_rank(source_id: str) -> int:
     return 0
 
 
-def best_available_fusion_inputs() -> list[Path]:
+def best_available_fusion_input_records() -> list[tuple[str, Path]]:
     ordered_sources: list[tuple[int, int, str, Path]] = [
         (10, 0, "noaa_crm_vol7_3as", CRM_TERRAIN_WGS84),
         (20, 0, "noaa_cudem_1_9as", CUDEM_TERRAIN_WGS84),
@@ -2685,11 +2690,142 @@ def best_available_fusion_inputs() -> list[Path]:
         (95, 20, "usgs_ds684_dem4", DS684_TERRAIN_WGS84),
     ]
     ordered_sources.sort(key=lambda item: (item[0], item[1], item[2]))
-    return [path for _, _, _, path in ordered_sources if path.exists()]
+    return [(source_id, path) for _, _, source_id, path in ordered_sources if path.exists()]
+
+
+def best_available_fusion_inputs() -> list[Path]:
+    return [path for _, path in best_available_fusion_input_records()]
+
+
+def source_quality_category(source_id: str) -> str:
+    if source_id.startswith("noaa_crm"):
+        return "CRM fallback"
+    if source_id.startswith("noaa_cudem"):
+        return "CUDEM support"
+    if source_id.startswith("noaa_ocm_area_a"):
+        return "NOAA OCM survey"
+    if source_id.startswith("noaa_nos"):
+        return "NOAA BAG survey"
+    if source_id.startswith("usgs_csmp") or source_id.startswith("usgs_ds684"):
+        return "USGS nearshore"
+    if "farallon" in source_id or "rittenburg" in source_id:
+        return "USGS offshore"
+    if source_id.startswith("usgs_sf_bay_1m"):
+        return "USGS Bay DEM"
+    return "other"
+
+
+def source_quality_color(category: str) -> tuple[int, int, int]:
+    colors = {
+        "CRM fallback": (35, 48, 76),
+        "CUDEM support": (43, 104, 142),
+        "NOAA OCM survey": (42, 202, 170),
+        "NOAA BAG survey": (74, 218, 255),
+        "USGS nearshore": (248, 207, 82),
+        "USGS offshore": (188, 126, 255),
+        "USGS Bay DEM": (105, 245, 163),
+        "other": (220, 230, 240),
+    }
+    return colors.get(category, colors["other"])
+
+
+def write_best_available_source_quality_texture(records: list[tuple[str, Path]]) -> dict[str, Any]:
+    if not records:
+        return {}
+
+    categories = [
+        "CRM fallback",
+        "CUDEM support",
+        "NOAA OCM survey",
+        "NOAA BAG survey",
+        "USGS nearshore",
+        "USGS offshore",
+        "USGS Bay DEM",
+        "other",
+    ]
+    category_codes = {category: index + 1 for index, category in enumerate(categories)}
+    code_to_category = {code: category for category, code in category_codes.items()}
+
+    width = 0
+    height = 0
+    provenance: np.ndarray | None = None
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_root = Path(temp_dir)
+        for source_id, path in records:
+            sample_path = temp_root / f"{source_id}.tif"
+            run([
+                "gdalwarp",
+                "-q",
+                "-overwrite",
+                "-t_srs",
+                "EPSG:4326",
+                "-te",
+                str(BEST_AVAILABLE_BOUNDS["west"]),
+                str(BEST_AVAILABLE_BOUNDS["south"]),
+                str(BEST_AVAILABLE_BOUNDS["east"]),
+                str(BEST_AVAILABLE_BOUNDS["north"]),
+                "-ts",
+                str(BEST_AVAILABLE_SOURCE_TEXTURE_SIZE),
+                "0",
+                "-r",
+                "near",
+                "-ot",
+                "Float32",
+                "-srcnodata",
+                "-9999",
+                "-dstnodata",
+                "-9999",
+                str(path),
+                str(sample_path),
+            ])
+            sample = Image.open(sample_path)
+            values = np.asarray(sample, dtype=np.float32)
+            if values.ndim > 2:
+                values = values[:, :, 0]
+
+            if provenance is None:
+                height, width = values.shape
+                provenance = np.zeros((height, width), dtype=np.uint8)
+
+            valid = np.isfinite(values) & (values > -9000) & (values < 1_000_000)
+            category = source_quality_category(source_id)
+            provenance[valid] = category_codes[category]
+
+    if provenance is None:
+        return {}
+
+    pixels = np.zeros((height, width, 4), dtype=np.uint8)
+    summary: dict[str, int] = {}
+    for code, category in code_to_category.items():
+        mask = provenance == code
+        count = int(mask.sum())
+        if count == 0:
+            continue
+        color = source_quality_color(category)
+        pixels[mask, 0] = color[0]
+        pixels[mask, 1] = color[1]
+        pixels[mask, 2] = color[2]
+        pixels[mask, 3] = 238
+        summary[category] = count
+
+    Image.fromarray(pixels, "RGBA").save(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG)
+    total = sum(summary.values())
+    return {
+        "texture": "/" + str(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.relative_to(ROOT / "public")),
+        "pixelSize": [width, height],
+        "pixelCounts": summary,
+        "pixelPercents": {
+            category: round((count / total) * 100, 2)
+            for category, count in summary.items()
+            if total
+        },
+        "note": "Lower-resolution source-quality texture for the fused terrain. It shows which input class won each sampled pixel after broad-to-detailed stacking.",
+    }
 
 
 def generate_best_available_terrain_asset() -> dict[str, Any]:
-    inputs = best_available_fusion_inputs()
+    records = best_available_fusion_input_records()
+    inputs = [path for _, path in records]
     if len(inputs) < 2:
         raise SystemExit("Best-available terrain fusion needs at least two prepared WGS84 terrain sources.")
 
@@ -2739,7 +2875,8 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         BEST_AVAILABLE_TERRAIN_MIN_M,
         BEST_AVAILABLE_TERRAIN_MAX_M,
     )
-    return terrain_metadata(
+    source_confidence_summary = write_best_available_source_quality_texture(records)
+    metadata = terrain_metadata(
         "best_available_gate_shelf_fusion",
         source_label("best_available_gate_shelf_fusion"),
         BEST_AVAILABLE_TERRAIN_WGS84,
@@ -2753,7 +2890,11 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         BEST_AVAILABLE_TERRAIN_MIN_M,
         BEST_AVAILABLE_TERRAIN_MAX_M,
         "Derived best-available terrain fusion for the Golden Gate, San Francisco Bar, nearshore shelf, and Farallones approach. It stacks CRM/CUDEM continuity first, then available NOAA OCM, NOAA BAG, USGS/CSMP, Farallon/Rittenburg, and DS684 survey surfaces where they exist. This is a visual continuity layer, not a new measured survey.",
+        BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG,
     )
+    if source_confidence_summary:
+        metadata["sourceConfidence"] = source_confidence_summary
+    return metadata
 
 
 def generate_terrain_assets() -> list[dict[str, Any]]:
@@ -3181,6 +3322,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(BEST_AVAILABLE_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.relative_to(ROOT)),
             str(noaa_ocm_area_a_interferometric_elevation_png().relative_to(ROOT)),
             str(noaa_ocm_area_a_interferometric_texture_png().relative_to(ROOT)),
             str(noaa_ocm_area_a_interferometric_relief_texture_png().relative_to(ROOT)),
