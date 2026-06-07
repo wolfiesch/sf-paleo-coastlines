@@ -85,8 +85,8 @@ CRM_TERRAIN_MIN_M = -2500.0
 CRM_TERRAIN_MAX_M = 1000.0
 CUDEM_TERRAIN_MIN_M = -2500.0
 CUDEM_TERRAIN_MAX_M = 1200.0
-BEST_AVAILABLE_TERRAIN_SIZE = 6144
-BEST_AVAILABLE_SOURCE_TEXTURE_SIZE = 2048
+BEST_AVAILABLE_TERRAIN_SIZE = 8192
+BEST_AVAILABLE_SOURCE_TEXTURE_SIZE = 4096
 BEST_AVAILABLE_TERRAIN_MIN_M = -1000.0
 BEST_AVAILABLE_TERRAIN_MAX_M = 500.0
 BEST_AVAILABLE_BOUNDS = {
@@ -632,7 +632,7 @@ BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
         "characterZipName": "SeafloorCharacter_OffshoreSanFrancisco.zip",
         "characterDatasetName": "SeafloorCharacter_OffshoreSanFrancisco.tif",
         "terrainStem": "csmp_offshore_sf",
-        "terrainSize": 2048,
+        "terrainSize": 4096,
         "terrainMinimum": -120.0,
         "terrainMaximum": 5.0,
         "contourMinimum": -115.0,
@@ -789,7 +789,7 @@ USGS_SF_BAY_1M_BLOCKS: list[dict[str, Any]] = [
         "zipName": None,
         "datasetName": "NorthSFBay_DEM_Mosaic_NAVD88_1m.tif",
         "terrainStem": "usgs_sf_bay_1m_north_navd88",
-        "terrainSize": 2048,
+        "terrainSize": 4096,
         "terrainMinimum": -45.0,
         "terrainMaximum": 8.0,
         "contourMinimum": -40.0,
@@ -808,7 +808,7 @@ USGS_SF_BAY_1M_BLOCKS: list[dict[str, Any]] = [
         "zipName": "CentralSFBay_DEM_Mosaic_NAVD88_1M.zip",
         "datasetName": "CentralSFBay_DEM_Mosaic_NAVD88_1M.tif",
         "terrainStem": "usgs_sf_bay_1m_central_navd88",
-        "terrainSize": 2048,
+        "terrainSize": 4096,
         "terrainMinimum": -45.0,
         "terrainMaximum": 8.0,
         "contourMinimum": -40.0,
@@ -827,7 +827,7 @@ USGS_SF_BAY_1M_BLOCKS: list[dict[str, Any]] = [
         "zipName": "SouthSFBay_DEM_Mosaic_NAVD88_1m.zip",
         "datasetName": "SouthSFBay_DEM_Mosaic_NAVD88_1m.tif",
         "terrainStem": "usgs_sf_bay_1m_south_navd88",
-        "terrainSize": 2048,
+        "terrainSize": 4096,
         "terrainMinimum": -35.0,
         "terrainMaximum": 8.0,
         "contourMinimum": -30.0,
@@ -835,6 +835,25 @@ USGS_SF_BAY_1M_BLOCKS: list[dict[str, Any]] = [
         "contourSimplify": 4,
         "minDegreesLength": 0.0015,
         "note": "USGS 1 m NAVD88 DEM inset for south San Francisco Bay. This is intended to sharpen Bay-floor relief and near-modern waterline behavior once the large source file is present locally.",
+    },
+    {
+        "sourceId": "usgs_sf_bay_1m_south_mllw",
+        "sourceLabel": "USGS SF Bay 1 m DEM, south Bay MLLW",
+        "sourceName": "USGS high-resolution 1 m DEM of south San Francisco Bay, MLLW",
+        "sourceUrl": "https://www.sciencebase.gov/catalog/item/607df116d34e8564d67e3ae6",
+        "role": "High-resolution Bay-interior DEM for south San Francisco Bay, used as a visual-detail fallback while the NAVD88 package is unavailable from ScienceBase.",
+        "folder": "usgs-sf-bay-1m-dem/mllw/south",
+        "zipName": "SouthSFBay_DEM_Mosaic_MLLW_1m.zip",
+        "datasetName": "SouthSFBay_DEM_Mosaic_MLLW_1m.tif",
+        "terrainStem": "usgs_sf_bay_1m_south_mllw",
+        "terrainSize": 4096,
+        "terrainMinimum": -35.0,
+        "terrainMaximum": 8.0,
+        "contourMinimum": -30.0,
+        "contourMaximum": 5.0,
+        "contourSimplify": 4,
+        "minDegreesLength": 0.0015,
+        "note": "USGS 1 m MLLW DEM inset for south San Francisco Bay. It sharpens visible Bay-floor relief, but it needs tidal-datum conversion before exact sea-level alignment with NAVD88 sources.",
     },
 ]
 
@@ -850,7 +869,7 @@ NOAA_OCM_AREA_A_BLOCKS: list[dict[str, Any]] = [
         "url": f"https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/SF_mbs_areaA_2014_8500/{survey}_1m.tif",
         "stacUrl": f"https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/SF_mbs_areaA_2014_8500/stac/{survey}_1m.json",
         "terrainStem": f"noaa_ocm_area_a_{survey.lower()}_1m",
-        "terrainSize": 2048,
+        "terrainSize": 3072,
         "terrainMinimum": -70.0,
         "terrainMaximum": 5.0,
         "contourMinimum": -65.0,
@@ -949,7 +968,7 @@ NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC: dict[str, Any] = {
     "role": "Broad 1 m interferometric source-survey mosaic for much of San Francisco Bay Area A.",
     "folder": "noaa-ocm-sf-bay-area-a-interferometric",
     "terrainStem": "noaa_ocm_area_a_interferometric_1m_mosaic",
-    "terrainSize": 4096,
+    "terrainSize": 5120,
     "terrainMinimum": -70.0,
     "terrainMaximum": 5.0,
     "contourMinimum": -65.0,

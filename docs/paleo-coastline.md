@@ -188,7 +188,9 @@ The `*_character.png` files power the `Bottom` surface style for CSMP coastal bl
 
 The vertical scale is exaggerated 4x so the shelf, ridges, and small protruding islands are easier to see. The waterline slider moves the transparent water plane independently of the selected scientific time slice, so you can scrub sea level and watch terrain start to emerge.
 
-The terrain mesh control changes deck.gl's `meshMaxError` setting. In plain English: lower values keep more small bumps and ridges from the elevation image, while higher values trade some detail for speed. The default `Survey` setting uses tighter mesh error values for the USGS/CSMP and Farallon multibeam patches than for the broad NOAA background surface.
+The terrain mesh control changes deck.gl's `meshMaxError` setting. In plain English: lower values keep more small bumps and ridges from the elevation image, while higher values trade some detail for speed. The default `Survey` setting now uses very tight mesh error values for the NOAA Area A 1 m Bay mosaic, the USGS SF Bay 1 m DEM inset, the NOAA BAG patches, and the USGS/CSMP/Farallon multibeam patches. This is intentionally heavier because the current sprint prioritizes detail over speed.
+
+The generated browser terrain images are intentionally larger than the first MVP while staying inside common WebGL texture limits. The best-available fused surface is exported at 8192 pixels wide, the NOAA Area A 1 m mosaic at 5120 pixels wide, the individual NOAA Area A source-survey tiles at 3072 pixels wide, and the USGS SF Bay 1 m DEM insets at 4096 pixels wide when present. In plain English: we are preserving more of the raw DEM detail before the browser turns it into a 3D surface, but keeping each single image small enough for the browser to draw reliably.
 
 The scene control changes only how the terrain is drawn. `Study` is calmer for reading labels and sources, `Relief` increases height, light, and shadow, and `Emerge` makes the active waterline and newly exposed terrain more obvious. In plain English: this is like changing the lighting and vertical emphasis on a physical model. It does not change the sea-level estimate or the source elevation data.
 
@@ -213,6 +215,7 @@ The uncertainty toggle shows extra contour lines around each estimate. These ban
 
 - USGS/CSMP DS 781 is high resolution, but the blocks are mostly nearshore and state-water focused. The app now uses a longer chain of those blocks, but they still do not form one seamless full-ocean DEM.
 - NOAA/NOS Farallon-region BAG surveys improve island-adjacent and sanctuary-priority offshore bathymetry, but they are still survey patches. In plain English: the Farallones view is becoming much more interesting, but we should still expect visible data-footprint edges where detailed surveys start and stop.
+- NOAA OCM Area B/C Bay survey metadata exists and would likely help north/south Bay detail, but the official InPort records currently expose no public downloadable distribution. In plain English: it is a real lead, but not an actionable app input until we find a working NOAA/NCEI download path.
 - USGS OFR 2014-1234 improves the Farallon Escarpment and Rittenburg Bank areas with bathymetry, backscatter, and seafloor character, but it is still patch coverage, not full Farallones-region coverage.
 - USGS DS684 DEM 4 is high resolution, but it is only one tile. It improves the Golden Gate and nearby coast; it is not full Bay-plus-Farallones coverage.
 - NOAA/NOS BAG surveys add very detailed Golden Gate and Farallon-region bathymetry, but they use MLLW. In plain English: they are excellent shape data, but we should not overclaim exact sea-level alignment until we do a proper local datum conversion.

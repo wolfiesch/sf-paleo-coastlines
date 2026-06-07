@@ -506,15 +506,15 @@ function meshMaxErrorForTerrain(
   }
 
   if (detail === "survey") {
-    if (tier === "broad") return 0.95;
-    if (tier === "bay_mosaic") return 0.38;
-    if (tier === "offshore_survey") return 0.42;
-    return 0.22;
+    if (tier === "broad") return 0.55;
+    if (tier === "bay_mosaic") return 0.18;
+    if (tier === "offshore_survey") return 0.22;
+    return 0.12;
   }
 
-  if (tier === "broad") return 2.4;
-  if (tier === "bay_mosaic") return 0.7;
-  return 0.5;
+  if (tier === "broad") return 1.8;
+  if (tier === "bay_mosaic") return 0.42;
+  return 0.32;
 }
 
 function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode): string {

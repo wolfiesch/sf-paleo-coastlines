@@ -54,7 +54,16 @@ NEXT_DATA_CANDIDATES: list[dict[str, Any]] = [
         "sourceUrl": "https://www.fisheries.noaa.gov/inport/item/47860",
         "priority": "highest",
         "reason": "Practical high-detail Central Bay source grids exposed as individual public S3 GeoTIFFs, avoiding the flaky ScienceBase stitched-DEM download.",
-        "nextAction": "Keep Area A active as Central Bay detail; next, discover matching NOAA OCM interferometric Area A/B/C source grids and add them where they overlap the Bay DEM source footprints.",
+        "nextAction": "Keep Area A active as Central Bay detail. Area B/C metadata exists, but the public InPort pages currently expose no downloadable distribution, so treat them as blocked until a NOAA/NCEI download path is found.",
+    },
+    {
+        "id": "noaa_ocm_area_b_c_blocked",
+        "label": "NOAA OCM San Francisco Bay Area B/C 1 m survey grids",
+        "sourceFamily": "NOAA OCM acoustic bathymetry",
+        "sourceUrl": "https://www.fisheries.noaa.gov/inport/item/47864",
+        "priority": "high",
+        "reason": "Potentially valuable north/south Bay detail, but the official InPort records currently say no distributions are available.",
+        "nextAction": "Do not block the app on this. Re-check NOAA/NCEI discovery and public S3/FTP mirrors later, or contact NOAA OCM/NCEI for the Area B/C grid download path.",
     },
     {
         "id": "noaa_ocm_area_a_interferometric",
@@ -152,6 +161,8 @@ def datum_note(source_id: str) -> str:
         return "Broad sea-level/geoid-style reference; useful for continuity, not local datum precision."
     if source_id.startswith("noaa_cudem"):
         return "NOAA topobathy product; verify local vertical reference against CoNED/NAVD88 before exact contours."
+    if source_id.startswith("usgs_sf_bay_1m") and source_id.endswith("_mllw"):
+        return "MLLW; useful for Bay-floor visual detail, but needs tidal-datum conversion before exact sea-level alignment with NAVD88 sources."
     if source_id.startswith("usgs_sf_bay_1m"):
         return "NAVD88; best first-fit datum among the candidate Bay DEM files, but still compare overlap against CUDEM, DS684, and MLLW BAG patches."
     return "NAVD88-style or source-projected DEM; verify against local datum before exact contours."
