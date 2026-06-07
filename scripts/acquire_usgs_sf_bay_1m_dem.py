@@ -57,6 +57,10 @@ USGS_SF_BAY_1M_ITEMS: list[dict[str, Any]] = [
         "fileName": "SouthSFBay_DEM_Mosaic_NAVD88_1m.zip",
         "sizeBytes": 1_051_095_550,
         "downloadUrl": "https://www.sciencebase.gov/catalog/file/get/607df17bd34e8564d67e3af0?f=__disk__fb%2Fe0%2F85%2Ffbe085c476effe78fe49486c657844f95ac47a24",
+        "fallbackDownloadUrls": [
+            "https://www.sciencebase.gov/catalog/file/get/607df17bd34e8564d67e3af0",
+            "https://www.sciencebase.gov/catalog/file/get/607df17bd34e8564d67e3af0?name=SouthSFBay_DEM_Mosaic_NAVD88_1m.zip",
+        ],
         "bounds": {"minX": -122.563558, "maxX": -121.779581, "minY": 37.40643, "maxY": 37.781613},
     },
     {
@@ -224,6 +228,12 @@ def item_record(seed: dict[str, str]) -> dict[str, Any]:
         for file in item.get("files", [])
     ]
     primary_files = [file for file in files if file["primaryDemFile"]]
+    if not primary_files:
+        fallback = fallback_item_record(seed, RuntimeError("ScienceBase item JSON did not expose primary DEM files"))
+        fallback["metadataSource"] = "built-in last-known USGS metadata after live ScienceBase item omitted file records"
+        fallback["scienceBaseTitle"] = item.get("title")
+        fallback["lastUpdated"] = item.get("provenance", {}).get("lastUpdated")
+        return fallback
     local_primary_paths = [
         str(local_download_path(seed, {"name": file["name"]}).relative_to(ROOT))
         for file in primary_files
@@ -257,6 +267,7 @@ def fallback_item_record(seed: dict[str, Any], cause: Exception) -> dict[str, An
         "sizeBytes": seed["sizeBytes"],
         "sizeHuman": human_size(seed["sizeBytes"]),
         "url": seed["downloadUrl"],
+        "fallbackUrls": seed.get("fallbackDownloadUrls", []),
         "originalUrl": seed["downloadUrl"],
         "primaryDemFile": True,
     }
@@ -288,6 +299,24 @@ def selected_records(datum: str, section: str) -> list[dict[str, Any]]:
     if section != "all":
         records = [record for record in records if record["section"] == section]
     return records
+
+
+def matching_seed(item: dict[str, Any]) -> dict[str, Any] | None:
+    section = str(item.get("section") or "")
+    datum = str(item.get("datum") or "").lower()
+    for seed in USGS_SF_BAY_1M_ITEMS:
+        if seed["section"] == section and seed["datum"].lower() == datum:
+            return seed
+    return None
+
+
+def fallback_urls_for(item: dict[str, Any], file: dict[str, Any]) -> list[str]:
+    urls = [str(url) for url in file.get("fallbackUrls", [])]
+    seed = matching_seed(item)
+    if seed is not None:
+        urls.extend(str(url) for url in seed.get("fallbackDownloadUrls", []))
+    primary_url = str(file.get("url") or "")
+    return [url for index, url in enumerate(urls) if url and url != primary_url and url not in urls[:index]]
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -387,6 +416,7 @@ def download_file(
     force: bool,
     expected_size: int | None,
     minimum_free_gb: float | None,
+    fallback_urls: list[str] | None = None,
 ) -> None:
     if not force and existing_file_is_usable(target, expected_size):
         print(f"Using existing file: {target.relative_to(ROOT)}")
@@ -396,55 +426,75 @@ def download_file(
     require_free_space(target, expected_size, minimum_free_gb)
     part_path = target.with_name(f"{target.name}.part")
 
+    urls = [url, *(fallback_urls or [])]
+
     if shutil.which("curl") is not None:
         # ScienceBase S3-backed files may ignore byte-range requests. A normal
         # one-piece transfer has proven more reliable than curl resume here.
-        part_path.unlink(missing_ok=True)
-        print(f"Downloading {url}")
-        print(f"to {target.relative_to(ROOT)}")
-        subprocess.run(
-            [
-                "curl",
-                "--location",
-                "--fail",
-                "--retry",
-                "5",
-                "--retry-delay",
-                "5",
-                "--retry-all-errors",
-                "--connect-timeout",
-                "30",
-                "--speed-limit",
-                "1",
-                "--speed-time",
-                "120",
-                "--max-time",
-                "7200",
-                "--output",
-                str(part_path),
-                url,
-            ],
-            check=True,
-        )
-        validate_download(part_path, target, expected_size)
-        part_path.replace(target)
-        return
+        last_error: subprocess.CalledProcessError | RuntimeError | None = None
+        for attempt_url in urls:
+            part_path.unlink(missing_ok=True)
+            print(f"Downloading {attempt_url}")
+            print(f"to {target.relative_to(ROOT)}")
+            try:
+                subprocess.run(
+                    [
+                        "curl",
+                        "--location",
+                        "--fail",
+                        "--retry",
+                        "5",
+                        "--retry-delay",
+                        "5",
+                        "--retry-all-errors",
+                        "--connect-timeout",
+                        "30",
+                        "--speed-limit",
+                        "1",
+                        "--speed-time",
+                        "600",
+                        "--max-time",
+                        "7200",
+                        "--output",
+                        str(part_path),
+                        attempt_url,
+                    ],
+                    check=True,
+                )
+                validate_download(part_path, target, expected_size)
+            except (subprocess.CalledProcessError, RuntimeError) as cause:
+                last_error = cause
+                continue
+            part_path.replace(target)
+            return
+        assert last_error is not None
+        raise last_error
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=target.suffix) as tmp:
         tmp_path = Path(tmp.name)
 
-    print(f"Downloading {url}")
-    print(f"to {target.relative_to(ROOT)}")
     try:
-        request = urllib.request.Request(url, headers={"User-Agent": "sf-paleo-coastlines/0.1"})
-        with urllib.request.urlopen(request, timeout=60) as response, tmp_path.open("wb") as output:
-            while True:
-                chunk = response.read(1024 * 1024)
-                if not chunk:
-                    break
-                output.write(chunk)
-        validate_download(tmp_path, target, expected_size)
-        tmp_path.replace(target)
+        last_error: Exception | None = None
+        for attempt_url in urls:
+            print(f"Downloading {attempt_url}")
+            print(f"to {target.relative_to(ROOT)}")
+            try:
+                request = urllib.request.Request(attempt_url, headers={"User-Agent": "sf-paleo-coastlines/0.1"})
+                with urllib.request.urlopen(request, timeout=60) as response, tmp_path.open("wb") as output:
+                    while True:
+                        chunk = response.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        output.write(chunk)
+                validate_download(tmp_path, target, expected_size)
+            except Exception as cause:  # noqa: BLE001 - try the next public URL form.
+                last_error = cause
+                tmp_path.unlink(missing_ok=True)
+                continue
+            tmp_path.replace(target)
+            return
+        assert last_error is not None
+        raise last_error
     finally:
         tmp_path.unlink(missing_ok=True)
 
@@ -502,7 +552,14 @@ def main() -> int:
                 if not file.get("url") or not file.get("name"):
                     continue
                 target = local_download_path(item, file)
-                download_file(str(file["url"]), target, args.force, file.get("sizeBytes"), args.minimum_free_gb)
+                download_file(
+                    str(file["url"]),
+                    target,
+                    args.force,
+                    file.get("sizeBytes"),
+                    args.minimum_free_gb,
+                    fallback_urls_for(item, file),
+                )
         for item in items:
             item["localPrimaryPresent"] = [(ROOT / path).exists() for path in item["localPrimaryPaths"]]
         write_json(OUT_JSON, payload)

@@ -146,6 +146,8 @@ def source_family(source_id: str) -> str:
         return "USGS SF Bay 1 m DEM"
     if source_id.startswith("usgs_2023_sf_lidar"):
         return "USGS 3DEP / The National Map"
+    if source_id.startswith("usgs_coned_sf_2m"):
+        return "USGS CoNED"
     if source_id.startswith("usgs_farallon") or source_id.startswith("usgs_rittenburg"):
         return "USGS OFR 2014-1234"
     if source_id.startswith("usgs_ds684"):
@@ -172,6 +174,8 @@ def datum_note(source_id: str) -> str:
         return "Broad sea-level/geoid-style reference; useful for continuity, not local datum precision."
     if source_id.startswith("noaa_cudem"):
         return "NOAA topobathy product; verify local vertical reference against CoNED/NAVD88 before exact contours."
+    if source_id.startswith("usgs_coned_sf_2m"):
+        return "USGS CoNED topobathymetry; compare overlap against CUDEM, USGS Bay DEM, DS684, and MLLW BAG patches before exact sea-level alignment."
     if source_id.startswith("usgs_sf_bay_1m") and source_id.endswith("_mllw"):
         return "MLLW; useful for Bay-floor visual detail, but needs tidal-datum conversion before exact sea-level alignment with NAVD88 sources."
     if source_id.startswith("usgs_sf_bay_1m"):
@@ -288,6 +292,9 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
     if source_id == "usgs_2023_sf_lidar_dem":
         return module.usgs_2023_sf_lidar_dem_tiles()
 
+    if source_id == "usgs_coned_sf_2m":
+        return [module.USGS_CONED_SF_2M_TIF]
+
     if source_id == "noaa_crm_vol7_3as":
         paths.append(module.CRM_TIF)
     elif source_id == "noaa_cudem_1_9as":
@@ -315,6 +322,8 @@ def source_url(module: Any, source_id: str) -> str | None:
         return "https://coast.noaa.gov/htdata/raster2/elevation/NCEI_ninth_Topobathy_2014_8483/"
     if source_id == "usgs_2023_sf_lidar_dem":
         return "https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/OPR/Projects/CA_SanFrancisco_B23/CA_SanFrancisco_1_B23/TIFF/"
+    if source_id == "usgs_coned_sf_2m":
+        return "https://topotools.cr.usgs.gov/topobathy_viewer/"
     if source_id == "usgs_ds684_dem4":
         return "https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/"
     return None

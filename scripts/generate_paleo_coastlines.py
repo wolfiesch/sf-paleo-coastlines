@@ -51,6 +51,13 @@ CUDEM_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_elev
 CUDEM_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_color.png"
 CUDEM_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_relief.png"
 CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "cudem_sf_bay_farallones_composite.png"
+USGS_CONED_SF_2M_DIR = RAW_DIR / "usgs-coned-sf-2m"
+USGS_CONED_SF_2M_TIF = USGS_CONED_SF_2M_DIR / "coned_sf_2m_best_available_8192.tif"
+USGS_CONED_SF_2M_TERRAIN_WGS84 = WORK_DIR / "usgs_coned_sf_2m_terrain_wgs84.tif"
+USGS_CONED_SF_2M_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_elevation.png"
+USGS_CONED_SF_2M_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_color.png"
+USGS_CONED_SF_2M_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_relief.png"
+USGS_CONED_SF_2M_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_composite.png"
 BEST_AVAILABLE_TERRAIN_VRT = WORK_DIR / "best_available_gate_shelf_terrain.vrt"
 BEST_AVAILABLE_TERRAIN_WGS84 = WORK_DIR / "best_available_gate_shelf_terrain_wgs84.tif"
 BEST_AVAILABLE_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_elevation.png"
@@ -97,6 +104,10 @@ CRM_TERRAIN_MIN_M = -2500.0
 CRM_TERRAIN_MAX_M = 1000.0
 CUDEM_TERRAIN_MIN_M = -2500.0
 CUDEM_TERRAIN_MAX_M = 1200.0
+USGS_CONED_SF_2M_TERRAIN_SIZE = 8192
+USGS_CONED_SF_2M_TERRAIN_MIN_M = -1000.0
+USGS_CONED_SF_2M_TERRAIN_MAX_M = 500.0
+USGS_CONED_SF_2M_NODATA_M = -3.4028235e38
 BEST_AVAILABLE_TERRAIN_SIZE = 8192
 BEST_AVAILABLE_SOURCE_TEXTURE_SIZE = 4096
 BEST_AVAILABLE_TERRAIN_MIN_M = -1000.0
@@ -1047,6 +1058,11 @@ SOURCES = [
         "url": "https://coast.noaa.gov/htdata/raster2/elevation/NCEI_ninth_Topobathy_2014_8483/",
         "role": "Sharper broad Bay/coast topobathymetry inset built from remote California COG tiles.",
     },
+    {
+        "name": "USGS CoNED San Francisco Bay 2 m topobathymetric DEM",
+        "url": "https://topotools.cr.usgs.gov/topobathy_viewer/",
+        "role": "Unified San Francisco land-plus-seafloor topobathymetry surface clipped from the official USGS CoNED WCS layer.",
+    },
     *[
         {
             "name": block["sourceName"],
@@ -1075,11 +1091,6 @@ SOURCES = [
         "name": "USGS Data Series 684 DEM 4, San Francisco Bar 2 m GeoTIFF",
         "url": "https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/",
         "role": "Higher-resolution topobathymetric surface for Ocean Beach, Golden Gate, Marin Headlands, and the San Francisco Bar.",
-    },
-    {
-        "name": "USGS CoNED San Francisco Bay 2 m topobathymetric DEM",
-        "url": "https://www.usgs.gov/special-topics/coastal-national-elevation-database-applications-project/science/topobathymetric-0",
-        "role": "Recommended higher-resolution replacement DEM for later local refinement.",
     },
     {
         "name": "USGS Atwater, Hedel, and Helley sea-level reconstruction",
@@ -1337,6 +1348,10 @@ def usgs_2023_sf_lidar_dem_tiles() -> list[Path]:
 
 def active_usgs_2023_sf_lidar_dem() -> bool:
     return bool(usgs_2023_sf_lidar_dem_tiles())
+
+
+def active_usgs_coned_sf_2m() -> bool:
+    return USGS_CONED_SF_2M_TIF.exists()
 
 
 def build_usgs_2023_sf_lidar_dem_vrt() -> None:
@@ -2177,6 +2192,8 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
         return {"qualityTier": "broad", "renderPriority": 10, "resolutionMeters": None}
     if source_id.startswith("noaa_cudem"):
         return {"qualityTier": "broad", "renderPriority": 20, "resolutionMeters": None}
+    if source_id.startswith("usgs_coned_sf_2m"):
+        return {"qualityTier": "bay_mosaic", "renderPriority": 30, "resolutionMeters": 2}
     if source_id.startswith("best_available"):
         return {"qualityTier": "bay_mosaic", "renderPriority": 35, "resolutionMeters": 20}
     if source_id.startswith("noaa_ocm_area_a_interferometric"):
@@ -2237,6 +2254,54 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
         DS684_TERRAIN_MIN_M,
         DS684_TERRAIN_MAX_M,
         "Higher-resolution 2 m terrain inset for the Golden Gate, Ocean Beach, Marin Headlands, and San Francisco Bar.",
+    )
+
+
+def generate_usgs_coned_sf_2m_terrain_asset() -> dict[str, Any]:
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-ts",
+        str(USGS_CONED_SF_2M_TERRAIN_SIZE),
+        "0",
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-srcnodata",
+        str(USGS_CONED_SF_2M_NODATA_M),
+        "-dstnodata",
+        "-9999",
+        str(USGS_CONED_SF_2M_TIF),
+        str(USGS_CONED_SF_2M_TERRAIN_WGS84),
+    ])
+    write_terrain_pngs_from_wgs84(
+        USGS_CONED_SF_2M_TERRAIN_WGS84,
+        USGS_CONED_SF_2M_TERRAIN_ELEVATION_PNG,
+        USGS_CONED_SF_2M_TERRAIN_TEXTURE_PNG,
+        USGS_CONED_SF_2M_TERRAIN_RELIEF_TEXTURE_PNG,
+        USGS_CONED_SF_2M_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        USGS_CONED_SF_2M_TERRAIN_MIN_M,
+        USGS_CONED_SF_2M_TERRAIN_MAX_M,
+        18,
+    )
+    return terrain_metadata(
+        "usgs_coned_sf_2m",
+        source_label("usgs_coned_sf_2m"),
+        USGS_CONED_SF_2M_TERRAIN_WGS84,
+        USGS_CONED_SF_2M_TERRAIN_ELEVATION_PNG,
+        USGS_CONED_SF_2M_TERRAIN_TEXTURE_PNG,
+        USGS_CONED_SF_2M_TERRAIN_RELIEF_TEXTURE_PNG,
+        USGS_CONED_SF_2M_TERRAIN_COMPOSITE_TEXTURE_PNG,
+        None,
+        None,
+        None,
+        USGS_CONED_SF_2M_TERRAIN_MIN_M,
+        USGS_CONED_SF_2M_TERRAIN_MAX_M,
+        "USGS CoNED San Francisco 2 m topobathymetry clipped from the official WCS layer. It gives the app a unified local land-plus-seafloor continuity surface underneath sharper survey patches.",
     )
 
 
@@ -2786,6 +2851,11 @@ def best_available_fusion_input_records() -> list[tuple[str, Path]]:
     ordered_sources: list[tuple[int, int, str, Path]] = [
         (10, 0, "noaa_crm_vol7_3as", CRM_TERRAIN_WGS84),
         (20, 0, "noaa_cudem_1_9as", CUDEM_TERRAIN_WGS84),
+        *(
+            [(30, 20, "usgs_coned_sf_2m", USGS_CONED_SF_2M_TERRAIN_WGS84)]
+            if active_usgs_coned_sf_2m()
+            else []
+        ),
         (
             40,
             0,
@@ -2848,6 +2918,8 @@ def source_quality_category(source_id: str) -> str:
         return "CRM fallback"
     if source_id.startswith("noaa_cudem"):
         return "CUDEM support"
+    if source_id.startswith("usgs_coned_sf_2m"):
+        return "USGS CoNED"
     if source_id.startswith("noaa_ocm_area_a"):
         return "NOAA OCM survey"
     if source_id.startswith("noaa_nos"):
@@ -2867,6 +2939,7 @@ def source_quality_color(category: str) -> tuple[int, int, int]:
     colors = {
         "CRM fallback": (35, 48, 76),
         "CUDEM support": (43, 104, 142),
+        "USGS CoNED": (92, 180, 132),
         "NOAA OCM survey": (42, 202, 170),
         "NOAA BAG survey": (74, 218, 255),
         "USGS land LiDAR": (236, 241, 222),
@@ -2885,6 +2958,7 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
     categories = [
         "CRM fallback",
         "CUDEM support",
+        "USGS CoNED",
         "NOAA OCM survey",
         "NOAA BAG survey",
         "USGS land LiDAR",
@@ -3056,6 +3130,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         USGS_2023_SF_LIDAR_DEM_TERRAIN_WGS84,
         CRM_TERRAIN_WGS84,
         CUDEM_TERRAIN_WGS84,
+        USGS_CONED_SF_2M_TERRAIN_WGS84,
         ETOPO_TERRAIN_WGS84,
         BEST_AVAILABLE_TERRAIN_VRT,
         BEST_AVAILABLE_TERRAIN_WGS84,
@@ -3078,6 +3153,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
     terrain = [
         generate_crm_terrain_asset(),
         generate_cudem_terrain_asset(),
+        *([generate_usgs_coned_sf_2m_terrain_asset()] if active_usgs_coned_sf_2m() else []),
         generate_noaa_ocm_area_a_interferometric_terrain_asset(),
         *[generate_usgs_sf_bay_1m_terrain_asset(block) for block in active_usgs_sf_bay_1m_blocks()],
         *[generate_noaa_ocm_area_a_terrain_asset(block) for block in NOAA_OCM_AREA_A_BLOCKS],
@@ -3269,6 +3345,8 @@ def source_label(source_id: str) -> str:
         return "USGS DS684 DEM 4, 2 m San Francisco Bar / Ocean Beach tile"
     if source_id == "usgs_2023_sf_lidar_dem":
         return "USGS 2023 San Francisco 1 m LiDAR DEM"
+    if source_id == "usgs_coned_sf_2m":
+        return "USGS CoNED San Francisco 2 m topobathymetry"
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
     if source_id == "best_available_gate_shelf_fusion":
@@ -3430,10 +3508,11 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
+            *([str(USGS_CONED_SF_2M_TIF.relative_to(ROOT))] if active_usgs_coned_sf_2m() else []),
             *CUDEM_TILE_URLS,
             *[str(nos_bag_dataset(block).relative_to(ROOT)) for block in NOS_BAG_BLOCKS],
             *[
@@ -3477,6 +3556,12 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(CUDEM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(CUDEM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
             str(CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            *([
+                str(USGS_CONED_SF_2M_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
+                str(USGS_CONED_SF_2M_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
+                str(USGS_CONED_SF_2M_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
+                str(USGS_CONED_SF_2M_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            ] if active_usgs_coned_sf_2m() else []),
             str(BEST_AVAILABLE_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
