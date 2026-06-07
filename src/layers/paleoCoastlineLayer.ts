@@ -343,6 +343,7 @@ function terrainFootprintColor(category: TerrainFootprint["category"], alpha: nu
 }
 
 function shortTerrainLabel(terrain: TerrainFootprint): string {
+  if (terrain.sourceId.includes("noaa_ocm_area_a_interferometric")) return "Area A 1 m";
   const ocmSurveyId = terrain.sourceId.match(/noaa_ocm_area_a_([a-z]{2}1b\d{2})_1m/);
   if (ocmSurveyId) return ocmSurveyId[1].toUpperCase();
   if (terrain.sourceId.includes("h12109")) return "H12109";

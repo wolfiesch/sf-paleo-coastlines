@@ -746,6 +746,103 @@ NOAA_OCM_AREA_A_BLOCKS: list[dict[str, Any]] = [
     for survey in ("CA1B08", "CA1B09", "CA1B22", "CA1B24", "CA1B26", "NA1B15", "NA1B23")
 ]
 
+NOAA_OCM_AREA_A_INTERFEROMETRIC_TILES: tuple[str, ...] = (
+    "CA1B01",
+    "CA1B02",
+    "CA1B03",
+    "CA1B04",
+    "CA1B05",
+    "CA1B06",
+    "CA1B07",
+    "CA1B10",
+    "CA1B11",
+    "CA1B12",
+    "CA1B13",
+    "CA1B14",
+    "CA1B15",
+    "CA1B16",
+    "CA1B17",
+    "CA1B18",
+    "CA1B19",
+    "CA1B20",
+    "CA1B21",
+    "CA1B23",
+    "CA1B25",
+    "CA1B27",
+    "CA1B28",
+    "CA1B29",
+    "CA1B30",
+    "CA1B31",
+    "CA1B32",
+    "CA1B33",
+    "CA1B34",
+    "CA2B01",
+    "NA1B01",
+    "NA1B02",
+    "NA1B03",
+    "NA1B04",
+    "NA1B05",
+    "NA1B06",
+    "NA1B07-08-09",
+    "NA1B10",
+    "NA1B11",
+    "NA1B12",
+    "NA1B13",
+    "NA1B14",
+    "NA1B16",
+    "NA1B17",
+    "NA1B18",
+    "NA1B19",
+    "NA1B20",
+    "NA1B21",
+    "NA1B22",
+    "NA1B24",
+    "NA1B25",
+    "NA1B26",
+    "NA1B27",
+    "NA2B01",
+    "NA2B02",
+    "NA2B03",
+    "NA2B04",
+    "NA2B05",
+    "SA1B01",
+    "SA1B02",
+    "SA1B03",
+    "SA1B04",
+    "SA1B05",
+    "SA1B06",
+    "SA1B07",
+    "SA1B08",
+    "SA1B09",
+    "SA1B10",
+    "SA1B11",
+    "SA1B12",
+    "SA2B01",
+    "SA2B02",
+    "SA2B03",
+)
+
+NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC: dict[str, Any] = {
+    "sourceId": "noaa_ocm_area_a_interferometric_1m_mosaic",
+    "sourceLabel": "NOAA OCM Area A interferometric 1 m Bay-floor mosaic",
+    "sourceName": "NOAA Office for Coastal Management San Francisco Bay Area A 1 m interferometric bathymetry",
+    "sourceUrl": "https://www.fisheries.noaa.gov/inport/item/47862",
+    "indexUrl": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/SF_sss_areaA_2014_9715/index.html",
+    "urlPrefix": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/SF_sss_areaA_2014_9715",
+    "role": "Broad 1 m interferometric source-survey mosaic for much of San Francisco Bay Area A.",
+    "folder": "noaa-ocm-sf-bay-area-a-interferometric",
+    "terrainStem": "noaa_ocm_area_a_interferometric_1m_mosaic",
+    "terrainSize": 4096,
+    "terrainMinimum": -70.0,
+    "terrainMaximum": 5.0,
+    "contourMinimum": -65.0,
+    "contourMaximum": 2.0,
+    "contourSimplify": 3,
+    "minDegreesLength": 0.0012,
+    "sourceNoData": 1_000_000.0,
+    "note": "NOAA OCM Area A 1 m interferometric bathymetry mosaic for San Francisco Bay. This source covers many more shallow Bay blocks than the multibeam subset, but NOAA notes the interferometric data are less accurate than multibeam in deeper water.",
+}
+
 TIME_SLICES = [
     {
         "id": "present",
@@ -997,6 +1094,50 @@ def noaa_ocm_area_a_composite_texture_png(block: dict[str, Any]) -> Path:
     return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_composite.png"
 
 
+def noaa_ocm_area_a_interferometric_dir() -> Path:
+    return RAW_DIR / str(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["folder"])
+
+
+def noaa_ocm_area_a_interferometric_dataset(tile_id: str) -> Path:
+    return noaa_ocm_area_a_interferometric_dir() / f"{tile_id}_1m.tif"
+
+
+def noaa_ocm_area_a_interferometric_vrt() -> Path:
+    return WORK_DIR / "noaa_ocm_area_a_interferometric_1m_mosaic.vrt"
+
+
+def noaa_ocm_area_a_interferometric_contours_raw() -> Path:
+    return WORK_DIR / "noaa_ocm_area_a_interferometric_1m_mosaic_contours_raw.geojson"
+
+
+def noaa_ocm_area_a_interferometric_contours_wgs84() -> Path:
+    return WORK_DIR / "noaa_ocm_area_a_interferometric_1m_mosaic_contours_wgs84.geojson"
+
+
+def noaa_ocm_area_a_interferometric_contour_grid_wgs84() -> Path:
+    return WORK_DIR / "noaa_ocm_area_a_interferometric_1m_mosaic_contour_grid_wgs84.tif"
+
+
+def noaa_ocm_area_a_interferometric_terrain_wgs84() -> Path:
+    return WORK_DIR / "noaa_ocm_area_a_interferometric_1m_mosaic_terrain_wgs84.tif"
+
+
+def noaa_ocm_area_a_interferometric_elevation_png() -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC['terrainStem']}_elevation.png"
+
+
+def noaa_ocm_area_a_interferometric_texture_png() -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC['terrainStem']}_color.png"
+
+
+def noaa_ocm_area_a_interferometric_relief_texture_png() -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC['terrainStem']}_relief.png"
+
+
+def noaa_ocm_area_a_interferometric_composite_texture_png() -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC['terrainStem']}_composite.png"
+
+
 def nos_bag_contours_raw(block: dict[str, Any]) -> Path:
     return WORK_DIR / f"{block['sourceId']}_contours_raw.geojson"
 
@@ -1033,6 +1174,26 @@ def download_nos_bag_blocks() -> None:
 def download_noaa_ocm_area_a_blocks() -> None:
     for block in NOAA_OCM_AREA_A_BLOCKS:
         download_url(str(block["url"]), noaa_ocm_area_a_dataset(block))
+
+
+def download_noaa_ocm_area_a_interferometric_tiles() -> None:
+    prefix = str(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["urlPrefix"])
+    for tile_id in NOAA_OCM_AREA_A_INTERFEROMETRIC_TILES:
+        download_url(f"{prefix}/{tile_id}_1m.tif", noaa_ocm_area_a_interferometric_dataset(tile_id))
+
+
+def build_noaa_ocm_area_a_interferometric_vrt() -> None:
+    run([
+        "gdalbuildvrt",
+        "-q",
+        "-overwrite",
+        "-srcnodata",
+        str(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceNoData"]),
+        "-vrtnodata",
+        str(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceNoData"]),
+        str(noaa_ocm_area_a_interferometric_vrt()),
+        *[str(noaa_ocm_area_a_interferometric_dataset(tile_id)) for tile_id in NOAA_OCM_AREA_A_INTERFEROMETRIC_TILES],
+    ])
 
 
 def bathymetry_block_zip(block: dict[str, Any]) -> Path:
@@ -1315,6 +1476,58 @@ def generate_contours() -> None:
             str(block["contourSimplify"]),
             str(noaa_ocm_area_a_contours_wgs84(block)),
             str(noaa_ocm_area_a_contours_raw(block)),
+        ])
+
+    block = NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC
+    block_levels = [
+        str(level)
+        for level in contour_levels()
+        if float(block["contourMinimum"]) <= level <= float(block["contourMaximum"])
+    ]
+    if block_levels:
+        build_noaa_ocm_area_a_interferometric_vrt()
+        run([
+            "gdalwarp",
+            "-q",
+            "-overwrite",
+            "-t_srs",
+            "EPSG:4326",
+            "-ts",
+            str(block["terrainSize"]),
+            "0",
+            "-r",
+            "bilinear",
+            "-ot",
+            "Float32",
+            "-srcnodata",
+            str(block["sourceNoData"]),
+            "-dstnodata",
+            "-9999",
+            str(noaa_ocm_area_a_interferometric_vrt()),
+            str(noaa_ocm_area_a_interferometric_contour_grid_wgs84()),
+        ])
+        run([
+            "gdal_contour",
+            "-q",
+            "-a",
+            "elevation_m",
+            "-snodata",
+            "-9999",
+            "-fl",
+            *block_levels,
+            str(noaa_ocm_area_a_interferometric_contour_grid_wgs84()),
+            str(noaa_ocm_area_a_interferometric_contours_raw()),
+        ])
+        run([
+            "ogr2ogr",
+            "-f",
+            "GeoJSON",
+            "-t_srs",
+            "EPSG:4326",
+            "-simplify",
+            str(block["contourSimplify"]),
+            str(noaa_ocm_area_a_interferometric_contours_wgs84()),
+            str(noaa_ocm_area_a_interferometric_contours_raw()),
         ])
 
     # These bathymetry blocks are sharper than the broad CRM grid, but each
@@ -2031,6 +2244,56 @@ def generate_noaa_ocm_area_a_terrain_asset(block: dict[str, Any]) -> dict[str, A
     )
 
 
+def generate_noaa_ocm_area_a_interferometric_terrain_asset() -> dict[str, Any]:
+    block = NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC
+    build_noaa_ocm_area_a_interferometric_vrt()
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-ts",
+        str(block["terrainSize"]),
+        "0",
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-srcnodata",
+        str(block["sourceNoData"]),
+        "-dstnodata",
+        "-9999",
+        str(noaa_ocm_area_a_interferometric_vrt()),
+        str(noaa_ocm_area_a_interferometric_terrain_wgs84()),
+    ])
+    write_terrain_pngs_from_wgs84(
+        noaa_ocm_area_a_interferometric_terrain_wgs84(),
+        noaa_ocm_area_a_interferometric_elevation_png(),
+        noaa_ocm_area_a_interferometric_texture_png(),
+        noaa_ocm_area_a_interferometric_relief_texture_png(),
+        noaa_ocm_area_a_interferometric_composite_texture_png(),
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        22,
+    )
+    return terrain_metadata(
+        str(block["sourceId"]),
+        source_label(str(block["sourceId"])),
+        noaa_ocm_area_a_interferometric_terrain_wgs84(),
+        noaa_ocm_area_a_interferometric_elevation_png(),
+        noaa_ocm_area_a_interferometric_texture_png(),
+        noaa_ocm_area_a_interferometric_relief_texture_png(),
+        noaa_ocm_area_a_interferometric_composite_texture_png(),
+        None,
+        None,
+        None,
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        str(block["note"]),
+    )
+
+
 def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
     run([
         "gdalwarp",
@@ -2216,6 +2479,8 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         CRM_TERRAIN_WGS84,
         CUDEM_TERRAIN_WGS84,
         ETOPO_TERRAIN_WGS84,
+        noaa_ocm_area_a_interferometric_contour_grid_wgs84(),
+        noaa_ocm_area_a_interferometric_terrain_wgs84(),
     ):
         target.unlink(missing_ok=True)
     for block in NOS_BAG_BLOCKS:
@@ -2233,6 +2498,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
     return [
         generate_crm_terrain_asset(),
         generate_cudem_terrain_asset(),
+        generate_noaa_ocm_area_a_interferometric_terrain_asset(),
         *[generate_usgs_sf_bay_1m_terrain_asset(block) for block in active_usgs_sf_bay_1m_blocks()],
         *[generate_noaa_ocm_area_a_terrain_asset(block) for block in NOAA_OCM_AREA_A_BLOCKS],
         *[generate_nos_bag_terrain_asset(block) for block in NOS_BAG_BLOCKS],
@@ -2401,11 +2667,15 @@ def probe_features_for_level(
     return features
 
 
-BATHYMETRY_SOURCE_IDS = {str(block["sourceId"]) for block in [*BATHYMETRY_BLOCKS, *USGS_SF_BAY_1M_BLOCKS, *NOAA_OCM_AREA_A_BLOCKS]}
+BATHYMETRY_SOURCE_IDS = {
+    str(block["sourceId"])
+    for block in [*BATHYMETRY_BLOCKS, *USGS_SF_BAY_1M_BLOCKS, *NOAA_OCM_AREA_A_BLOCKS, NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC]
+}
 NOS_BAG_SOURCE_IDS = {str(block["sourceId"]) for block in NOS_BAG_BLOCKS}
 SOURCE_LABELS = {
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in NOS_BAG_BLOCKS},
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in NOAA_OCM_AREA_A_BLOCKS},
+    str(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceId"]): str(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceLabel"]),
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in BATHYMETRY_BLOCKS},
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in USGS_SF_BAY_1M_BLOCKS},
 }
@@ -2440,28 +2710,38 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     ])
     bathymetry_by_level = merge_level_indexes([
         build_level_index(
-            noaa_ocm_area_a_contours_wgs84(block),
-            str(block["sourceId"]),
-            float(block["minDegreesLength"]),
+            noaa_ocm_area_a_interferometric_contours_wgs84(),
+            str(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceId"]),
+            float(NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["minDegreesLength"]),
             False,
-        )
-        for block in NOAA_OCM_AREA_A_BLOCKS
-    ] + [
-        build_level_index(
-            bathymetry_block_contours_wgs84(block),
-            str(block["sourceId"]),
-            float(block["minDegreesLength"]),
-            False,
-        )
-        for block in BATHYMETRY_BLOCKS
-    ] + [
-        build_level_index(
-            usgs_sf_bay_1m_contours_wgs84(block),
-            str(block["sourceId"]),
-            float(block["minDegreesLength"]),
-            False,
-        )
-        for block in bay_dem_blocks
+        ),
+        *[
+            build_level_index(
+                noaa_ocm_area_a_contours_wgs84(block),
+                str(block["sourceId"]),
+                float(block["minDegreesLength"]),
+                False,
+            )
+            for block in NOAA_OCM_AREA_A_BLOCKS
+        ],
+        *[
+            build_level_index(
+                bathymetry_block_contours_wgs84(block),
+                str(block["sourceId"]),
+                float(block["minDegreesLength"]),
+                False,
+            )
+            for block in BATHYMETRY_BLOCKS
+        ],
+        *[
+            build_level_index(
+                usgs_sf_bay_1m_contours_wgs84(block),
+                str(block["sourceId"]),
+                float(block["minDegreesLength"]),
+                False,
+            )
+            for block in bay_dem_blocks
+        ],
     ])
     usgs_by_level = build_level_index(DS684_CONTOURS_WGS84, "usgs_ds684_dem4", 0.003, False)
     terrain = generate_terrain_assets()
@@ -2563,12 +2843,16 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added NOAA OCM Area A 1 m Central Bay source-survey GeoTIFFs, NOAA/NOS H12109, H12110, and H12111 Golden Gate BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, and H12111 Golden Gate BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
             *CUDEM_TILE_URLS,
             *[str(nos_bag_dataset(block).relative_to(ROOT)) for block in NOS_BAG_BLOCKS],
+            *[
+                str(noaa_ocm_area_a_interferometric_dataset(tile_id).relative_to(ROOT))
+                for tile_id in NOAA_OCM_AREA_A_INTERFEROMETRIC_TILES
+            ],
             *[str(noaa_ocm_area_a_dataset(block).relative_to(ROOT)) for block in NOAA_OCM_AREA_A_BLOCKS],
             str(RAW_NETCDF.relative_to(ROOT)),
             *[
@@ -2602,6 +2886,10 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(CUDEM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(CUDEM_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
             str(CUDEM_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            str(noaa_ocm_area_a_interferometric_elevation_png().relative_to(ROOT)),
+            str(noaa_ocm_area_a_interferometric_texture_png().relative_to(ROOT)),
+            str(noaa_ocm_area_a_interferometric_relief_texture_png().relative_to(ROOT)),
+            str(noaa_ocm_area_a_interferometric_composite_texture_png().relative_to(ROOT)),
             *[
                 str(path.relative_to(ROOT))
                 for block in NOS_BAG_BLOCKS
@@ -2756,6 +3044,7 @@ def write_outputs(payload: list[dict[str, Any]], metadata: dict[str, Any]) -> No
 
 def main() -> int:
     require_tool("gdal_contour")
+    require_tool("gdalbuildvrt")
     require_tool("gdalinfo")
     require_tool("gdal_translate")
     require_tool("gdalwarp")
@@ -2764,6 +3053,7 @@ def main() -> int:
     download_raw_netcdf()
     download_noaa_crm_vol7_subset()
     prepare_noaa_cudem_subset()
+    download_noaa_ocm_area_a_interferometric_tiles()
     download_noaa_ocm_area_a_blocks()
     download_nos_bag_blocks()
     download_bathymetry_blocks()
