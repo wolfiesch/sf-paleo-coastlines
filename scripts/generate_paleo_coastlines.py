@@ -1957,8 +1957,10 @@ def terrain_metadata(
 
 
 def terrain_source_kind(source_id: str) -> dict[str, Any]:
-    if source_id.startswith("noaa_crm") or source_id.startswith("noaa_cudem") or source_id.startswith("etopo"):
+    if source_id.startswith("noaa_crm") or source_id.startswith("etopo"):
         return {"qualityTier": "broad", "renderPriority": 10, "resolutionMeters": None}
+    if source_id.startswith("noaa_cudem"):
+        return {"qualityTier": "broad", "renderPriority": 20, "resolutionMeters": None}
     if source_id.startswith("noaa_ocm_area_a_interferometric"):
         return {"qualityTier": "bay_mosaic", "renderPriority": 40, "resolutionMeters": 1}
     if source_id.startswith("usgs_sf_bay_1m") or source_id.startswith("noaa_ocm_area_a"):

@@ -347,6 +347,8 @@ function terrainQualityTier(terrain: PaleoTerrainConfig): TerrainQualityTier {
 }
 
 function terrainRenderPriority(terrain: PaleoTerrainConfig): number {
+  if (terrain.sourceId.includes("crm")) return 10;
+  if (terrain.sourceId.includes("cudem")) return 20;
   if (typeof terrain.renderPriority === "number") return terrain.renderPriority;
 
   const tier = terrainQualityTier(terrain);
@@ -364,12 +366,40 @@ function isBroadTerrain(terrain: PaleoTerrainConfig): boolean {
 
 function terrainVisualLiftMeters(terrain: PaleoTerrainConfig): number {
   const tier = terrainQualityTier(terrain);
-  if (tier === "broad") return 0;
-  if (tier === "bay_mosaic") return 2.5;
-  if (tier === "source_survey") return 7;
-  if (tier === "nearshore_detail") return 8;
-  if (tier === "offshore_survey") return 9;
-  return 4;
+  const sourceJitter = stableSourceOffsetMeters(terrain.sourceId);
+  if (terrain.sourceId.includes("crm")) return 0;
+  if (terrain.sourceId.includes("cudem")) return 26;
+  if (tier === "bay_mosaic") return 58 + sourceJitter;
+  if (tier === "source_survey") return sourceSurveyLiftMeters(terrain) + sourceJitter;
+  if (tier === "nearshore_detail") return 118 + sourceJitter;
+  if (tier === "offshore_survey") return 136 + sourceJitter;
+  return 42 + sourceJitter;
+}
+
+function sourceSurveyLiftMeters(terrain: PaleoTerrainConfig): number {
+  if (terrain.sourceId.includes("noaa_nos") && terrain.sourceId.includes("_2m")) return 78;
+  if (terrain.sourceId.includes("noaa_nos") && terrain.sourceId.includes("_1m")) return 94;
+  if (terrain.sourceId.includes("noaa_nos")) return 88;
+  if (terrain.sourceId.includes("noaa_ocm_area_a")) return 102;
+  return 90;
+}
+
+function stableSourceOffsetMeters(sourceId: string): number {
+  let hash = 0;
+  for (let index = 0; index < sourceId.length; index += 1) {
+    hash = (hash * 31 + sourceId.charCodeAt(index)) % 997;
+  }
+  return (hash % 13) * 0.7;
+}
+
+function terrainDepthBiasParameters(terrain: PaleoTerrainConfig) {
+  const tier = terrainQualityTier(terrain);
+  const units = tier === "broad" ? 0 : tier === "bay_mosaic" ? -24 : tier === "source_survey" ? -48 : -64;
+  return {
+    depthWriteEnabled: true,
+    polygonOffsetFill: true,
+    polygonOffset: [0, units] as [number, number],
+  };
 }
 
 function terrainRevealBandMeters(terrain: PaleoTerrainConfig): number {
@@ -513,11 +543,11 @@ function baySourceFillColor(feature: PickedBaySourceFeature): [number, number, n
   const interpolation = feature.properties.interpolation.toLowerCase();
   const quality = feature.properties.quality_class.toLowerCase();
 
-  if (quality.includes("direct") && quality.includes("1m")) return [92, 255, 178, 46];
-  if (sensor.includes("multi")) return [75, 210, 255, 38];
-  if (sensor.includes("interferometric")) return [190, 124, 255, interpolation === "yes" ? 36 : 44];
-  if (sensor.includes("single")) return [255, 198, 92, 36];
-  return [235, 244, 255, 30];
+  if (quality.includes("direct") && quality.includes("1m")) return [92, 255, 178, 28];
+  if (sensor.includes("multi")) return [75, 210, 255, 24];
+  if (sensor.includes("interferometric")) return [190, 124, 255, interpolation === "yes" ? 20 : 26];
+  if (sensor.includes("single")) return [255, 198, 92, 22];
+  return [235, 244, 255, 18];
 }
 
 function baySourceLineColor(feature: PickedBaySourceFeature): [number, number, number, number] {
@@ -534,8 +564,8 @@ function baySourceLineColor(feature: PickedBaySourceFeature): [number, number, n
 
 function baySourceLineWidth(feature: PickedBaySourceFeature): number {
   const quality = feature.properties.quality_class.toLowerCase();
-  if (quality.includes("direct") && quality.includes("1m")) return 1.8;
-  return 1.15;
+  if (quality.includes("direct") && quality.includes("1m")) return 2.6;
+  return 1.8;
 }
 
 function meshMaxErrorForTerrain(
@@ -787,6 +817,7 @@ export function createPaleoCoastlineLayers(
       meshMaxError: meshMaxErrorForTerrain(terrain, context.terrainDetail),
       wireframe: false,
       material: terrainMaterial(terrain, profile),
+      parameters: terrainDepthBiasParameters(terrain),
       _subLayerProps: {
         mesh: {
           extensions: [terrainRevealExtension],
@@ -837,9 +868,9 @@ export function createPaleoCoastlineLayers(
     filled: true,
     stroked: true,
     getPolygon: (item) => item.polygon,
-    getFillColor: (item) => terrainFootprintColor(item.category, 18),
+    getFillColor: (item) => terrainFootprintColor(item.category, 10),
     getLineColor: (item) => terrainFootprintColor(item.category, 220),
-    getLineWidth: 2,
+    getLineWidth: 3,
     lineWidthUnits: "pixels",
     parameters: ANNOTATION_PARAMETERS,
   });
@@ -873,7 +904,7 @@ export function createPaleoCoastlineLayers(
     stroked: true,
     filled: true,
     lineWidthUnits: "pixels",
-    lineWidthMinPixels: 0.9,
+    lineWidthMinPixels: 1.6,
     getFillColor: baySourceFillColor,
     getLineColor: baySourceLineColor,
     getLineWidth: baySourceLineWidth,
