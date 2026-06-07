@@ -45,7 +45,7 @@ interface TerrainFootprint {
   sourceId: string;
   sourceLabel: string;
   note: string;
-  category: "noaaBag" | "usgsCsmp" | "usgsOffshore" | "usgsGoldenGate" | "other";
+  category: "noaaBag" | "noaaOcm" | "usgsCsmp" | "usgsOffshore" | "usgsGoldenGate" | "other";
   bounds: [number, number, number, number];
   heightRangeMeters: [number, number];
   polygon: [number, number, number][];
@@ -324,6 +324,7 @@ function isBroadTerrain(terrain: PaleoTerrainConfig): boolean {
 }
 
 function terrainFootprintCategory(terrain: PaleoTerrainConfig): TerrainFootprint["category"] {
+  if (terrain.sourceId.includes("noaa_ocm_area_a")) return "noaaOcm";
   if (terrain.sourceId.includes("noaa_nos")) return "noaaBag";
   if (terrain.sourceId.includes("sf_bay_1m")) return "usgsGoldenGate";
   if (terrain.sourceId.includes("csmp")) return "usgsCsmp";
@@ -334,6 +335,7 @@ function terrainFootprintCategory(terrain: PaleoTerrainConfig): TerrainFootprint
 
 function terrainFootprintColor(category: TerrainFootprint["category"], alpha: number): [number, number, number, number] {
   if (category === "noaaBag") return [70, 210, 255, alpha];
+  if (category === "noaaOcm") return [70, 245, 190, alpha];
   if (category === "usgsCsmp") return [255, 208, 92, alpha];
   if (category === "usgsOffshore") return [190, 124, 255, alpha];
   if (category === "usgsGoldenGate") return [110, 255, 170, alpha];
@@ -341,6 +343,8 @@ function terrainFootprintColor(category: TerrainFootprint["category"], alpha: nu
 }
 
 function shortTerrainLabel(terrain: TerrainFootprint): string {
+  const ocmSurveyId = terrain.sourceId.match(/noaa_ocm_area_a_([a-z]{2}1b\d{2})_1m/);
+  if (ocmSurveyId) return ocmSurveyId[1].toUpperCase();
   if (terrain.sourceId.includes("h12109")) return "H12109";
   if (terrain.sourceId.includes("h12110")) return "H12110";
   if (terrain.sourceId.includes("h12111")) return "H12111";

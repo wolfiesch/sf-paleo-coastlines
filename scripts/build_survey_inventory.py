@@ -48,6 +48,15 @@ NEXT_DATA_CANDIDATES: list[dict[str, Any]] = [
         "nextAction": "Run `pnpm paleo-coastlines:usgs-bay-dem` to refresh exact ScienceBase file metadata, then download NAVD88 sections one at a time and add them as Bay-focused terrain insets above CUDEM but below small survey patches.",
     },
     {
+        "id": "noaa_ocm_area_a",
+        "label": "NOAA OCM San Francisco Bay Area A 1 m source-survey GeoTIFFs",
+        "sourceFamily": "NOAA OCM acoustic bathymetry",
+        "sourceUrl": "https://www.fisheries.noaa.gov/inport/item/47860",
+        "priority": "highest",
+        "reason": "Practical high-detail Central Bay source grids exposed as individual public S3 GeoTIFFs, avoiding the flaky ScienceBase stitched-DEM download.",
+        "nextAction": "Keep Area A active as Central Bay detail; next, discover matching NOAA OCM interferometric Area A/B/C source grids and add them where they overlap the Bay DEM source footprints.",
+    },
+    {
         "id": "noaa_bdv_query",
         "label": "NOAA/NCEI Bathymetric Data Viewer survey search",
         "sourceFamily": "NOAA/NCEI discovery",
@@ -96,6 +105,8 @@ def write_json(path: Path, payload: Any) -> None:
 
 
 def source_family(source_id: str) -> str:
+    if source_id.startswith("noaa_ocm_area_a"):
+        return "NOAA OCM acoustic bathymetry"
     if source_id.startswith("noaa_nos"):
         return "NOAA NOS BAG"
     if source_id.startswith("usgs_csmp"):
@@ -116,6 +127,8 @@ def source_family(source_id: str) -> str:
 
 
 def datum_note(source_id: str) -> str:
+    if source_id.startswith("noaa_ocm_area_a"):
+        return "NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment."
     if source_id.startswith("noaa_nos"):
         return "MLLW; needs tidal-datum conversion before exact sea-level alignment."
     if source_id.startswith("noaa_crm") or source_id.startswith("noaa_etopo"):
@@ -193,6 +206,11 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
             paths.append(module.RAW_DIR / block["folder"] / block["fileName"])
             return paths
 
+    for block in module.NOAA_OCM_AREA_A_BLOCKS:
+        if block["sourceId"] == source_id:
+            paths.append(module.RAW_DIR / block["folder"] / block["fileName"])
+            return paths
+
     for block in module.BATHYMETRY_BLOCKS:
         if block["sourceId"] == source_id:
             folder = module.RAW_DIR / block["folder"]
@@ -224,7 +242,7 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
 
 
 def source_url(module: Any, source_id: str) -> str | None:
-    for block in [*module.NOS_BAG_BLOCKS, *module.BATHYMETRY_BLOCKS, *module.USGS_SF_BAY_1M_BLOCKS]:
+    for block in [*module.NOS_BAG_BLOCKS, *module.NOAA_OCM_AREA_A_BLOCKS, *module.BATHYMETRY_BLOCKS, *module.USGS_SF_BAY_1M_BLOCKS]:
         if block["sourceId"] == source_id:
             return str(block["sourceUrl"])
     if source_id == "noaa_crm_vol7_3as":
@@ -296,6 +314,8 @@ def source_record(module: Any, terrain: dict[str, Any], with_gdalinfo: bool) -> 
         limitations.append("broad inset; sharper than CRM but still not a substitute for local survey data")
     if source_id.startswith("noaa_nos"):
         limitations.append("MLLW vertical datum; exact paleo contour alignment needs conversion")
+    if source_id.startswith("noaa_ocm_area_a"):
+        limitations.append("source-survey grid, not a seamless Bay DEM; vertical reference must be checked before exact paleo contour use")
     if source_id.startswith("usgs_csmp"):
         limitations.append("nearshore/state-water patch, not seamless offshore coverage")
     if source_id.startswith("usgs_sf_bay_1m"):
@@ -342,6 +362,8 @@ def next_action_for_source(source_id: str, score: int) -> str:
         return "Compare against USGS CoNED and use whichever has cleaner Bay/coast coverage and datum metadata."
     if source_id.startswith("noaa_nos"):
         return "Add VDatum/tidal-datum conversion before using as exact sea-level contour authority."
+    if source_id.startswith("noaa_ocm_area_a"):
+        return "Use as high-detail Central Bay terrain now; compare overlap against the stitched USGS 1 m Bay DEM when that download becomes available."
     if source_id.startswith("usgs_csmp"):
         return "Keep bathymetry plus backscatter/character; add geology/habitat polygons from CSMP web services."
     if source_id.startswith("usgs_sf_bay_1m"):

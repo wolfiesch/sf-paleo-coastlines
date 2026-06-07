@@ -56,6 +56,7 @@ const SCENE_PROFILE_OPTIONS: { id: SceneProfile; label: string; title: string }[
 
 const COVERAGE_LEGEND = [
   { label: "NOAA BAG", className: "bg-cyan-300" },
+  { label: "NOAA OCM 1 m", className: "bg-teal-300" },
   { label: "USGS CSMP", className: "bg-amber-300" },
   { label: "USGS offshore", className: "bg-violet-300" },
   { label: "SF Bar", className: "bg-emerald-300" },
@@ -97,7 +98,7 @@ function terrainSummary(slice: PaleoTimeSlice): string | null {
   const terrains = slice.terrains?.length ? slice.terrains : slice.terrain ? [slice.terrain] : [];
   if (!terrains.length) return null;
   if (terrains.length === 1) return terrains[0].note;
-  return `${terrains.length} terrain surfaces: NOAA CRM/CUDEM broad Bay-to-coast coverage, NOAA BAG Golden Gate and Farallon-region survey patches, USGS/CSMP 2 m coastal bathymetry blocks, Farallon Escarpment/Rittenburg Bank offshore multibeam patches, and DS684 Golden Gate detail.`;
+  return `${terrains.length} terrain surfaces: NOAA CRM/CUDEM broad Bay-to-coast coverage, NOAA OCM 1 m Central Bay source-survey tiles, NOAA BAG Golden Gate and Farallon-region survey patches, USGS/CSMP 2 m coastal bathymetry blocks, Farallon Escarpment/Rittenburg Bank offshore multibeam patches, and DS684 Golden Gate detail.`;
 }
 
 export function PaleoCoastlineControls({

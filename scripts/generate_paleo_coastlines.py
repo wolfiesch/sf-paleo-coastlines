@@ -721,6 +721,31 @@ USGS_SF_BAY_1M_BLOCKS: list[dict[str, Any]] = [
     },
 ]
 
+NOAA_OCM_AREA_A_BLOCKS: list[dict[str, Any]] = [
+    {
+        "sourceId": f"noaa_ocm_area_a_{survey.lower()}_1m",
+        "sourceLabel": f"NOAA OCM Area A {survey}, 1 m Central Bay source survey",
+        "sourceName": f"NOAA Office for Coastal Management San Francisco Bay Area A 1 m bathymetry tile {survey}",
+        "sourceUrl": "https://www.fisheries.noaa.gov/inport/item/47860",
+        "role": "High-resolution 1 m NOAA OCM source-survey tile used in the central San Francisco Bay bathymetry compilation.",
+        "folder": "noaa-ocm-sf-bay-area-a",
+        "fileName": f"{survey}_1m.tif",
+        "url": f"https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/SF_mbs_areaA_2014_8500/{survey}_1m.tif",
+        "stacUrl": f"https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/SF_mbs_areaA_2014_8500/stac/{survey}_1m.json",
+        "terrainStem": f"noaa_ocm_area_a_{survey.lower()}_1m",
+        "terrainSize": 2048,
+        "terrainMinimum": -70.0,
+        "terrainMaximum": 5.0,
+        "contourMinimum": -65.0,
+        "contourMaximum": 2.0,
+        "contourSimplify": 2,
+        "minDegreesLength": 0.0008,
+        "sourceNoData": 1_000_000.0,
+        "note": f"NOAA OCM Area A 1 m source-survey tile {survey} in central San Francisco Bay. This is a real source grid from NOAA's public S3 archive, not the ScienceBase stitched USGS Bay DEM package.",
+    }
+    for survey in ("CA1B08", "CA1B09", "CA1B22", "CA1B24", "CA1B26", "NA1B15", "NA1B23")
+]
+
 TIME_SLICES = [
     {
         "id": "present",
@@ -936,6 +961,42 @@ def nos_bag_dataset(block: dict[str, Any]) -> Path:
     return nos_bag_block_dir(block) / str(block["fileName"])
 
 
+def noaa_ocm_area_a_block_dir(block: dict[str, Any]) -> Path:
+    return RAW_DIR / str(block["folder"])
+
+
+def noaa_ocm_area_a_dataset(block: dict[str, Any]) -> Path:
+    return noaa_ocm_area_a_block_dir(block) / str(block["fileName"])
+
+
+def noaa_ocm_area_a_contours_raw(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_contours_raw.geojson"
+
+
+def noaa_ocm_area_a_contours_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_contours_wgs84.geojson"
+
+
+def noaa_ocm_area_a_terrain_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_terrain_wgs84.tif"
+
+
+def noaa_ocm_area_a_elevation_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_elevation.png"
+
+
+def noaa_ocm_area_a_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_color.png"
+
+
+def noaa_ocm_area_a_relief_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_relief.png"
+
+
+def noaa_ocm_area_a_composite_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_composite.png"
+
+
 def nos_bag_contours_raw(block: dict[str, Any]) -> Path:
     return WORK_DIR / f"{block['sourceId']}_contours_raw.geojson"
 
@@ -967,6 +1028,11 @@ def nos_bag_composite_texture_png(block: dict[str, Any]) -> Path:
 def download_nos_bag_blocks() -> None:
     for block in NOS_BAG_BLOCKS:
         download_url(str(block["url"]), nos_bag_dataset(block))
+
+
+def download_noaa_ocm_area_a_blocks() -> None:
+    for block in NOAA_OCM_AREA_A_BLOCKS:
+        download_url(str(block["url"]), noaa_ocm_area_a_dataset(block))
 
 
 def bathymetry_block_zip(block: dict[str, Any]) -> Path:
@@ -1217,6 +1283,38 @@ def generate_contours() -> None:
             str(block["contourSimplify"]),
             str(nos_bag_contours_wgs84(block)),
             str(nos_bag_contours_raw(block)),
+        ])
+
+    for block in NOAA_OCM_AREA_A_BLOCKS:
+        block_levels = [
+            str(level)
+            for level in contour_levels()
+            if float(block["contourMinimum"]) <= level <= float(block["contourMaximum"])
+        ]
+        if not block_levels:
+            continue
+        run([
+            "gdal_contour",
+            "-q",
+            "-a",
+            "elevation_m",
+            "-snodata",
+            str(block["sourceNoData"]),
+            "-fl",
+            *block_levels,
+            str(noaa_ocm_area_a_dataset(block)),
+            str(noaa_ocm_area_a_contours_raw(block)),
+        ])
+        run([
+            "ogr2ogr",
+            "-f",
+            "GeoJSON",
+            "-t_srs",
+            "EPSG:4326",
+            "-simplify",
+            str(block["contourSimplify"]),
+            str(noaa_ocm_area_a_contours_wgs84(block)),
+            str(noaa_ocm_area_a_contours_raw(block)),
         ])
 
     # These bathymetry blocks are sharper than the broad CRM grid, but each
@@ -1885,6 +1983,54 @@ def generate_usgs_sf_bay_1m_terrain_asset(block: dict[str, Any]) -> dict[str, An
     )
 
 
+def generate_noaa_ocm_area_a_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-ts",
+        str(block["terrainSize"]),
+        "0",
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-srcnodata",
+        str(block["sourceNoData"]),
+        "-dstnodata",
+        "-9999",
+        str(noaa_ocm_area_a_dataset(block)),
+        str(noaa_ocm_area_a_terrain_wgs84(block)),
+    ])
+    write_terrain_pngs_from_wgs84(
+        noaa_ocm_area_a_terrain_wgs84(block),
+        noaa_ocm_area_a_elevation_png(block),
+        noaa_ocm_area_a_texture_png(block),
+        noaa_ocm_area_a_relief_texture_png(block),
+        noaa_ocm_area_a_composite_texture_png(block),
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        24,
+    )
+    return terrain_metadata(
+        str(block["sourceId"]),
+        source_label(str(block["sourceId"])),
+        noaa_ocm_area_a_terrain_wgs84(block),
+        noaa_ocm_area_a_elevation_png(block),
+        noaa_ocm_area_a_texture_png(block),
+        noaa_ocm_area_a_relief_texture_png(block),
+        noaa_ocm_area_a_composite_texture_png(block),
+        None,
+        None,
+        None,
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        str(block["note"]),
+    )
+
+
 def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
     run([
         "gdalwarp",
@@ -2074,6 +2220,8 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         target.unlink(missing_ok=True)
     for block in NOS_BAG_BLOCKS:
         nos_bag_terrain_wgs84(block).unlink(missing_ok=True)
+    for block in NOAA_OCM_AREA_A_BLOCKS:
+        noaa_ocm_area_a_terrain_wgs84(block).unlink(missing_ok=True)
     for block in BATHYMETRY_BLOCKS:
         bathymetry_block_terrain_wgs84(block).unlink(missing_ok=True)
         bathymetry_block_backscatter_wgs84(block).unlink(missing_ok=True)
@@ -2086,6 +2234,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         generate_crm_terrain_asset(),
         generate_cudem_terrain_asset(),
         *[generate_usgs_sf_bay_1m_terrain_asset(block) for block in active_usgs_sf_bay_1m_blocks()],
+        *[generate_noaa_ocm_area_a_terrain_asset(block) for block in NOAA_OCM_AREA_A_BLOCKS],
         *[generate_nos_bag_terrain_asset(block) for block in NOS_BAG_BLOCKS],
         *[generate_bathymetry_block_terrain_asset(block) for block in BATHYMETRY_BLOCKS],
         generate_usgs_terrain_asset(),
@@ -2252,10 +2401,11 @@ def probe_features_for_level(
     return features
 
 
-BATHYMETRY_SOURCE_IDS = {str(block["sourceId"]) for block in [*BATHYMETRY_BLOCKS, *USGS_SF_BAY_1M_BLOCKS]}
+BATHYMETRY_SOURCE_IDS = {str(block["sourceId"]) for block in [*BATHYMETRY_BLOCKS, *USGS_SF_BAY_1M_BLOCKS, *NOAA_OCM_AREA_A_BLOCKS]}
 NOS_BAG_SOURCE_IDS = {str(block["sourceId"]) for block in NOS_BAG_BLOCKS}
 SOURCE_LABELS = {
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in NOS_BAG_BLOCKS},
+    **{str(block["sourceId"]): str(block["sourceLabel"]) for block in NOAA_OCM_AREA_A_BLOCKS},
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in BATHYMETRY_BLOCKS},
     **{str(block["sourceId"]): str(block["sourceLabel"]) for block in USGS_SF_BAY_1M_BLOCKS},
 }
@@ -2289,6 +2439,14 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         for block in NOS_BAG_BLOCKS
     ])
     bathymetry_by_level = merge_level_indexes([
+        build_level_index(
+            noaa_ocm_area_a_contours_wgs84(block),
+            str(block["sourceId"]),
+            float(block["minDegreesLength"]),
+            False,
+        )
+        for block in NOAA_OCM_AREA_A_BLOCKS
+    ] + [
         build_level_index(
             bathymetry_block_contours_wgs84(block),
             str(block["sourceId"]),
@@ -2393,7 +2551,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             **item,
             "generatedAt": generated_at,
             "sourceModel": source_label(estimate_source_id),
-            "datumNote": "NOAA BAG surveys use MLLW; NOAA CUDEM, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
+            "datumNote": "NOAA BAG and NOAA OCM source-survey tiles use survey-specific vertical references; NOAA CUDEM, USGS CSMP, Farallon, Rittenburg Bank, and DS684 sources use NAVD88-style vertical references; NOAA CRM and ETOPO use broader sea-level/EGM-style vertical references. Sea-level offsets are approximate relative values, not a full local tidal-datum correction.",
             "uncertaintyNote": "Lines show only sea-level uncertainty. They do not model erosion, sediment, marsh growth, tectonic motion, or river-channel migration.",
             "terrain": terrain[0],
             "terrains": terrain,
@@ -2405,12 +2563,13 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added NOAA/NOS H12109, H12110, and H12111 Golden Gate BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, added NOAA OCM Area A 1 m Central Bay source-survey GeoTIFFs, NOAA/NOS H12109, H12110, and H12111 Golden Gate BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, and exported broad plus local browser terrain images. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
             *CUDEM_TILE_URLS,
             *[str(nos_bag_dataset(block).relative_to(ROOT)) for block in NOS_BAG_BLOCKS],
+            *[str(noaa_ocm_area_a_dataset(block).relative_to(ROOT)) for block in NOAA_OCM_AREA_A_BLOCKS],
             str(RAW_NETCDF.relative_to(ROOT)),
             *[
                 str(bathymetry_block_dataset(block).relative_to(ROOT))
@@ -2451,6 +2610,17 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                     nos_bag_texture_png(block),
                     nos_bag_relief_texture_png(block),
                     nos_bag_composite_texture_png(block),
+                )
+                if path.exists()
+            ],
+            *[
+                str(path.relative_to(ROOT))
+                for block in NOAA_OCM_AREA_A_BLOCKS
+                for path in (
+                    noaa_ocm_area_a_elevation_png(block),
+                    noaa_ocm_area_a_texture_png(block),
+                    noaa_ocm_area_a_relief_texture_png(block),
+                    noaa_ocm_area_a_composite_texture_png(block),
                 )
                 if path.exists()
             ],
@@ -2594,6 +2764,7 @@ def main() -> int:
     download_raw_netcdf()
     download_noaa_crm_vol7_subset()
     prepare_noaa_cudem_subset()
+    download_noaa_ocm_area_a_blocks()
     download_nos_bag_blocks()
     download_bathymetry_blocks()
     prepare_usgs_sf_bay_1m_blocks()
