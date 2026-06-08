@@ -183,4 +183,6 @@ export interface PaleoRenderContext {
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;
   sceneProfile: SceneProfile;
+  showPlaceLabels: boolean;
+  currentYearsBP: number;
 }

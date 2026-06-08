@@ -18,6 +18,7 @@ import type {
   TerrainTextureMode,
 } from "../types";
 import { terrainRevealExtension } from "./terrainRevealExtension";
+import { PALEO_PLACE_LABELS, type PaleoPlaceLabel } from "../lib/paleoPlaceLabels";
 
 interface PickedPaleoFeature {
   properties: PaleoCoastlineProperties;
@@ -970,6 +971,37 @@ export function createPaleoCoastlineLayers(
     parameters: ANNOTATION_PARAMETERS,
   });
 
+  const placeLabels = context.showPlaceLabels
+    ? PALEO_PLACE_LABELS.filter(
+        (label) => context.currentYearsBP >= label.minYearsBP && context.currentYearsBP <= label.maxYearsBP,
+      )
+    : [];
+
+  const placeLabelLayer = new TextLayer<PaleoPlaceLabel>({
+    id: "paleo-place-labels",
+    data: placeLabels,
+    pickable: false,
+    getPosition: (label) => {
+      const z = terrain ? terrainZ(terrain, label.elevationM, profile, Z_BANDS.sourceLabel) : 0;
+      return [label.longitude, label.latitude, z];
+    },
+    getText: (label) => label.text,
+    getSize: 13,
+    getColor: [255, 236, 178, 240],
+    getTextAnchor: "middle",
+    getAlignmentBaseline: "center",
+    getAngle: 0,
+    sizeUnits: "pixels",
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    fontWeight: 700,
+    outlineWidth: 2,
+    outlineColor: [2, 8, 23, 235],
+    background: true,
+    getBackgroundColor: [2, 8, 23, 150],
+    backgroundPadding: [4, 2],
+    parameters: ANNOTATION_PARAMETERS,
+  });
+
   return [
     ...terrainLayers,
     riverLayer,
@@ -982,6 +1014,7 @@ export function createPaleoCoastlineLayers(
     shorelineGlowInnerLayer,
     coastlineLayer,
     emergenceLayer,
+    placeLabelLayer,
   ];
 }
 
