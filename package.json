@@ -12,6 +12,7 @@
     "paleo-coastlines:generate": "python3 scripts/generate_paleo_coastlines.py",
     "paleo-coastlines:terrain-tiles": "python3 scripts/generate_terrain_tiles.py",
     "paleo-coastlines:inventory": "python3 scripts/build_survey_inventory.py --with-gdalinfo",
+    "paleo-coastlines:nw-gap-sources": "python3 scripts/discover_nw_gap_sources.py",
     "paleo-coastlines:usgs-2023-sf-dem": "python3 scripts/acquire_usgs_2023_sf_lidar_dem.py",
     "paleo-coastlines:usgs-coned-sf": "python3 scripts/acquire_usgs_coned_sf_2m.py",
     "paleo-coastlines:usgs-bay-dem": "python3 scripts/acquire_usgs_sf_bay_1m_dem.py",

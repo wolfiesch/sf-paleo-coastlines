@@ -17,6 +17,8 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | USGS/CSMP DS 781, 2 m Offshore of San Francisco bathymetry | USGS/CSMP DS 781 | 2 m | 315.0 | 7 | excellent local detail | NAVD88-style or source-projected DEM; verify against local datum before exact contours. |
 | USGS/CSMP DS 781, 2 m Offshore of San Gregorio bathymetry | USGS/CSMP DS 781 | 2 m | 160.4 | 7 | excellent local detail | NAVD88-style or source-projected DEM; verify against local datum before exact contours. |
 | USGS OFR 2014-1234, 10 m Upper Farallon Escarpment bathymetry | USGS OFR 2014-1234 | 10 m | 779.8 | 6 | excellent local detail | NAVD88-style or source-projected DEM; verify against local datum before exact contours. |
+| NOAA NOS H11738, 1 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | 1 m | 10903.8 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H11738, 2 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | 2 m | 10903.8 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12109, 1 m BAG Golden Gate approach bathymetry | NOAA NOS BAG | 1 m | 474.4 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12109, 2 m BAG Golden Gate approach bathymetry | NOAA NOS BAG | 2 m | 474.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12110, 1 m BAG south Golden Gate approach bathymetry | NOAA NOS BAG | 1 m | 2.1 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
@@ -27,6 +29,8 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS H12112, 2 m BAG outer Golden Gate bathymetry | NOAA NOS BAG | 2 m | 245.0 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12113, 1 m BAG Lake Merced to Shelter Cove bathymetry | NOAA NOS BAG | 1 m | 186.3 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12113, 2 m BAG Lake Merced to Shelter Cove bathymetry | NOAA NOS BAG | 2 m | 230.0 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00431, 32 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00442, 32 m BAG north coast bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA OCM Area A CA1B08, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 0.3 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
 | NOAA OCM Area A CA1B09, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 4.5 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
 | NOAA OCM Area A CA1B22, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 8.5 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
@@ -44,6 +48,7 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | USGS SF Bay 1 m DEM, central Bay NAVD88 | USGS SF Bay 1 m DEM | 1 m | 736.6 | 5 | high detail patch | NAVD88; best first-fit datum among the candidate Bay DEM files, but still compare overlap against CUDEM, DS684, and MLLW BAG patches. |
 | Best-available fused Golden Gate-to-Farallones terrain | Derived fused terrain | 20 m | 10899.9 | 4 | high detail patch | Mixed-source visual fusion; useful for continuity, but not a single vertical datum. |
 | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | NOAA CUDEM | about 3.4 m | 36502.2 | 4 | high detail patch | NOAA topobathy product; verify local vertical reference against CoNED/NAVD88 before exact contours. |
+| NOAA NOS H11739, VR BAG Drakes Bay to Bolinas bathymetry | NOAA NOS BAG | variable-resolution BAG | 10897.5 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H11965, VR BAG Farallon Islands bathymetry | NOAA NOS BAG | variable-resolution BAG | 5096.8 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H13334, VR BAG southeast Farallon bathymetry | NOAA NOS BAG | variable-resolution BAG | 3791.9 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00477, VR BAG Greater Farallones bathymetry 1 | NOAA NOS BAG | variable-resolution BAG | 1267.4 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
@@ -52,7 +57,15 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS W00477, VR BAG Greater Farallones bathymetry 4 | NOAA NOS BAG | variable-resolution BAG | 179.8 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00614, VR BAG sanctuary bathymetry | NOAA NOS BAG | variable-resolution BAG | 19009.5 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | NOAA CRM | 90 m | 36536.5 | 2 | broad support surface | Broad sea-level/geoid-style reference; useful for continuity, not local datum precision. |
+| NOAA NOS H11738, 1.5 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H11738, 4 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12112, 4 m BAG outer Golden Gate bathymetry | NOAA NOS BAG | unknown | 220.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00431, 16 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00431, 64 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00431, 8 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00442, 16 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00442, 64 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00442, 8 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 
 ## Highest-Value Next Data Chases
 
@@ -65,6 +78,7 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | [NOAA OCM San Francisco Bay Area B/C 1 m survey grids](https://www.fisheries.noaa.gov/inport/item/47864) | high | Potentially valuable north/south Bay detail, but the official InPort records currently say no distributions are available. | Do not block the app on this. Re-check NOAA/NCEI discovery and public S3/FTP mirrors later, or contact NOAA OCM/NCEI for the Area B/C grid download path. |
 | [NOAA OCM Area A 1 m interferometric Bay-floor mosaic](https://www.fisheries.noaa.gov/inport/item/47862) | highest | Broad 1 m Bay-floor source-grid coverage from 73 public NOAA GeoTIFF tiles, useful for visible shallow-bay relief where the multibeam-only subset is sparse. | Keep as the broad high-detail Bay-floor blanket; prefer multibeam, BAG, or USGS Bay DEM sources where they overlap and have cleaner datum metadata. |
 | [NOAA/NCEI Bathymetric Data Viewer survey search](https://www.ncei.noaa.gov/products/bathymetry) | high | Authoritative discovery path for more BAG, multibeam, singlebeam, lidar, and DEM coverage. | Query every survey footprint intersecting the study bounds and add missing high-resolution BAG/multibeam patches. |
+| [NW Gap NOAA/NCEI BAG candidates](/data/paleo-coastlines/nw_gap_source_candidates.json) | highest | The machine query for the northwest outer-shelf gap found BAG survey groups W00433, W00443, W00444, and W00478 that are not currently in the local terrain stack. | Inspect these BAG groups first; if their downloadable BAG files cover the broad-support cells, add the best one as the next northwest shelf terrain inset. |
 | [NOAA/NCEI multibeam bathymetry archive](https://www.ngdc.noaa.gov/mgg/bathymetry/multibeam/) | high | Potential source of additional offshore swath data beyond the currently baked survey patches. | Search the Farallones shelf and nearby outer shelf for cruises with public gridded products or processable soundings. |
 | [USGS/CSMP map series geology, habitat, and web-service layers](https://data.usgs.gov/datacatalog/data/USGS%3A632748c2-f4e3-46cf-bf4c-aaeeb99d6064) | medium | Adds scientific meaning: mapped bottom type, substrate, geology, and habitat context over the 3D terrain. | Bring interpreted polygons in as optional overlays tied to source confidence and bottom type. |
 

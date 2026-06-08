@@ -93,6 +93,15 @@ NEXT_DATA_CANDIDATES: list[dict[str, Any]] = [
         "nextAction": "Query every survey footprint intersecting the study bounds and add missing high-resolution BAG/multibeam patches.",
     },
     {
+        "id": "nw_gap_noaa_bag_candidates",
+        "label": "NW Gap NOAA/NCEI BAG candidates",
+        "sourceFamily": "NOAA/NCEI BAG bathymetry",
+        "sourceUrl": "/data/paleo-coastlines/nw_gap_source_candidates.json",
+        "priority": "highest",
+        "reason": "The machine query for the northwest outer-shelf gap found BAG survey groups W00433, W00443, W00444, and W00478 that are not currently in the local terrain stack.",
+        "nextAction": "Inspect these BAG groups first; if their downloadable BAG files cover the broad-support cells, add the best one as the next northwest shelf terrain inset.",
+    },
+    {
         "id": "noaa_multibeam_archive",
         "label": "NOAA/NCEI multibeam bathymetry archive",
         "sourceFamily": "NOAA/NCEI multibeam",
