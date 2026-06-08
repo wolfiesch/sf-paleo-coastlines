@@ -83,6 +83,7 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS W00447, 16 m BAG southern outer shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00447, 64 m BAG southern outer shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | NOAA/NCEI multibeam | 50 m | 15059.9 | 2 | broad support surface | Source gridded multibeam depth values; useful for measured offshore shape, but still compare overlap against BAG, CUDEM, and VDatum before exact sea-level alignment. |
+| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | NOAA/NCEI multibeam | unknown | 173374.6 | 2 | broad support surface | Source gridded multibeam depth values; useful for measured offshore shape, but still compare overlap against BAG, CUDEM, and VDatum before exact sea-level alignment. |
 
 ## Highest-Value Next Data Chases
 
