@@ -101,7 +101,7 @@ function terrainSummary(slice: PaleoTimeSlice): string | null {
   const terrains = slice.terrains?.length ? slice.terrains : slice.terrain ? [slice.terrain] : [];
   if (!terrains.length) return null;
   if (terrains.length === 1) return terrains[0].note;
-  return `${terrains.length} terrain surfaces, drawn from broad support grids up to sharper local survey patches: NOAA CRM/CUDEM Bay-to-coast coverage, USGS CoNED San Francisco 2 m land-plus-seafloor topobathymetry where the WCS clip is present, a derived best-available Golden Gate-to-Farallones fusion surface, NOAA OCM 1 m Area A Bay-floor mosaic, Central Bay source-survey tiles, NOAA BAG Golden Gate/Gulf of the Farallones/Farallon-region survey patches, USGS/CSMP 2 m coastal bathymetry blocks, Farallon Escarpment/Rittenburg Bank offshore multibeam patches, 2023 USGS San Francisco land LiDAR where local tiles are present, and DS684 Golden Gate detail.`;
+  return `${terrains.length} terrain surfaces, drawn from broad support grids up to sharper local survey patches: NOAA CRM/CUDEM Bay-to-coast coverage, USGS CoNED San Francisco 2 m land-plus-seafloor topobathymetry, smaller high-density CoNED focus clips for the Gate, Farallon shelf, and south Bay edge, a derived best-available Golden Gate-to-Farallones fusion surface, NOAA OCM 1 m Area A Bay-floor mosaic, Central Bay source-survey tiles, NOAA BAG Golden Gate/Gulf of the Farallones/Farallon-region survey patches, USGS/CSMP 2 m coastal bathymetry blocks, Farallon Escarpment/Rittenburg Bank offshore multibeam patches, 2023 USGS San Francisco land LiDAR where local tiles are present, and DS684 Golden Gate detail.`;
 }
 
 export function PaleoCoastlineControls({

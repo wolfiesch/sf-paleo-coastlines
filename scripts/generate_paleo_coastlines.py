@@ -65,6 +65,7 @@ BEST_AVAILABLE_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_s
 BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_relief.png"
 BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_composite.png"
 BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_source_quality.png"
+BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_source_quality.json"
 NOS_BAG_DEFAULT_DIR = RAW_DIR / "noaa-nos-bag"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
@@ -3060,8 +3061,10 @@ def source_quality_category(source_id: str) -> str:
         return "CRM fallback"
     if source_id.startswith("noaa_cudem"):
         return "CUDEM support"
-    if source_id.startswith("usgs_coned_sf_2m"):
-        return "USGS CoNED"
+    if source_id == "usgs_coned_sf_2m":
+        return "USGS CoNED broad"
+    if source_id.startswith("usgs_coned_sf_2m_"):
+        return "USGS CoNED focus"
     if source_id.startswith("noaa_ocm_area_a"):
         return "NOAA OCM survey"
     if source_id.startswith("noaa_nos"):
@@ -3081,7 +3084,8 @@ def source_quality_color(category: str) -> tuple[int, int, int]:
     colors = {
         "CRM fallback": (35, 48, 76),
         "CUDEM support": (43, 104, 142),
-        "USGS CoNED": (92, 180, 132),
+        "USGS CoNED broad": (92, 180, 132),
+        "USGS CoNED focus": (132, 236, 148),
         "NOAA OCM survey": (42, 202, 170),
         "NOAA BAG survey": (74, 218, 255),
         "USGS land LiDAR": (236, 241, 222),
@@ -3100,7 +3104,8 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
     categories = [
         "CRM fallback",
         "CUDEM support",
-        "USGS CoNED",
+        "USGS CoNED broad",
+        "USGS CoNED focus",
         "NOAA OCM survey",
         "NOAA BAG survey",
         "USGS land LiDAR",
@@ -3115,6 +3120,9 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
     width = 0
     height = 0
     provenance: np.ndarray | None = None
+    source_provenance: np.ndarray | None = None
+    source_codes = {source_id: index + 1 for index, (source_id, _) in enumerate(records)}
+    code_to_source_id = {code: source_id for source_id, code in source_codes.items()}
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_root = Path(temp_dir)
         for source_id, path in records:
@@ -3152,12 +3160,15 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
             if provenance is None:
                 height, width = values.shape
                 provenance = np.zeros((height, width), dtype=np.uint8)
+                source_provenance = np.zeros((height, width), dtype=np.uint16)
 
             valid = np.isfinite(values) & (values > -9000) & (values < 1_000_000)
             category = source_quality_category(source_id)
             provenance[valid] = category_codes[category]
+            if source_provenance is not None:
+                source_provenance[valid] = source_codes[source_id]
 
-    if provenance is None:
+    if provenance is None or source_provenance is None:
         return {}
 
     pixels = np.zeros((height, width, 4), dtype=np.uint8)
@@ -3176,8 +3187,43 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
 
     Image.fromarray(pixels, "RGBA").save(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG)
     total = sum(summary.values())
+
+    source_summary: list[dict[str, Any]] = []
+    source_total = int((source_provenance > 0).sum())
+    for code, source_id in code_to_source_id.items():
+        count = int((source_provenance == code).sum())
+        if count == 0:
+            continue
+        kind = terrain_source_kind(source_id)
+        source_summary.append({
+            "sourceId": source_id,
+            "sourceLabel": source_label(source_id),
+            "category": source_quality_category(source_id),
+            "pixelCount": count,
+            "pixelPercent": round((count / source_total) * 100, 2) if source_total else 0,
+            "renderPriority": kind["renderPriority"],
+            "resolutionMeters": kind["resolutionMeters"],
+        })
+    source_summary.sort(key=lambda item: (-float(item["pixelPercent"]), str(item["sourceId"])))
+
+    provenance_payload = {
+        "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "texture": "/" + str(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.relative_to(ROOT / "public")),
+        "pixelSize": [width, height],
+        "categoryPixelCounts": summary,
+        "categoryPixelPercents": {
+            category: round((count / total) * 100, 2)
+            for category, count in summary.items()
+            if total
+        },
+        "sourceWinners": source_summary,
+        "note": "Exact sampled-source provenance for the best-available fused terrain. Later/higher-priority valid sources overwrite broader support surfaces.",
+    }
+    BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON.write_text(json.dumps(provenance_payload, indent=2) + "\n")
+
     return {
         "texture": "/" + str(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.relative_to(ROOT / "public")),
+        "detailUrl": "/" + str(BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON.relative_to(ROOT / "public")),
         "pixelSize": [width, height],
         "pixelCounts": summary,
         "pixelPercents": {
@@ -3185,7 +3231,8 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
             for category, count in summary.items()
             if total
         },
-        "note": "Lower-resolution source-quality texture for the fused terrain. It shows which input class won each sampled pixel after broad-to-detailed stacking.",
+        "topSourceWinners": source_summary[:10],
+        "note": "Lower-resolution source-quality texture for the fused terrain. It shows which input class won each sampled pixel after broad-to-detailed stacking; detailUrl contains exact source winner counts.",
     }
 
 
