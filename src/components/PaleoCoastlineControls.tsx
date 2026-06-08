@@ -205,6 +205,15 @@ function percentLabel(value: number): string {
   return `${Math.round(value)}%`;
 }
 
+function compactSourceCategory(category: string): string {
+  return category
+    .replace(" fallback", "")
+    .replace(" support", "")
+    .replace(" survey", "")
+    .replace("USGS ", "")
+    .replace("NOAA ", "");
+}
+
 export function PaleoCoastlineControls({
   slices,
   activeSliceId,
@@ -486,6 +495,15 @@ export function PaleoCoastlineControls({
                       <span className="truncate text-xs font-semibold text-gray-200">{sourceQualityGapSummary.priorityZones[0].label}</span>
                       <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-200">{sourceQualityGapSummary.priorityZones[0].tierLabel}</span>
                     </div>
+                    {sourceQualityGapSummary.priorityZones[0].topCategories?.length ? (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {sourceQualityGapSummary.priorityZones[0].topCategories.slice(0, 2).map((category) => (
+                          <span key={category.category} className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 text-[10px] leading-3 text-gray-300">
+                            {compactSourceCategory(category.category)} {percentLabel(category.percent)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                     <p className="mt-1 text-[11px] leading-4 text-gray-400">{sourceQualityGapSummary.priorityZones[0].nextAction}</p>
                   </div>
                 ) : null}

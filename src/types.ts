@@ -176,6 +176,8 @@ export interface SourceQualityPriorityZone {
   broadFallbackPercent: number;
   conedFoundationPercent: number;
   measuredDetailPercent: number;
+  categoryPercents: Record<string, number>;
+  topCategories: { category: string; percent: number }[];
   nextAction: string;
   whyItMatters: string;
 }

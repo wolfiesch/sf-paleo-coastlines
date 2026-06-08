@@ -288,6 +288,19 @@ def build_zone_summaries(features: list[dict[str, Any]]) -> list[dict[str, Any]]
         tier = classify_tier(broad, coned, detail)
         dominant_tiers = Counter(str(feature["properties"]["tier"]) for feature in cells)
         dominant_categories = Counter(str(feature["properties"]["dominantCategory"]) for feature in cells)
+        category_weights: Counter[str] = Counter()
+        for feature in cells:
+            valid_pixels = float(feature["properties"]["validPixelCount"])
+            for category, percent in feature["properties"]["categoryPercents"].items():
+                category_weights[category] += valid_pixels * (float(percent) / 100)
+        category_percents = {
+            category: round((weight / total_weight) * 100, 2)
+            for category, weight in sorted(category_weights.items())
+        }
+        top_categories = [
+            {"category": category, "percent": percent}
+            for category, percent in sorted(category_percents.items(), key=lambda item: (-item[1], item[0]))[:4]
+        ]
         summaries.append({
             "id": zone["id"],
             "label": zone["label"],
@@ -304,6 +317,8 @@ def build_zone_summaries(features: list[dict[str, Any]]) -> list[dict[str, Any]]
             "tierLabel": TIER_LABELS[tier],
             "whyItMatters": zone["whyItMatters"],
             "nextAction": next_action(tier, dominant_categories.most_common(1)[0][0]),
+            "categoryPercents": category_percents,
+            "topCategories": top_categories,
         })
     summaries.sort(
         key=lambda item: (
