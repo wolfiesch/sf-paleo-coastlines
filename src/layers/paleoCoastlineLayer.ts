@@ -108,7 +108,7 @@ const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
       shadedRelief: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_gate_shelf/relief/{z}/{x}/{y}.png",
     },
     minZoom: 12,
-    maxZoom: 14,
+    maxZoom: 15,
     tileSize: 256,
   },
   usgs_coned_sf_2m_south_bay_edge: {
@@ -1062,6 +1062,8 @@ export function createPaleoCoastlineLayers(
             extent: tileConfig.extent,
             maxZoom: tileConfig.maxZoom,
             minZoom: tileConfig.minZoom,
+            maxCacheSize: 72,
+            maxRequests: 12,
             tileSize: tileConfig.tileSize,
           }
         : {

@@ -34,7 +34,7 @@ class TerrainTileset:
 
 DEFAULT_TILESETS = [
   TerrainTileset("usgs_2023_sf_lidar_dem", 12, 16),
-  TerrainTileset("usgs_coned_sf_2m_gate_shelf", 12, 14),
+  TerrainTileset("usgs_coned_sf_2m_gate_shelf", 12, 15),
   TerrainTileset("usgs_coned_sf_2m_south_bay_edge", 12, 14),
 ]
 
@@ -153,6 +153,15 @@ def write_tiles(
   return written
 
 
+def count_tiles(output_dir: Path, min_zoom: int, max_zoom: int) -> int:
+  total = 0
+  for zoom in range(min_zoom, max_zoom + 1):
+    zoom_dir = output_dir / str(zoom)
+    if zoom_dir.exists():
+      total += sum(1 for _ in zoom_dir.glob("*/*.png"))
+  return total
+
+
 def generate_tileset(terrain: dict, output_root: Path, min_zoom: int, max_zoom: int, clean: bool) -> dict:
   source_id = terrain["sourceId"]
   source_output = output_root / source_id
@@ -164,14 +173,21 @@ def generate_tileset(terrain: dict, output_root: Path, min_zoom: int, max_zoom: 
   elevation_path = terrain_asset_path(terrain["elevationData"])
   relief_path = terrain_asset_path(terrain["textures"]["shadedRelief"])
 
-  elevation_count = write_tiles(elevation_path, terrain["bounds"], elevation_output, min_zoom, max_zoom, "nearest")
-  relief_count = write_tiles(relief_path, terrain["bounds"], relief_output, min_zoom, max_zoom, "bilinear")
+  existing_metadata_path = source_output / "tileset.json"
+  existing_metadata = json.loads(existing_metadata_path.read_text()) if existing_metadata_path.exists() else {}
+  metadata_min_zoom = min(min_zoom, int(existing_metadata.get("minZoom", min_zoom)))
+  metadata_max_zoom = max(max_zoom, int(existing_metadata.get("maxZoom", max_zoom)))
+
+  write_tiles(elevation_path, terrain["bounds"], elevation_output, min_zoom, max_zoom, "nearest")
+  write_tiles(relief_path, terrain["bounds"], relief_output, min_zoom, max_zoom, "bilinear")
+  elevation_count = count_tiles(elevation_output, metadata_min_zoom, metadata_max_zoom)
+  relief_count = count_tiles(relief_output, metadata_min_zoom, metadata_max_zoom)
 
   metadata = {
     "sourceId": source_id,
     "bounds": terrain["bounds"],
-    "minZoom": min_zoom,
-    "maxZoom": max_zoom,
+    "minZoom": metadata_min_zoom,
+    "maxZoom": metadata_max_zoom,
     "tileSize": TILE_SIZE,
     "elevationData": f"/data/paleo-coastlines/terrain-tiles/{source_id}/elevation/{{z}}/{{x}}/{{y}}.png",
     "textures": {
