@@ -58,6 +58,7 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS W00477, VR BAG Greater Farallones bathymetry 2 | NOAA NOS BAG | variable-resolution BAG | 211.8 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00477, VR BAG Greater Farallones bathymetry 3 | NOAA NOS BAG | variable-resolution BAG | 591.6 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00477, VR BAG Greater Farallones bathymetry 4 | NOAA NOS BAG | variable-resolution BAG | 179.8 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00478, VR BAG northwest shelf bathymetry | NOAA NOS BAG | variable-resolution BAG | 9037.5 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00614, VR BAG sanctuary bathymetry | NOAA NOS BAG | variable-resolution BAG | 19009.5 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | NOAA CRM | 90 m | 36536.5 | 2 | broad support surface | Broad sea-level/geoid-style reference; useful for continuity, not local datum precision. |
 | NOAA NOS H11738, 1.5 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
