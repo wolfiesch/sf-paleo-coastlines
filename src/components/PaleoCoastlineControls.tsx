@@ -496,7 +496,7 @@ export function PaleoCoastlineControls({
 
         <div>
           <span className={`mb-1.5 block ${sectionTitleClass}`}>Fly to</span>
-          <div className="grid grid-cols-3 gap-1 rounded-lg bg-white/[0.04] p-1">
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-white/[0.04] p-1 sm:grid-cols-4">
             {viewPresets.map((preset) => (
               <button
                 key={preset.id}

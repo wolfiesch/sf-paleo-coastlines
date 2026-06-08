@@ -72,6 +72,17 @@ const VIEW_PRESETS = [
       bearing: -43,
     },
   },
+  {
+    id: "northwest-gap",
+    label: "NW Gap",
+    viewState: {
+      longitude: -123.35,
+      latitude: 38.05,
+      zoom: 8.65,
+      pitch: 62,
+      bearing: -34,
+    },
+  },
 ] satisfies { id: string; label: string; viewState: MapViewState }[];
 
 const BAY_SOURCE_FOOTPRINTS_URL = "/data/paleo-coastlines/usgs_sf_bay_source_footprints.geojson";
