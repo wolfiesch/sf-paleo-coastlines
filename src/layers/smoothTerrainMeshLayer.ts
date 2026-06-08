@@ -29,7 +29,8 @@ interface SmoothTerrainMeshProps {
   terrainSmoothHeights?: boolean;
 }
 
-const TERRAIN_HEIGHT_SMOOTHING_STRENGTH = 0.18;
+const TERRAIN_HEIGHT_SMOOTHING_STRENGTH = 0.16;
+const TERRAIN_HEIGHT_SMOOTHING_PASSES = 2;
 
 const sharpMeshCache = new WeakMap<object, TerrainMesh>();
 const smoothedMeshCache = new WeakMap<object, TerrainMesh>();
@@ -66,9 +67,10 @@ function smoothedPositionAttribute(
 
   const vertexCount = Math.floor(positions.length / positionSize);
   const triangleIndexCount = indices.length;
-  const neighborHeightSums = new Float64Array(vertexCount);
-  const neighborCounts = new Uint16Array(vertexCount);
+  const neighborIndices: number[][] = Array.from({ length: vertexCount }, () => []);
   const smoothedPositions = new Float32Array(positions.length);
+  const workingHeights = new Float64Array(vertexCount);
+  const nextHeights = new Float64Array(vertexCount);
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -85,12 +87,12 @@ function smoothedPositionAttribute(
     for (let component = 0; component < positionSize; component += 1) {
       smoothedPositions[offset + component] = Number(positions[offset + component]);
     }
+    workingHeights[vertex] = Number(positions[offset + 2]);
   }
 
   const addNeighbor = (vertex: number, neighbor: number) => {
     if (vertex >= vertexCount || neighbor >= vertexCount) return;
-    neighborHeightSums[vertex] += Number(positions[neighbor * positionSize + 2]);
-    neighborCounts[vertex] += 1;
+    neighborIndices[vertex].push(neighbor);
   };
 
   for (let i = 0; i <= triangleIndexCount - 3; i += 3) {
@@ -107,26 +109,41 @@ function smoothedPositionAttribute(
   }
 
   const edgeTolerance = Math.max(maxX - minX, maxY - minY) * 1e-5;
+  const edgeVertices = new Uint8Array(vertexCount);
 
   for (let vertex = 0; vertex < vertexCount; vertex += 1) {
-    const count = neighborCounts[vertex];
-    if (count === 0) continue;
-
     const offset = vertex * positionSize;
     const x = Number(positions[offset]);
     const y = Number(positions[offset + 1]);
-    const isEdge =
+    edgeVertices[vertex] =
       Math.abs(x - minX) <= edgeTolerance ||
       Math.abs(x - maxX) <= edgeTolerance ||
       Math.abs(y - minY) <= edgeTolerance ||
-      Math.abs(y - maxY) <= edgeTolerance;
+      Math.abs(y - maxY) <= edgeTolerance
+        ? 1
+        : 0;
+  }
 
-    if (isEdge) continue;
+  for (let pass = 0; pass < TERRAIN_HEIGHT_SMOOTHING_PASSES; pass += 1) {
+    nextHeights.set(workingHeights);
+    for (let vertex = 0; vertex < vertexCount; vertex += 1) {
+      const neighbors = neighborIndices[vertex];
+      if (edgeVertices[vertex] || neighbors.length === 0) continue;
 
-    const originalZ = Number(positions[offset + 2]);
-    const neighborZ = neighborHeightSums[vertex] / count;
-    smoothedPositions[offset + 2] =
-      originalZ + (neighborZ - originalZ) * TERRAIN_HEIGHT_SMOOTHING_STRENGTH;
+      let neighborHeightSum = 0;
+      for (const neighbor of neighbors) {
+        neighborHeightSum += workingHeights[neighbor];
+      }
+
+      const neighborZ = neighborHeightSum / neighbors.length;
+      nextHeights[vertex] =
+        workingHeights[vertex] + (neighborZ - workingHeights[vertex]) * TERRAIN_HEIGHT_SMOOTHING_STRENGTH;
+    }
+    workingHeights.set(nextHeights);
+  }
+
+  for (let vertex = 0; vertex < vertexCount; vertex += 1) {
+    smoothedPositions[vertex * positionSize + 2] = workingHeights[vertex];
   }
 
   return { size: positionSize, value: smoothedPositions };
@@ -188,15 +205,13 @@ function smoothMesh(mesh: TerrainMesh, smoothHeights: boolean): TerrainMesh {
     const nx = aby * acz - abz * acy;
     const ny = abz * acx - abx * acz;
     const nz = abx * acy - aby * acx;
-    const length = Math.hypot(nx, ny, nz);
-
-    if (length === 0) {
+    if (nx === 0 && ny === 0 && nz === 0) {
       continue;
     }
 
-    addNormal(normals, a, nx / length, ny / length, nz / length);
-    addNormal(normals, b, nx / length, ny / length, nz / length);
-    addNormal(normals, c, nx / length, ny / length, nz / length);
+    addNormal(normals, a, nx, ny, nz);
+    addNormal(normals, b, nx, ny, nz);
+    addNormal(normals, c, nx, ny, nz);
   }
 
   for (let i = 0; i < normals.length; i += 3) {
