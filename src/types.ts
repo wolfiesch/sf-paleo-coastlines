@@ -90,6 +90,27 @@ export interface BaySourceFootprintCollection {
   features: BaySourceFootprintFeature[];
 }
 
+export interface PaleoRiverProperties {
+  flow: number;
+  order: number;
+  min_elevation_m: number;
+  max_elevation_m: number;
+}
+
+export interface PaleoRiverFeature {
+  type: "Feature";
+  properties: PaleoRiverProperties;
+  geometry: {
+    type: "LineString";
+    coordinates: number[][]; // [lon, lat, elevation_m]
+  };
+}
+
+export interface PaleoRiverCollection {
+  type: "FeatureCollection";
+  features: PaleoRiverFeature[];
+}
+
 export interface PaleoTimeSlice {
   id: PaleoTimeSliceId;
   label: string;
