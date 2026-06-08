@@ -34,7 +34,8 @@ class TerrainTileset:
 
 DEFAULT_TILESETS = [
   TerrainTileset("usgs_2023_sf_lidar_dem", 12, 16),
-  TerrainTileset("usgs_coned_sf_2m_gate_shelf", 12, 15),
+  TerrainTileset("usgs_coned_sf_2m_gate_shelf", 12, 14),
+  TerrainTileset("usgs_coned_sf_2m_south_bay_edge", 12, 14),
 ]
 
 
