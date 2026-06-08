@@ -8,31 +8,31 @@ It answers a practical question: where is the 3D terrain already backed by measu
 
 | Source family | Share of visible fused surface | Plain-English meaning |
 |---|---:|---|
-| Broad fallback/support | 15.7% | Useful for continuity, but not where the best detail lives. |
-| CoNED foundation | 56.56% | Strong 2 m land-plus-seafloor base; good, but not as visually rich as survey/backscatter patches. |
-| Measured detail | 27.75% | The best current visual/scientific detail: BAG, OCM, USGS Bay DEM, LiDAR, CSMP, and offshore survey patches. |
+| Broad fallback/support | 8.1% | Useful for continuity, but not where the best detail lives. |
+| CoNED foundation | 55.38% | Strong 2 m land-plus-seafloor base; good, but not as visually rich as survey/backscatter patches. |
+| Measured detail | 36.52% | The best current visual/scientific detail: BAG, OCM, NOAA multibeam, USGS Bay DEM, LiDAR, CSMP, and offshore survey patches. |
 
 ## Cell Types
 
 | Cell type | Cell count | Approx area sq km | What to do next |
 |---|---:|---:|---|
-| Critical broad-data gap | 788 | 1627.24 | Chase new bathymetry first. |
-| Broad support gap | 74 | 153.07 | Replace broad support where survey/CoNED exists. |
-| Good CoNED foundation, low measured detail | 2889 | 5964.24 | Look for survey texture or scientific overlays. |
-| Mixed foundation | 74 | 152.84 | Inspect case by case. |
-| Measured local detail | 164 | 337.65 | Keep, then datum-check. |
-| High-detail survey/source patch | 1291 | 2663.52 | Use as quality benchmark. |
+| Critical broad-data gap | 398 | 822.35 | Chase new bathymetry first. |
+| Broad support gap | 49 | 101.18 | Replace broad support where survey/CoNED exists. |
+| Good CoNED foundation, low measured detail | 2825 | 5831.75 | Look for survey texture or scientific overlays. |
+| Mixed foundation | 79 | 163.14 | Inspect case by case. |
+| Measured local detail | 175 | 360.59 | Keep, then datum-check. |
+| High-detail survey/source patch | 1754 | 3619.55 | Use as quality benchmark. |
 
 ## Priority Zones
 
 | Zone | Broad fallback | CoNED base | Measured detail | Gap score | What it means | Next action |
 |---|---:|---:|---:|---:|---|---|
-| Northwest outer shelf | 43.83% | 9.63% | 46.54% | 47.44 | This is the broadest visible fallback area near the far-west/northwest part of the current fused scene. | Replace CRM/CUDEM support with CoNED, BAG, multibeam, or CSMP patches if coverage exists. |
-| Southern outer shelf | 30.24% | 46.63% | 23.13% | 47.36 | This captures the lower-left offshore portion of the current scene and helps avoid only optimizing the Golden Gate. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
+| Southern outer shelf | 20.51% | 43.62% | 35.87% | 36.17 | This captures the lower-left offshore portion of the current scene and helps avoid only optimizing the Golden Gate. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
+| Northwest outer shelf | 32.46% | 9.63% | 57.91% | 35.84 | This is the broadest visible fallback area near the far-west/northwest part of the current fused scene. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |
 | North Bay edge | 0.0% | 90.67% | 9.33% | 33.55 | This helps separate true measured Bay detail from broad support on the northern side of the scene. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
 | South Bay edge | 0.0% | 77.37% | 22.63% | 27.66 | This area has large shallow modern-bay surfaces where extra survey data can visibly change the exposed-waterline story. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
-| Farallon Islands and shelf | 0.98% | 70.35% | 28.67% | 26.36 | This is where the 20k shoreline story gets most interesting, because islands and submerged shelf highs emerge as sea level drops. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
 | Farallon-to-Golden-Gate corridor | 0.0% | 70.59% | 29.41% | 25.42 | This is the visual path between the old outer coast and today's Golden Gate. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
+| Farallon Islands and shelf | 0.57% | 66.82% | 32.62% | 24.34 | This is where the 20k shoreline story gets most interesting, because islands and submerged shelf highs emerge as sea level drops. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
 | Central Bay floor | 0.0% | 64.15% | 35.85% | 22.03 | This is where Bay-floor survey detail can make the modern-bay interior look much less smooth. | Mixed source area; inspect the source-quality overlay before prioritizing another download. |
 | Golden Gate and San Francisco Bar | 0.0% | 32.04% | 67.96% | 11.11 | This is the key constriction where old drainage, bathymetry, and the modern bay entrance meet. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |
 
@@ -40,18 +40,18 @@ It answers a practical question: where is the 3D terrain already backed by measu
 
 | Cell | Dominant source | Broad fallback | CoNED base | Measured detail | Score | Bounds | Next action |
 |---|---|---:|---:|---:|---:|---|---|
-| qg-00-00 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.55, 38.1353059, -123.5353027, 38.15]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-00-06 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.4625, 38.1353059, -123.4478027, 38.15]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-03-06 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.4625, 38.0919069, -123.4478027, 38.1062593]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
 | qg-05-12 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.375, 38.0628604, -123.3603027, 38.0772128]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-06-03 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.50625, 38.0481663, -123.4915527, 38.0628604]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-11-09 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.41875, 37.9753791, -123.4040527, 37.9900732]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-11-15 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.33125, 37.9753791, -123.3165527, 37.9900732]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-12-00 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.55, 37.9610267, -123.5353027, 37.9753791]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-17-06 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.4625, 37.8882395, -123.4478027, 37.9025919]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-09-06 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.4625, 38.0044256, -123.4478027, 38.0191198]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-11-12 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.375, 37.9753791, -123.3603027, 37.9900732]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
 | qg-17-12 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.375, 37.8882395, -123.3603027, 37.9025919]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-18-00 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.55, 37.8735454, -123.5353027, 37.8882395]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-23-06 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.4625, 37.8007582, -123.4478027, 37.8154523]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
-| qg-24-00 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.55, 37.7864058, -123.5353027, 37.8007582]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-23-10 | CUDEM support | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.4040527, 37.8007582, -123.3896973, 37.8154523]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-41-00 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.55, 37.5389977, -123.5353027, 37.5536918]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-41-06 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.4625, 37.5389977, -123.4478027, 37.5536918]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-41-12 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.375, 37.5389977, -123.3603027, 37.5536918]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-47-00 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.55, 37.4518581, -123.5353027, 37.4665522]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-47-06 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.4625, 37.4518581, -123.4478027, 37.4665522]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
+| qg-47-12 | CRM fallback | 100.0% | 0.0% | 0.0% | 100.0 | `[-123.375, 37.4518581, -123.3603027, 37.4665522]` | Search NOAA/NCEI Bathymetric Data Viewer, USGS/CSMP, and regional multibeam/BAG records before adding more visual polish here. |
 
 ## How To Read This
 

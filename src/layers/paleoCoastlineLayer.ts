@@ -45,7 +45,7 @@ interface TerrainFootprint {
   sourceId: string;
   sourceLabel: string;
   note: string;
-  category: "noaaBag" | "noaaOcm" | "usgsConed" | "usgsCsmp" | "usgsOffshore" | "usgsLandLidar" | "usgsGoldenGate" | "other";
+  category: "noaaBag" | "noaaMultibeam" | "noaaOcm" | "usgsConed" | "usgsCsmp" | "usgsOffshore" | "usgsLandLidar" | "usgsGoldenGate" | "other";
   qualityTier: TerrainQualityTier;
   bounds: [number, number, number, number];
   heightRangeMeters: [number, number];
@@ -568,6 +568,7 @@ function terrainMaterial(terrain: PaleoTerrainConfig, profile: SceneProfileConfi
 
 function terrainFootprintCategory(terrain: PaleoTerrainConfig): TerrainFootprint["category"] {
   if (terrain.sourceId.includes("noaa_ocm_area_a")) return "noaaOcm";
+  if (terrain.sourceId.includes("noaa_ncei")) return "noaaMultibeam";
   if (terrain.sourceId.includes("noaa_nos")) return "noaaBag";
   if (terrain.sourceId.includes("coned_sf_2m")) return "usgsConed";
   if (terrain.sourceId.includes("2023_sf_lidar")) return "usgsLandLidar";
@@ -580,6 +581,7 @@ function terrainFootprintCategory(terrain: PaleoTerrainConfig): TerrainFootprint
 
 function terrainFootprintColor(category: TerrainFootprint["category"], alpha: number): [number, number, number, number] {
   if (category === "noaaBag") return [70, 210, 255, alpha];
+  if (category === "noaaMultibeam") return [99, 160, 255, alpha];
   if (category === "noaaOcm") return [70, 245, 190, alpha];
   if (category === "usgsConed") return [92, 180, 132, alpha];
   if (category === "usgsCsmp") return [255, 208, 92, alpha];
@@ -605,6 +607,7 @@ function shortTerrainLabel(terrain: TerrainFootprint): string {
   if (terrain.sourceId.includes("h13334")) return "H13334";
   if (terrain.sourceId.includes("w00477")) return "W00477";
   if (terrain.sourceId.includes("w00614")) return "W00614";
+  if (terrain.sourceId.includes("ex0907")) return "EX0907";
   if (terrain.sourceId.includes("tomales")) return "Tomales";
   if (terrain.sourceId.includes("point_reyes")) return "Point Reyes";
   if (terrain.sourceId.includes("bolinas")) return "Bolinas";

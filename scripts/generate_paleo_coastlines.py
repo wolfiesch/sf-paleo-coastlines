@@ -8,6 +8,7 @@ sea-level contour.
 
 from __future__ import annotations
 
+import gzip
 import json
 import math
 import shutil
@@ -771,6 +772,27 @@ NOS_BAG_BLOCKS: list[dict[str, Any]] = [
 ]
 
 BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
+    {
+        "sourceId": "noaa_ncei_ex0907_sanctuary_50m_multibeam",
+        "sourceLabel": "NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry",
+        "sourceName": "NOAA Ship Okeanos Explorer EX0907 50 m Sanctuary gridded multibeam bathymetry",
+        "sourceUrl": "https://www.ngdc.noaa.gov/ships/okeanos_explorer/EX0907_mb.html",
+        "role": "Measured offshore multibeam grid for the northwest Greater Farallones shelf and deeper sanctuary corridor.",
+        "folder": "noaa-ex0907-products",
+        "xyzGzipName": "Geog_LatLong_50m_Sanctuary_EX0907.xyz.gz",
+        "xyzName": "Geog_LatLong_50m_Sanctuary_EX0907.xyz",
+        "xyzUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/okeanos_explorer/EX0907/multibeam/data/version2/products/Geog_LatLong_50m_Sanctuary_EX0907.xyz.gz",
+        "datasetName": "Geog_LatLong_50m_Sanctuary_EX0907_bathy.tif",
+        "terrainStem": "noaa_ncei_ex0907_sanctuary_50m",
+        "terrainSize": 1536,
+        "terrainMinimum": -3700.0,
+        "terrainMaximum": -100.0,
+        "contourMinimum": -3600.0,
+        "contourMaximum": -120.0,
+        "contourSimplify": 20,
+        "minDegreesLength": 0.004,
+        "note": "NOAA/NCEI EX0907 50 m gridded multibeam bathymetry, adding measured deeper-water shape across the northwest outer-shelf support gap.",
+    },
     {
         "sourceId": "usgs_csmp_offshore_tomales_point_2m",
         "sourceLabel": "USGS/CSMP DS 781, 2 m Offshore Tomales Point bathymetry",
@@ -1723,6 +1745,14 @@ def bathymetry_block_zip(block: dict[str, Any]) -> Path:
     return bathymetry_block_dir(block) / str(block["zipName"])
 
 
+def bathymetry_block_xyz_gzip(block: dict[str, Any]) -> Path:
+    return bathymetry_block_dir(block) / str(block["xyzGzipName"])
+
+
+def bathymetry_block_xyz(block: dict[str, Any]) -> Path:
+    return bathymetry_block_dir(block) / str(block["xyzName"])
+
+
 def bathymetry_block_dataset(block: dict[str, Any]) -> Path:
     return bathymetry_block_dir(block) / str(block["datasetName"])
 
@@ -1801,6 +1831,26 @@ def bathymetry_block_character_wgs84(block: dict[str, Any]) -> Path:
 
 
 def download_bathymetry_block(block: dict[str, Any]) -> None:
+    if block.get("xyzUrl"):
+        if not bathymetry_block_dataset(block).exists():
+            download_url(str(block["xyzUrl"]), bathymetry_block_xyz_gzip(block))
+            print(f"Unpacking {bathymetry_block_xyz_gzip(block)} to {bathymetry_block_xyz(block)}")
+            with gzip.open(bathymetry_block_xyz_gzip(block), "rb") as source, bathymetry_block_xyz(block).open("wb") as target:
+                shutil.copyfileobj(source, target)
+            run([
+                "gdal_translate",
+                "-q",
+                "-of",
+                "GTiff",
+                "-a_srs",
+                "EPSG:4326",
+                str(bathymetry_block_xyz(block)),
+                str(bathymetry_block_dataset(block)),
+            ])
+        else:
+            print(f"Using existing source file: {bathymetry_block_dataset(block)}")
+        return
+
     if not bathymetry_block_dataset(block).exists():
         download_url(str(block["zipUrl"]), bathymetry_block_zip(block))
         run(["unzip", "-o", str(bathymetry_block_zip(block)), "-d", str(bathymetry_block_dir(block))])
@@ -2521,6 +2571,8 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
         return {"qualityTier": "nearshore_detail", "renderPriority": 82, "resolutionMeters": 1}
     if source_id.startswith("usgs_csmp") or source_id.startswith("usgs_ds684"):
         return {"qualityTier": "nearshore_detail", "renderPriority": 85, "resolutionMeters": 2}
+    if source_id.startswith("noaa_ncei"):
+        return {"qualityTier": "offshore_survey", "renderPriority": 88, "resolutionMeters": 50}
     if "farallon" in source_id or "rittenburg" in source_id:
         resolution = 2 if "rittenburg" in source_id else 10 if "farallon_escarpment" in source_id else None
         return {"qualityTier": "offshore_survey", "renderPriority": 90, "resolutionMeters": resolution}
@@ -3294,7 +3346,7 @@ def best_available_fusion_input_records() -> list[tuple[str, Path]]:
         ),
         *[
             (
-                85 if not ("farallon" in str(block["sourceId"]) or "rittenburg" in str(block["sourceId"])) else 90,
+                88 if str(block["sourceId"]).startswith("noaa_ncei") else 85 if not ("farallon" in str(block["sourceId"]) or "rittenburg" in str(block["sourceId"])) else 90,
                 fusion_resolution_rank(str(block["sourceId"])),
                 str(block["sourceId"]),
                 bathymetry_block_terrain_wgs84(block),
@@ -3324,6 +3376,8 @@ def source_quality_category(source_id: str) -> str:
         return "NOAA OCM survey"
     if source_id.startswith("noaa_nos"):
         return "NOAA BAG survey"
+    if source_id.startswith("noaa_ncei"):
+        return "NOAA multibeam"
     if source_id.startswith("usgs_2023_sf_lidar"):
         return "USGS land LiDAR"
     if source_id.startswith("usgs_csmp") or source_id.startswith("usgs_ds684"):
@@ -3343,6 +3397,7 @@ def source_quality_color(category: str) -> tuple[int, int, int]:
         "USGS CoNED focus": (132, 236, 148),
         "NOAA OCM survey": (42, 202, 170),
         "NOAA BAG survey": (74, 218, 255),
+        "NOAA multibeam": (99, 160, 255),
         "USGS land LiDAR": (236, 241, 222),
         "USGS nearshore": (248, 207, 82),
         "USGS offshore": (188, 126, 255),
@@ -3363,6 +3418,7 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
         "USGS CoNED focus",
         "NOAA OCM survey",
         "NOAA BAG survey",
+        "NOAA multibeam",
         "USGS land LiDAR",
         "USGS nearshore",
         "USGS offshore",
@@ -3557,7 +3613,7 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         None,
         BEST_AVAILABLE_TERRAIN_MIN_M,
         BEST_AVAILABLE_TERRAIN_MAX_M,
-        "Derived best-available terrain fusion for the Golden Gate, San Francisco Bar, nearshore shelf, and Farallones approach. It stacks CRM/CUDEM continuity first, then available NOAA OCM, NOAA BAG, USGS/CSMP, Farallon/Rittenburg, and DS684 survey surfaces where they exist. This is a visual continuity layer, not a new measured survey.",
+        "Derived best-available terrain fusion for the Golden Gate, San Francisco Bar, nearshore shelf, and Farallones approach. It stacks CRM/CUDEM continuity first, then available NOAA OCM, NOAA BAG, NOAA/NCEI multibeam, USGS/CSMP, Farallon/Rittenburg, and DS684 survey surfaces where they exist. This is a visual continuity layer, not a new measured survey.",
         BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG,
     )
     if source_confidence_summary:
@@ -3959,7 +4015,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added smaller high-pixel-density USGS CoNED focus clips when present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, W00614, W00431, W00442, W00433, W00443, W00444, and W00478 Farallon-region / northwest shelf BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added smaller high-pixel-density USGS CoNED focus clips when present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, W00614, W00431, W00442, W00433, W00443, W00444, and W00478 Farallon-region / northwest shelf BAG survey patches, added NOAA/NCEI EX0907 50 m gridded multibeam bathymetry for the northwest offshore shelf, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),

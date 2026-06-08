@@ -149,6 +149,8 @@ def source_family(source_id: str) -> str:
         return "NOAA OCM acoustic bathymetry"
     if source_id.startswith("noaa_nos"):
         return "NOAA NOS BAG"
+    if source_id.startswith("noaa_ncei"):
+        return "NOAA/NCEI multibeam"
     if source_id.startswith("usgs_csmp"):
         return "USGS/CSMP DS 781"
     if source_id.startswith("usgs_sf_bay_1m"):
@@ -179,6 +181,8 @@ def datum_note(source_id: str) -> str:
         return "NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment."
     if source_id.startswith("noaa_nos"):
         return "MLLW; needs tidal-datum conversion before exact sea-level alignment."
+    if source_id.startswith("noaa_ncei"):
+        return "Source gridded multibeam depth values; useful for measured offshore shape, but still compare overlap against BAG, CUDEM, and VDatum before exact sea-level alignment."
     if source_id.startswith("noaa_crm") or source_id.startswith("noaa_etopo"):
         return "Broad sea-level/geoid-style reference; useful for continuity, not local datum precision."
     if source_id.startswith("noaa_cudem"):
@@ -204,6 +208,8 @@ def approximate_native_resolution_m(source_id: str, label: str) -> float | None:
         return 2.0
     if "10 m" in text or "_10m" in text:
         return 10.0
+    if "50 m" in text or "_50m" in text:
+        return 50.0
     if "1_9as" in text or "1/9 arc-second" in text:
         return 3.4
     if "3as" in text or "3 arc-second" in text:
@@ -283,7 +289,12 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
         if block["sourceId"] == source_id:
             folder = module.RAW_DIR / block["folder"]
             paths.append(folder / block["datasetName"])
-            paths.append(folder / block["zipName"])
+            if block.get("zipName"):
+                paths.append(folder / block["zipName"])
+            if block.get("xyzGzipName"):
+                paths.append(folder / block["xyzGzipName"])
+            if block.get("xyzName"):
+                paths.append(folder / block["xyzName"])
             for zip_name in block.get("backscatterZipNames", []):
                 paths.append(folder / zip_name)
             if block.get("characterZipName"):
