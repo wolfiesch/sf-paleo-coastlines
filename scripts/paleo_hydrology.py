@@ -47,18 +47,7 @@ def fill_depressions(dem: np.ndarray, valid: np.ndarray) -> np.ndarray:
     adj_invalid[1:, 1:] |= invalid[:-1, :-1]
     adj_invalid[:-1, 1:] |= invalid[1:, :-1]
     adj_invalid[1:, :-1] |= invalid[:-1, 1:]
-    # Seed cells adjacent to the border at their actual elevation so that interior
-    # cells lower than the border are not artificially flooded by the high border.
-    adj_border = np.zeros((rows, cols), dtype=bool)
-    adj_border[:-1, :] |= border[1:, :]
-    adj_border[1:, :] |= border[:-1, :]
-    adj_border[:, :-1] |= border[:, 1:]
-    adj_border[:, 1:] |= border[:, :-1]
-    adj_border[:-1, :-1] |= border[1:, 1:]
-    adj_border[1:, 1:] |= border[:-1, :-1]
-    adj_border[:-1, 1:] |= border[1:, :-1]
-    adj_border[1:, :-1] |= border[:-1, 1:]
-    seed = valid & (border | adj_invalid | adj_border)
+    seed = valid & (border | adj_invalid)
 
     heap: list[tuple[float, int, int]] = []
     seed_rows, seed_cols = np.nonzero(seed)

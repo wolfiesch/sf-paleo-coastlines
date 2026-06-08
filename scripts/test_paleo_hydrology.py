@@ -4,20 +4,29 @@ import numpy as np
 from paleo_hydrology import fill_depressions
 
 
-def test_fill_raises_interior_pit_to_spill_level():
-    # 5x5 bowl: a deep interior pit (0) ringed by a 5 m lip, all valid land.
-    dem = np.full((5, 5), 10.0, dtype=np.float32)
-    dem[1:4, 1:4] = 5.0
-    dem[2, 2] = 0.0  # the pit
+def test_fill_raises_interior_pit_to_pour_point():
+    # 5x5: a deep pit (0) ringed by a 5 m lip inside a 9 m rim. A 2 m notch at
+    # (2,3) leads to an ocean outlet at (2,4) (invalid). The only escape from the
+    # pit crosses the 2 m notch, so canonical priority-flood must raise the pit to
+    # exactly 2 m - its pour point - not leave it at 0 and not flood it to the rim.
+    dem = np.array([
+        [9, 9, 9, 9, 9],
+        [9, 5, 5, 5, 9],
+        [9, 5, 0, 2, 9],
+        [9, 5, 5, 5, 9],
+        [9, 9, 9, 9, 9],
+    ], dtype=np.float32)
     valid = np.ones((5, 5), dtype=bool)
+    valid[2, 4] = False  # ocean outlet just past the notch
 
     filled = fill_depressions(dem, valid)
 
-    # The pit must be raised to its lowest spill path (the 5 m lip), not left at 0.
-    assert filled[2, 2] == 5.0, filled[2, 2]
-    # Cells already draining to the border are unchanged.
-    assert filled[0, 0] == 10.0
-    # Filling never lowers terrain.
+    # Pit raised to the 2 m pour point: not left at 0, not flooded to the 9 m rim.
+    assert filled[2, 2] == 2.0, filled[2, 2]
+    # The notch is already at its drainage level, so it is unchanged.
+    assert filled[2, 3] == 2.0, filled[2, 3]
+    # Cells already draining out are unchanged; filling never lowers terrain.
+    assert filled[0, 0] == 9.0, filled[0, 0]
     assert np.all(filled >= dem)
 
 
@@ -117,7 +126,7 @@ def test_simplify_keeps_endpoints_for_two_points():
 
 
 def run():
-    test_fill_raises_interior_pit_to_spill_level()
+    test_fill_raises_interior_pit_to_pour_point()
     test_fill_leaves_monotone_slope_untouched()
     print("Task 1 fill_depressions: OK")
     test_d8_points_downhill_west_on_a_ramp()
