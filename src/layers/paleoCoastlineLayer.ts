@@ -519,7 +519,7 @@ function terrainMaterial(terrain: PaleoTerrainConfig, profile: SceneProfileConfi
   const detailBoost = tier === "broad" ? 0 : tier === "bay_mosaic" ? 0.08 : 0.14;
   const specularColor: [number, number, number] = tier === "broad" ? [60, 70, 78] : [78, 88, 96];
 
-  if (textureMode === "relief" || textureMode === "survey") {
+  if (textureMode === "relief") {
     // The relief texture is a baked grayscale hillshade, so it is lit flatly
     // (diffuse near zero). Ambient was 0.96, which pushed every light-gray
     // hillshade pixel to near-white - tolerable when only peaks were exposed,
@@ -530,6 +530,18 @@ function terrainMaterial(terrain: PaleoTerrainConfig, profile: SceneProfileConfi
       diffuse: 0.08,
       shininess: 1,
       specularColor: [8, 10, 12] as [number, number, number],
+    };
+  }
+
+  if (textureMode === "survey") {
+    // Survey composites already contain measured color/detail, but they are no
+    // longer plain grayscale hillshade. A small amount of real mesh lighting
+    // helps hills read as terrain without turning the map into harsh relief art.
+    return {
+      ambient: Math.max(0.38, 0.54 - detailBoost * 0.36),
+      diffuse: tier === "broad" ? 0.2 : tier === "bay_mosaic" ? 0.24 : 0.28,
+      shininess: 4,
+      specularColor: [18, 22, 24] as [number, number, number],
     };
   }
 
