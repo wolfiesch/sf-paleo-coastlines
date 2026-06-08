@@ -811,58 +811,18 @@ function elevatedBaySourceFeature(
   };
 }
 
-function elevatedSourceQualityGapFeature(
-  feature: SourceQualityGapFeature,
-  terrain: PaleoTerrainConfig | null,
-  activeWaterLevel: number,
-  profile: SceneProfileConfig,
-): SourceQualityGapFeature {
-  const zMeters = terrain ? terrainZ(terrain, activeWaterLevel, profile, Z_BANDS.sourceQualityGap) : 0;
-  return {
-    ...feature,
-    geometry: {
-      ...feature.geometry,
-      coordinates: addZToCoordinates(feature.geometry.coordinates, zMeters),
-    },
-  };
-}
+// The ~5,280 source-quality gap cells are flat 2D grid quads. They render as a
+// PolygonLayer (not GeoJsonLayer) so deck.gl skips GeoJSON feature-type
+// separation, and the constant cell elevation is applied per-vertex inside the
+// layer's getPolygon accessor (gated by updateTriggers) rather than by
+// deep-cloning the whole FeatureCollection up front.
+const EMPTY_GAP_ARRAY: SourceQualityGapFeature[] = [];
 
-type GapFeatureCollection = { type: "FeatureCollection"; features: SourceQualityGapFeature[] };
-
-// Stable empty collection so the (hidden) gap layer's `data` keeps the same
-// reference when the overlay is off - deck.gl skips re-diffing it.
-const EMPTY_GAP_COLLECTION: GapFeatureCollection = { type: "FeatureCollection", features: [] };
-
-// Single-slot memo for the elevated gap collection. The ~5,280 cell polygons
-// only need rebuilding when the gaps data, terrain, water level, or scene
-// profile change. createPaleoCoastlineLayers runs on every render (pan, zoom,
-// texture/detail toggles); returning the same reference here lets deck.gl reuse
-// the tessellated geometry instead of re-tessellating 5,280 polygons each time.
-let cachedGapSource: SourceQualityGapCollection | null = null;
-let cachedGapSignature = "";
-let cachedGapCollection: GapFeatureCollection = EMPTY_GAP_COLLECTION;
-
-function elevatedSourceQualityGapCollection(
-  gaps: SourceQualityGapCollection,
-  terrain: PaleoTerrainConfig | null,
-  activeWaterLevel: number,
-  profile: SceneProfileConfig,
-  profileId: SceneProfile,
-): GapFeatureCollection {
-  const signature = `${terrain?.sourceId ?? ""}|${activeWaterLevel}|${profileId}`;
-  if (cachedGapSource === gaps && cachedGapSignature === signature) {
-    return cachedGapCollection;
-  }
-  cachedGapCollection = {
-    type: "FeatureCollection",
-    features: gaps.features.map((feature) =>
-      elevatedSourceQualityGapFeature(feature, terrain, activeWaterLevel, profile),
-    ),
-  };
-  cachedGapSource = gaps;
-  cachedGapSignature = signature;
-  return cachedGapCollection;
-}
+// Once the overlay has been shown, keep its tessellated geometry resident and
+// toggle layer `visible` instead of swapping `data` in and out. Re-toggles then
+// cost nothing (deck.gl retains the GPU geometry); only the first reveal pays a
+// tessellation. Load is not penalized - data stays empty until the first open.
+let gapsEverShown = false;
 
 function addZToCoordinates(coordinates: unknown, zMeters: number): unknown {
   if (!Array.isArray(coordinates)) return coordinates;
@@ -1065,9 +1025,10 @@ export function createPaleoCoastlineLayers(
   const riverFeatures = context.showRivers && paleoRivers
     ? paleoRivers.features.map((feature) => drapedRiverFeature(feature, terrain, profile))
     : [];
-  const sourceQualityGapCollection = context.showSourceQualityGaps && sourceQualityGaps
-    ? elevatedSourceQualityGapCollection(sourceQualityGaps, terrain, activeWaterLevel, profile, context.sceneProfile)
-    : EMPTY_GAP_COLLECTION;
+  if (context.showSourceQualityGaps) gapsEverShown = true;
+  const gapData = gapsEverShown && sourceQualityGaps ? sourceQualityGaps.features : EMPTY_GAP_ARRAY;
+  const gapZMeters = terrain ? terrainZ(terrain, activeWaterLevel, profile, Z_BANDS.sourceQualityGap) : 0;
+  const gapZSignature = `${terrain?.sourceId ?? ""}|${activeWaterLevel}|${context.sceneProfile}`;
   const features = [
     ...slice.coastline.features,
     ...activeProbeFeatures,
@@ -1185,17 +1146,22 @@ export function createPaleoCoastlineLayers(
     parameters: ANNOTATION_PARAMETERS,
   });
 
-  const sourceQualityGapLayer = new GeoJsonLayer<SourceQualityGapProperties>({
+  const sourceQualityGapLayer = new PolygonLayer<SourceQualityGapFeature>({
     id: "paleo-source-quality-gaps",
-    data: sourceQualityGapCollection as never,
+    data: gapData,
+    visible: context.showSourceQualityGaps,
     pickable: true,
     stroked: true,
     filled: true,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 0.6,
+    getPolygon: (feature) =>
+      (feature.geometry.coordinates as number[][][]).map((ring) =>
+        ring.map((position) => [position[0], position[1], gapZMeters] as [number, number, number])),
     getFillColor: sourceQualityGapFillColor,
     getLineColor: sourceQualityGapLineColor,
     getLineWidth: sourceQualityGapLineWidth,
+    updateTriggers: { getPolygon: gapZSignature },
     autoHighlight: true,
     highlightColor: [255, 255, 255, 86],
     parameters: ANNOTATION_PARAMETERS,
