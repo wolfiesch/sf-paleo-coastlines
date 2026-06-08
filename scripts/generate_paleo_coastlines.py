@@ -243,6 +243,110 @@ def build_nautilus_nos_bag_blocks() -> list[dict[str, Any]]:
     return blocks
 
 
+def build_point_reyes_nos_bag_blocks() -> list[dict[str, Any]]:
+    """NOAA Point Reyes / Drakes Bay BAG depth bands for the northern approach."""
+
+    survey = "H11738"
+    source_url = f"https://www.ngdc.noaa.gov/nos/H10001-H12000/{survey}.html"
+    resolution_specs = [
+        {
+            "resolutionLabel": "1 m",
+            "sourceIdResolution": "1m",
+            "fileResolution": "1m",
+            "part": 2,
+            "terrainSize": 1536,
+            "minimum": -21.0,
+            "maximum": -8.0,
+            "contourMinimum": -21.0,
+            "contourMaximum": -9.0,
+        },
+        {
+            "resolutionLabel": "1.5 m",
+            "sourceIdResolution": "1p5m",
+            "fileResolution": "150cm",
+            "part": 1,
+            "terrainSize": 1536,
+            "minimum": -35.0,
+            "maximum": -18.0,
+            "contourMinimum": -35.0,
+            "contourMaximum": -18.0,
+        },
+        {
+            "resolutionLabel": "2 m",
+            "sourceIdResolution": "2m",
+            "fileResolution": "2m",
+            "part": 3,
+            "terrainSize": 1536,
+            "minimum": -50.0,
+            "maximum": -31.0,
+            "contourMinimum": -50.0,
+            "contourMaximum": -31.0,
+        },
+        {
+            "resolutionLabel": "4 m",
+            "sourceIdResolution": "4m",
+            "fileResolution": "4m",
+            "part": 4,
+            "terrainSize": 1024,
+            "minimum": -74.0,
+            "maximum": -45.0,
+            "contourMinimum": -74.0,
+            "contourMaximum": -45.0,
+        },
+    ]
+    blocks: list[dict[str, Any]] = []
+    for resolution in resolution_specs:
+        source_id_resolution = resolution["sourceIdResolution"]
+        file_resolution = resolution["fileResolution"]
+        label = resolution["resolutionLabel"]
+        blocks.append({
+            "sourceId": f"noaa_nos_h11738_{source_id_resolution}_bag",
+            "sourceLabel": f"NOAA NOS H11738, {label} BAG Point Reyes / Drakes Bay bathymetry",
+            "sourceName": f"NOAA/NOS H11738 Bathymetric Attributed Grid, {label}, MLLW, Point Reyes Light to Drakes Bay",
+            "sourceUrl": source_url,
+            "role": "High-resolution NOAA BAG survey depth band for the Point Reyes / Drakes Bay northern Golden Gate approach.",
+            "folder": "noaa-nos-h11738",
+            "fileName": f"H11738_MB_{file_resolution}_MLLW_{resolution['part']}of4.bag",
+            "url": f"https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_{file_resolution}_MLLW_{resolution['part']}of4.bag",
+            "terrainStem": f"noaa_nos_h11738_{source_id_resolution}",
+            "terrainSize": resolution["terrainSize"],
+            "terrainMinimum": resolution["minimum"],
+            "terrainMaximum": resolution["maximum"],
+            "contourMinimum": resolution["contourMinimum"],
+            "contourMaximum": resolution["contourMaximum"],
+            "contourSimplify": 8,
+            "minDegreesLength": 0.002,
+            "clipBounds": BEST_AVAILABLE_BOUNDS,
+            "skipContours": True,
+            "sourceNoData": 1_000_000.0,
+            "note": f"NOAA NOS H11738 {label} BAG survey patch in MLLW, clipped to the current Bay-to-Farallones study box to add measured Point Reyes / Drakes Bay seafloor texture north of the Golden Gate.",
+        })
+
+    blocks.append({
+        "sourceId": "noaa_nos_h11739_vr_bag",
+        "sourceLabel": "NOAA NOS H11739, VR BAG Drakes Bay to Bolinas bathymetry",
+        "sourceName": "NOAA/NOS H11739 Variable Resolution Bathymetric Attributed Grid, MLLW, Drakes Bay to Bolinas Bay",
+        "sourceUrl": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11739.html",
+        "role": "Measured NOAA BAG survey support for Drakes Bay to Bolinas Bay north of the Golden Gate.",
+        "folder": "noaa-nos-h11739",
+        "fileName": "H11739_MB_VR_MLLW_1of1.bag",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11739/BAG/H11739_MB_VR_MLLW_1of1.bag",
+        "terrainStem": "noaa_nos_h11739_vr",
+        "terrainSize": 1024,
+        "terrainMinimum": -46.0,
+        "terrainMaximum": -13.0,
+        "contourMinimum": -45.0,
+        "contourMaximum": -14.0,
+        "contourSimplify": 8,
+        "minDegreesLength": 0.002,
+        "clipBounds": BEST_AVAILABLE_BOUNDS,
+        "skipContours": True,
+        "sourceNoData": 1_000_000.0,
+        "note": "NOAA NOS H11739 VR BAG survey patch in MLLW, clipped to the current Bay-to-Farallones study box to add measured Drakes Bay to Bolinas Bay seafloor support north of the Golden Gate.",
+    })
+    return blocks
+
+
 NOS_BAG_BLOCKS: list[dict[str, Any]] = [
     {
         "sourceId": "noaa_nos_h12109_1m_bag",
@@ -604,6 +708,7 @@ NOS_BAG_BLOCKS: list[dict[str, Any]] = [
         "sourceNoData": 1_000_000.0,
         "note": "NOAA NOS W00614 VR BAG survey patch in MLLW, adding broader sanctuary bathymetry detail across the Farallones-region shelf.",
     },
+    *build_point_reyes_nos_bag_blocks(),
     *build_nautilus_nos_bag_blocks(),
 ]
 
@@ -2343,6 +2448,8 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
     if source_id.startswith("usgs_sf_bay_1m") or source_id.startswith("noaa_ocm_area_a"):
         return {"qualityTier": "source_survey", "renderPriority": 70, "resolutionMeters": 1}
     if source_id.startswith("noaa_nos"):
+        if "_1p5m" in source_id:
+            return {"qualityTier": "source_survey", "renderPriority": 80, "resolutionMeters": 1.5}
         resolution = next(
             (
                 meters
@@ -3048,6 +3155,8 @@ def generate_cudem_terrain_asset() -> dict[str, Any]:
 def fusion_resolution_rank(source_id: str) -> int:
     if "_1m" in source_id:
         return 30
+    if "_1p5m" in source_id:
+        return 25
     if "_2m" in source_id:
         return 20
     if "_4m" in source_id:
