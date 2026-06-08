@@ -225,6 +225,53 @@ High-resolution survey insets now fade slightly at their outer bounds. In plain 
 
 The uncertainty toggle shows extra contour lines around each estimate. These bands only show uncertainty in sea-level height. They do not model erosion, sediment, marsh growth, tectonic motion, or river-channel changes.
 
+## Paleo-Drainage Network
+
+The river layer estimates the last-glacial-lowstand drainage: with sea level at
+-120 m, the Bay basin and inner shelf were dry land, and the Sacramento-San
+Joaquin system drained west through the Golden Gate across the exposed shelf. The
+"Rivers" toggle in the View panel shows this network draped on the 3D terrain,
+with trunk channels drawn thicker and brighter than tributaries.
+
+```text
+topobathymetry DEM
+        + sea level at -120 m  (land = cells above -120 m)
+        v
+priority-flood+epsilon depression fill -> D8 flow directions -> flow accumulation
+        v
+threshold accumulation -> trace channels -> simplify
+        v
+paleo_rivers.geojson  (per-vertex elevation + flow order)
+```
+
+The depression fill uses Priority-Flood+epsilon: each cell raised into a flat or
+pit is lifted to its spill point plus a tiny epsilon, tilting the filled surface
+imperceptibly toward its outlet. That gives D8 a gradient to follow across
+otherwise-flat filled basins, which is what lets the regional drainage integrate
+into one Central Valley + Bay trunk through the Golden Gate instead of
+fragmenting into many local sinks. The epsilon perturbs only the routing surface;
+the channel bed elevations shown in the browser are read from the original DEM,
+so displayed depths are undistorted. The trunk ends at the Gate throat because
+the terrain just west of it already drops below the -120 m lowstand sea, which is
+where the paleo-shoreline actually sat at the deepest lowstand for this DEM.
+
+Regenerate with:
+
+```sh
+pnpm paleo-coastlines:rivers
+```
+
+Tunables (all CLI flags): `--dem` (default the CUDEM work DEM; pass the fused
+`best_available_gate_shelf_terrain_wgs84.tif` when present for sharper Gate
+detail), `--hydro-width` (downsample width; higher = finer + slower),
+`--channel-quantile` (higher = fewer, larger rivers), `--simplify-deg`, and
+`--epsilon` (PF+epsilon flat-routing tilt; pass `0` to revert to plain
+priority-flood fill).
+
+These channels are flow-accumulation estimates for visualization. They are not
+surveyed paleo-river courses, and they do not model sediment infill, channel
+migration, or tectonic change since the lowstand.
+
 ## Data Limits
 
 - USGS/CSMP DS 781 is high resolution, but the blocks are mostly nearshore and state-water focused. The app now uses a longer chain of those blocks, but they still do not form one seamless full-ocean DEM.
