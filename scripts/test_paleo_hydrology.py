@@ -31,7 +31,9 @@ def test_fill_leaves_monotone_slope_untouched():
 
 def test_d8_points_downhill_west_on_a_ramp():
     from paleo_hydrology import d8_flow_directions
-    dem = np.array([[3, 2, 1], [3, 2, 1], [3, 2, 1]], dtype=np.float32)
+    # Values increase left-to-right: col 0 is low (west), col 2 is high (east).
+    # Water drains westward (toward decreasing column index).
+    dem = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]], dtype=np.float32)
     valid = np.ones((3, 3), dtype=bool)
     flowdir = d8_flow_directions(dem, valid)
     # NEIGHBORS index 3 is (0,-1) = due west. Middle column drains west.
@@ -82,7 +84,8 @@ def test_trace_channels_returns_connected_path():
     assert len(lines) == 1, lines
     path = lines[0]["cells"]
     # Path runs downstream as (row, col) pairs, head -> outlet.
-    assert path[0] == (0, 1) and path[-1] in {(0, 0), (0, 1)}, path
+    # dem [[4,3,2,1]] drains east: head at col 1 (acc=2), outlet at col 3 (acc=4).
+    assert path[0] == (0, 1) and path[-1] in {(0, 2), (0, 3)}, path
     assert lines[0]["max_flow"] >= 3.0
 
 
