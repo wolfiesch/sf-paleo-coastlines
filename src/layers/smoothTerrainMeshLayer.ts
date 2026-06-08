@@ -25,6 +25,8 @@ interface SmoothTerrainState {
   hasSmoothedTerrainNormals?: boolean;
 }
 
+const TERRAIN_HEIGHT_SMOOTHING_STRENGTH = 0.18;
+
 const smoothedMeshCache = new WeakMap<object, TerrainMesh>();
 
 function attributeValue(attribute: TerrainMeshAttribute | undefined): NumericArray | undefined {
@@ -48,7 +50,84 @@ function addNormal(
   normals[offset + 2] += nz;
 }
 
-function smoothMeshNormals(mesh: TerrainMesh): TerrainMesh {
+function smoothedPositionAttribute(
+  positions: NumericArray,
+  positionSize: number,
+  indices: NumericArray | undefined,
+): TerrainMeshAttribute | null {
+  if (!indices || positions.length < positionSize * 3) {
+    return null;
+  }
+
+  const vertexCount = Math.floor(positions.length / positionSize);
+  const triangleIndexCount = indices.length;
+  const neighborHeightSums = new Float64Array(vertexCount);
+  const neighborCounts = new Uint16Array(vertexCount);
+  const smoothedPositions = new Float32Array(positions.length);
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  for (let vertex = 0; vertex < vertexCount; vertex += 1) {
+    const offset = vertex * positionSize;
+    const x = Number(positions[offset]);
+    const y = Number(positions[offset + 1]);
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+    for (let component = 0; component < positionSize; component += 1) {
+      smoothedPositions[offset + component] = Number(positions[offset + component]);
+    }
+  }
+
+  const addNeighbor = (vertex: number, neighbor: number) => {
+    if (vertex >= vertexCount || neighbor >= vertexCount) return;
+    neighborHeightSums[vertex] += Number(positions[neighbor * positionSize + 2]);
+    neighborCounts[vertex] += 1;
+  };
+
+  for (let i = 0; i <= triangleIndexCount - 3; i += 3) {
+    const a = vertexIndex(indices, i);
+    const b = vertexIndex(indices, i + 1);
+    const c = vertexIndex(indices, i + 2);
+
+    addNeighbor(a, b);
+    addNeighbor(a, c);
+    addNeighbor(b, a);
+    addNeighbor(b, c);
+    addNeighbor(c, a);
+    addNeighbor(c, b);
+  }
+
+  const edgeTolerance = Math.max(maxX - minX, maxY - minY) * 1e-5;
+
+  for (let vertex = 0; vertex < vertexCount; vertex += 1) {
+    const count = neighborCounts[vertex];
+    if (count === 0) continue;
+
+    const offset = vertex * positionSize;
+    const x = Number(positions[offset]);
+    const y = Number(positions[offset + 1]);
+    const isEdge =
+      Math.abs(x - minX) <= edgeTolerance ||
+      Math.abs(x - maxX) <= edgeTolerance ||
+      Math.abs(y - minY) <= edgeTolerance ||
+      Math.abs(y - maxY) <= edgeTolerance;
+
+    if (isEdge) continue;
+
+    const originalZ = Number(positions[offset + 2]);
+    const neighborZ = neighborHeightSums[vertex] / count;
+    smoothedPositions[offset + 2] =
+      originalZ + (neighborZ - originalZ) * TERRAIN_HEIGHT_SMOOTHING_STRENGTH;
+  }
+
+  return { size: positionSize, value: smoothedPositions };
+}
+
+function smoothMesh(mesh: TerrainMesh): TerrainMesh {
   if (smoothedMeshCache.has(mesh)) {
     return smoothedMeshCache.get(mesh)!;
   }
@@ -70,6 +149,8 @@ function smoothMeshNormals(mesh: TerrainMesh): TerrainMesh {
     return mesh;
   }
 
+  const smoothedPosition = smoothedPositionAttribute(positions, positionSize, indices);
+  const normalPositions = smoothedPosition?.value ?? positions;
   const normals = new Float32Array(vertexCount * 3);
 
   for (let i = 0; i <= triangleIndexCount - 3; i += 3) {
@@ -81,15 +162,15 @@ function smoothMeshNormals(mesh: TerrainMesh): TerrainMesh {
       continue;
     }
 
-    const ax = Number(positions[a * positionSize]);
-    const ay = Number(positions[a * positionSize + 1]);
-    const az = Number(positions[a * positionSize + 2]);
-    const bx = Number(positions[b * positionSize]);
-    const by = Number(positions[b * positionSize + 1]);
-    const bz = Number(positions[b * positionSize + 2]);
-    const cx = Number(positions[c * positionSize]);
-    const cy = Number(positions[c * positionSize + 1]);
-    const cz = Number(positions[c * positionSize + 2]);
+    const ax = Number(normalPositions[a * positionSize]);
+    const ay = Number(normalPositions[a * positionSize + 1]);
+    const az = Number(normalPositions[a * positionSize + 2]);
+    const bx = Number(normalPositions[b * positionSize]);
+    const by = Number(normalPositions[b * positionSize + 1]);
+    const bz = Number(normalPositions[b * positionSize + 2]);
+    const cx = Number(normalPositions[c * positionSize]);
+    const cy = Number(normalPositions[c * positionSize + 1]);
+    const cz = Number(normalPositions[c * positionSize + 2]);
 
     const abx = bx - ax;
     const aby = by - ay;
@@ -132,6 +213,7 @@ function smoothMeshNormals(mesh: TerrainMesh): TerrainMesh {
     ...mesh,
     attributes: {
       ...attributes,
+      ...(smoothedPosition ? { POSITION: smoothedPosition, positions: smoothedPosition } : {}),
       NORMAL: normalAttribute,
       normals: normalAttribute,
     },
@@ -143,7 +225,7 @@ function smoothMeshNormals(mesh: TerrainMesh): TerrainMesh {
 
 export class SmoothTerrainMeshLayer<DataT = unknown> extends SimpleMeshLayer<DataT> {
   protected getModel(mesh: TerrainMesh) {
-    const smoothedMesh = smoothMeshNormals(mesh);
+    const smoothedMesh = smoothMesh(mesh);
     (this.state as SmoothTerrainState).hasSmoothedTerrainNormals = smoothedMesh !== mesh;
     return super.getModel(smoothedMesh);
   }
