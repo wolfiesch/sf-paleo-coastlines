@@ -5,6 +5,14 @@ import heapq
 
 import numpy as np
 
+__all__ = [
+    "fill_depressions",
+    "d8_flow_directions",
+    "flow_accumulation",
+    "trace_channels",
+    "simplify_polyline",
+]
+
 # 8-neighbour offsets and their planar distances (diagonals = sqrt(2)).
 NEIGHBORS = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
 NEIGHBOR_DIST = np.array([2 ** 0.5, 1.0, 2 ** 0.5, 1.0, 1.0, 2 ** 0.5, 1.0, 2 ** 0.5], dtype=np.float64)
