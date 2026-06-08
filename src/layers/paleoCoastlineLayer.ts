@@ -7,6 +7,9 @@ import type {
   PaleoCoastlineFeature,
   PaleoCoastlineProperties,
   PaleoRenderContext,
+  PaleoRiverCollection,
+  PaleoRiverFeature,
+  PaleoRiverProperties,
   PaleoTerrainConfig,
   PaleoTimeSlice,
   SceneProfile,
@@ -55,6 +58,7 @@ const DEPTH_CONTOUR_BAND_METERS = 30;
 const Z_BANDS = {
   probeContour: 18,
   coastline: 22,
+  riverChannel: 24,
   shorelineGlow: 26,
   emergencePoint: 34,
   contourLabel: 52,
@@ -611,6 +615,30 @@ function elevatedFeature(
   };
 }
 
+function drapedRiverFeature(
+  feature: PaleoRiverFeature,
+  terrain: PaleoTerrainConfig | null,
+  profile: SceneProfileConfig,
+): PaleoRiverFeature {
+  if (!terrain) return feature;
+  const coordinates = feature.geometry.coordinates.map((vertex) => {
+    const [lon, lat, elevationMeters = 0] = vertex;
+    return [lon, lat, terrainZ(terrain, elevationMeters, profile, Z_BANDS.riverChannel)];
+  });
+  return { ...feature, geometry: { ...feature.geometry, coordinates } };
+}
+
+function riverColor(feature: { properties: PaleoRiverProperties }): [number, number, number, number] {
+  // Brighter, more opaque for higher-order trunk channels.
+  const order = feature.properties.order;
+  const alpha = Math.min(235, 120 + order * 24);
+  return [86, 188, 255, alpha];
+}
+
+function riverWidth(feature: { properties: PaleoRiverProperties }): number {
+  return 0.8 + feature.properties.order * 0.9;
+}
+
 function emergencePointsForWaterLevel(
   features: PaleoCoastlineFeature[],
   terrain: PaleoTerrainConfig | null,
@@ -710,6 +738,7 @@ export function createPaleoCoastlineLayers(
   data: PaleoTimeSlice[],
   context: PaleoRenderContext,
   baySourceFootprints?: BaySourceFootprintCollection | null,
+  paleoRivers?: PaleoRiverCollection | null,
 ) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
@@ -724,6 +753,9 @@ export function createPaleoCoastlineLayers(
   const terrainFootprints = context.showTerrainFootprints ? terrainFootprintsForSlice(slice, activeWaterLevel, profile) : [];
   const baySourceFeatures = context.showBaySourceFootprints && baySourceFootprints
     ? baySourceFootprints.features.map((feature) => elevatedBaySourceFeature(feature, terrain, activeWaterLevel, profile))
+    : [];
+  const riverFeatures = context.showRivers && paleoRivers
+    ? paleoRivers.features.map((feature) => drapedRiverFeature(feature, terrain, profile))
     : [];
   const features = [
     ...slice.coastline.features,
@@ -920,8 +952,27 @@ export function createPaleoCoastlineLayers(
     parameters: ANNOTATION_PARAMETERS,
   });
 
+  const riverLayer = new GeoJsonLayer<PaleoRiverProperties>({
+    id: "paleo-rivers",
+    data: {
+      type: "FeatureCollection",
+      features: riverFeatures,
+    } as never,
+    pickable: true,
+    stroked: true,
+    filled: false,
+    lineWidthUnits: "pixels",
+    lineWidthMinPixels: 0.8,
+    getLineColor: riverColor,
+    getLineWidth: riverWidth,
+    autoHighlight: true,
+    highlightColor: [255, 255, 255, 160],
+    parameters: ANNOTATION_PARAMETERS,
+  });
+
   return [
     ...terrainLayers,
+    riverLayer,
     terrainFootprintFillLayer,
     terrainFootprintLabelLayer,
     baySourceFootprintLayer,
@@ -944,6 +995,22 @@ export function getPaleoTooltip(object: unknown) {
       style: {
         backgroundColor: "rgba(4, 20, 28, 0.92)",
         color: "#c8fbff",
+        fontSize: "13px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        border: "1px solid rgba(103, 232, 249, 0.35)",
+      },
+    };
+  }
+
+  const maybeRiver = object as Partial<{ properties: PaleoRiverProperties }>;
+  if (maybeRiver.properties && "flow" in maybeRiver.properties && "order" in maybeRiver.properties) {
+    const props = maybeRiver.properties;
+    return {
+      text: `Paleo-drainage channel\norder ${props.order} of 5\nbed ${props.min_elevation_m} to ${props.max_elevation_m} m`,
+      style: {
+        backgroundColor: "rgba(4, 20, 28, 0.92)",
+        color: "#bfe8ff",
         fontSize: "13px",
         padding: "8px 10px",
         borderRadius: "6px",

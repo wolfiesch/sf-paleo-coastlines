@@ -165,6 +165,7 @@ export interface PaleoRenderContext {
   showPaleoUncertainty: boolean;
   showTerrainFootprints: boolean;
   showBaySourceFootprints: boolean;
+  showRivers: boolean;
   paleoWaterLevelMeters: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;
