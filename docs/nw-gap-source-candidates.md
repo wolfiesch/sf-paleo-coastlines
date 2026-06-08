@@ -8,11 +8,18 @@ Bounds: `[-123.55, 37.95, -123.15, 38.15]`
 
 ## Summary
 
-- New candidate source groups: 36
-- Candidate groups already in the local stack: 7
+- New candidate source groups: 35
+- Candidate groups already in the local stack: 8
 - Downloadable new BAG source groups: none
 - Downloadable new BAG files found: 0
 - Downloadable new BAG file size: 0 B
+- Screened-out ready-made products: 1
+
+## Screened-Out Products
+
+| Product | Source | Why it is not being added now | Checked bounds |
+|---|---|---|---|
+| [EX0903_Geog_50m](https://data.ngdc.noaa.gov/platforms/ocean/ships/okeanos_explorer/EX0903/multibeam/data/version3/products/EX0903_Geog_50m.xyz.gz) | EX0903 | The ready-made version 3 grid ends near longitude -124.33, west of the study bounds that start at -123.55, so it does not fill this visible northwest shelf gap. | `[-135.7459259, 39.5978966, -124.3254166, 40.7603951]` |
 
 ## NOAA/NCEI BAG bathymetry
 
@@ -50,12 +57,12 @@ Unique source groups: 34
 | EW9414 | new candidate | 1 | [Maurice Ewing](https://www.ngdc.noaa.gov/ships/maurice_ewing/EW9414_mb.html) |
 | EW9505 | new candidate | 1 | [Maurice Ewing](https://www.ngdc.noaa.gov/ships/maurice_ewing/EW9505_mb.html) |
 | EX0903 | new candidate | 1 | [NOAA Ship OKEANOS EXPLORER (R337)](https://www.ngdc.noaa.gov/ships/okeanos_explorer/EX0903_mb.html) |
-| EX0907 | new candidate | 2 | [NOAA Ship OKEANOS EXPLORER (R337)](https://www.ngdc.noaa.gov/ships/okeanos_explorer/EX0907_mb.html); [NOAA Ship OKEANOS EXPLORER (R337)](https://www.ngdc.noaa.gov/ships/okeanos_explorer/EX0907_mb.html) |
 | LPRS02RR | new candidate | 1 | [Roger Revelle](https://www.ngdc.noaa.gov/ships/roger_revelle/LPRS02RR_mb.html) |
 | LWAD99MV | new candidate | 1 | [Melville](https://www.ngdc.noaa.gov/ships/melville/LWAD99MV_mb.html) |
 | MGL1302 | new candidate | 1 | [Marcus G. Langseth](https://www.ngdc.noaa.gov/ships/marcus_g_langseth/MGL1302_mb.html) |
 | MV1216 | new candidate | 1 | [Melville](https://www.ngdc.noaa.gov/ships/melville/MV1216_mb.html) |
 | MV1405 | new candidate | 1 | [Melville](https://www.ngdc.noaa.gov/ships/melville/MV1405_mb.html) |
+| MV1407 | new candidate | 1 | [Melville](https://www.ngdc.noaa.gov/ships/melville/MV1407_mb.html) |
 
 ## NOAA/NCEI multibeam products
 

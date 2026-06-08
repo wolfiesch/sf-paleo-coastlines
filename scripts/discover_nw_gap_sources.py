@@ -65,6 +65,16 @@ KNOWN_LOCAL_SURVEYS = {
     "W00614",
 }
 
+SCREENED_OUT_PRODUCTS = [
+    {
+        "id": "EX0903_Geog_50m",
+        "source": "EX0903",
+        "reason": "The ready-made version 3 grid ends near longitude -124.33, west of the study bounds that start at -123.55, so it does not fill this visible northwest shelf gap.",
+        "checkedProductUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/okeanos_explorer/EX0903/multibeam/data/version3/products/EX0903_Geog_50m.xyz.gz",
+        "checkedBounds": [-135.7459259, 39.5978966, -124.3254166, 40.7603951],
+    },
+]
+
 BAG_ARCHIVE_ROOT = "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000"
 BAG_SURVEY_PAGE_ROOT = "https://www.ngdc.noaa.gov/nos/W00001-W02000"
 
@@ -244,8 +254,10 @@ def build_report() -> dict[str, Any]:
             "downloadableNewBagCandidateIds": downloadable_bag_source_ids,
             "downloadableNewBagFileCount": len(downloadable_bag_files),
             "downloadableNewBagBytes": downloadable_bag_bytes,
+            "screenedOutProductCount": len(SCREENED_OUT_PRODUCTS),
         },
         "services": service_summaries,
+        "screenedOutProducts": SCREENED_OUT_PRODUCTS,
     }
 
 
@@ -278,8 +290,23 @@ def write_markdown(report: dict[str, Any]) -> None:
         f"- Downloadable new BAG source groups: {', '.join(report['summary']['downloadableNewBagCandidateIds']) or 'none'}",
         f"- Downloadable new BAG files found: {report['summary']['downloadableNewBagFileCount']}",
         f"- Downloadable new BAG file size: {format_bytes(report['summary']['downloadableNewBagBytes'])}",
+        f"- Screened-out ready-made products: {report['summary']['screenedOutProductCount']}",
         "",
     ]
+
+    if report.get("screenedOutProducts"):
+        lines.extend([
+            "## Screened-Out Products",
+            "",
+            "| Product | Source | Why it is not being added now | Checked bounds |",
+            "|---|---|---|---|",
+        ])
+        for product in report["screenedOutProducts"]:
+            lines.append(
+                f"| [{product['id']}]({product['checkedProductUrl']}) | {product['source']} | "
+                f"{product['reason']} | `{product['checkedBounds']}` |"
+            )
+        lines.append("")
 
     for service in report["services"]:
         lines.extend([
