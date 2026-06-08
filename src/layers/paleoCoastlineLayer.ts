@@ -99,6 +99,8 @@ const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
     elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/elevation/{z}/{x}/{y}.png",
     textures: {
       shadedRelief: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/relief/{z}/{x}/{y}.png",
+      depthColor: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/color/{z}/{x}/{y}.png",
+      surveyComposite: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/composite/{z}/{x}/{y}.png",
     },
     minZoom: 12,
     maxZoom: 16,
