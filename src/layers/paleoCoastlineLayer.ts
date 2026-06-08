@@ -22,6 +22,7 @@ import type {
 } from "../types";
 import { terrainRevealExtension } from "./terrainRevealExtension";
 import { PALEO_PLACE_LABELS, type PaleoPlaceLabel } from "../lib/paleoPlaceLabels";
+import { SmoothTerrainMeshLayer } from "./smoothTerrainMeshLayer";
 
 interface PickedPaleoFeature {
   properties: PaleoCoastlineProperties;
@@ -449,6 +450,17 @@ function terrainRevealReliefScale(terrain: PaleoTerrainConfig): number {
   if (tier === "broad") return 0.78;
   if (tier === "bay_mosaic") return 1.04;
   return 1.2;
+}
+
+function terrainRevealReliefStrengthForRender(
+  terrain: PaleoTerrainConfig,
+  context: PaleoRenderContext,
+  profile: SceneProfileConfig,
+): number {
+  if (context.terrainTextureMode === "relief" || context.terrainTextureMode === "survey") {
+    return terrainRevealReliefScale(terrain) * profile.terrainReliefStrength * 0.16;
+  }
+  return terrainRevealReliefScale(terrain) * profile.terrainReliefStrength;
 }
 
 function terrainRevealStrength(terrain: PaleoTerrainConfig): number {
@@ -1041,12 +1053,13 @@ export function createPaleoCoastlineLayers(
       parameters: terrainDepthBiasParameters(terrain),
       _subLayerProps: {
         mesh: {
+          type: SmoothTerrainMeshLayer,
           extensions: [terrainRevealExtension],
           flatShading: false,
           terrainRevealBandMeters: terrainRevealBandMeters(terrain),
           terrainRevealDepthFogStrength: terrainDepthFogStrength(terrain) * profile.waterDepthFogStrength,
           terrainRevealEnabled: true,
-          terrainRevealReliefStrength: terrainRevealReliefScale(terrain) * profile.terrainReliefStrength,
+          terrainRevealReliefStrength: terrainRevealReliefStrengthForRender(terrain, context, profile),
           terrainRevealStrength: terrainRevealStrength(terrain) * profile.revealStrengthScale,
           terrainRevealSubmergedStrength: terrainSubmergedStrength(terrain) * profile.submergedStrengthScale,
           terrainRevealWaterLevelZ: terrainZ(terrain, activeWaterLevel, profile, zLiftMeters),
