@@ -13,7 +13,8 @@
     "paleo-coastlines:usgs-2023-sf-dem": "python3 scripts/acquire_usgs_2023_sf_lidar_dem.py",
     "paleo-coastlines:usgs-coned-sf": "python3 scripts/acquire_usgs_coned_sf_2m.py",
     "paleo-coastlines:usgs-bay-dem": "python3 scripts/acquire_usgs_sf_bay_1m_dem.py",
-    "paleo-coastlines:bay-source-footprints": "python3 scripts/acquire_usgs_sf_bay_source_footprints.py"
+    "paleo-coastlines:bay-source-footprints": "python3 scripts/acquire_usgs_sf_bay_source_footprints.py",
+    "paleo-coastlines:rivers": "python3 scripts/generate_paleo_rivers.py"
   },
   "dependencies": {
     "@deck.gl/geo-layers": "^9.2.11",
