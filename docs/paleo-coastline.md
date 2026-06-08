@@ -323,3 +323,27 @@ Primary references:
 - USGS SF Bay bathymetry DEM: https://www.usgs.gov/data/high-resolution-1-m-digital-elevation-model-dem-san-francisco-bay-california-created-using
 - USGS Atwater/Hedel/Helley sea-level report: https://pubs.usgs.gov/of/1976/0389/report.pdf
 - NPS Presidio shoreline reference: https://www.nps.gov/prsf/learn/nature/sea-level-rise-since-the-last-glaciation.htm
+
+## Time-True Sea Level and Guided Tour
+
+The waterline control has two modes:
+
+- **Time** (default): a years-before-present slider (0-20,000) driven by a
+  relative-sea-level curve (`src/lib/seaLevelCurve.ts`). Control points are
+  anchored to the four science slices and shaped to the post-glacial rise of
+  Lambeck et al. 2014. The year is converted to a sea-level depth that feeds the
+  existing waterline renderer unchanged.
+- **Depth**: the original raw-meters waterline slider.
+
+A baked stats table (`pnpm paleo-coastlines:stats` -> `sealevel_stats.json`)
+powers the "more land than today" readout. Year-gated paleo-geography labels
+and a scripted camera + time flythrough (`src/lib/tourScript.ts`) narrate the
+drowning of the coastline.
+
+```sh
+pnpm paleo-coastlines:stats   # rebuild the land-exposed table
+pnpm test                     # run the sea-level curve unit tests
+```
+
+The RSL curve gives approximate relative heights. It does not model
+glacio-isostatic adjustment, tectonic motion, or sediment infill.
