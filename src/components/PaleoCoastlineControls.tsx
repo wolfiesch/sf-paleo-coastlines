@@ -1,4 +1,4 @@
-import { Clock, Database, Gauge, Layers3, MapPin, MapPinned, Pause, Play, RotateCcw, Waves } from "lucide-react";
+import { Clapperboard, Clock, Database, Gauge, Layers3, MapPin, MapPinned, Pause, Play, RotateCcw, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
 import type { PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
@@ -36,6 +36,8 @@ interface PaleoCoastlineControlsProps {
   onResetWaterLevel: () => void;
   onYearsChange: (years: number) => void;
   onToggleTimeMode: () => void;
+  isTouring: boolean;
+  onToggleTour: () => void;
   onTogglePlaceLabels: () => void;
   onTerrainDetailChange: (level: TerrainDetailLevel) => void;
   onTerrainTextureModeChange: (mode: TerrainTextureMode) => void;
@@ -147,6 +149,8 @@ export function PaleoCoastlineControls({
   onResetWaterLevel,
   onYearsChange,
   onToggleTimeMode,
+  isTouring,
+  onToggleTour,
   onTogglePlaceLabels,
   onTerrainDetailChange,
   onTerrainTextureModeChange,
@@ -173,6 +177,20 @@ export function PaleoCoastlineControls({
           <p className="text-xs leading-4 text-gray-400">{activeSlice.summary}</p>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={onToggleTour}
+        className={`mb-3 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+          isTouring
+            ? "border-rose-300/40 bg-rose-300 text-gray-950"
+            : "border-cyan-400/30 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-300 hover:text-gray-950"
+        }`}
+        aria-pressed={isTouring}
+      >
+        <Clapperboard size={15} />
+        {isTouring ? "Stop tour" : "Play guided tour"}
+      </button>
 
       <div className="mb-3 grid grid-cols-4 gap-1 rounded-lg border border-gray-700/50 bg-gray-900/70 p-1">
         {options.map((slice) => {

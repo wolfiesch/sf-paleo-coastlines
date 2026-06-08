@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DeckGL } from "@deck.gl/react";
 import { Map } from "react-map-gl/maplibre";
 import type { MapViewState } from "deck.gl";
+import { FlyToInterpolator } from "deck.gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { PaleoCoastlineControls } from "./components/PaleoCoastlineControls";
 import { createPaleoCoastlineLayers, getPaleoTooltip } from "./layers/paleoCoastlineLayer";
 import { DARK_MAP_STYLE } from "./lib/mapStyles";
 import { MAX_YEARS_BP, seaLevelForYearsBP } from "./lib/seaLevelCurve";
+import { TOUR_STEPS } from "./lib/tourScript";
 import type {
   BaySourceFootprintCollection,
   PaleoManifest,
@@ -135,6 +137,16 @@ function App() {
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("bottom");
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");
+  const [isTouring, setIsTouring] = useState(false);
+  const [tourCaption, setTourCaption] = useState<string | null>(null);
+  // Monotonic generation token. Each runTour() claims a new id; a stop, a new
+  // run, or unmount bumps it so any in-flight loop fails closed on its next check.
+  const tourRunId = useRef(0);
+
+  // Invalidate any in-flight tour loop if the component unmounts mid-tour.
+  useEffect(() => () => {
+    tourRunId.current += 1;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -445,13 +457,62 @@ function App() {
     });
   }, [yearsBeforePresent]);
 
+  const stopTour = useCallback(() => {
+    tourRunId.current += 1; // invalidate any in-flight tour loop
+    setIsTouring(false);
+    setTourCaption(null);
+  }, []);
+
+  const runTour = useCallback(async () => {
+    const myRun = (tourRunId.current += 1); // claim a generation; supersedes any prior loop
+    setIsPlaying(false);
+    setTimeMode(true);
+    setIsTouring(true);
+
+    const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+
+    for (const step of TOUR_STEPS) {
+      if (tourRunId.current !== myRun) return; // a stop, a newer run, or unmount superseded us
+      setTourCaption(step.caption);
+      setYearsBeforePresent(step.yearsBP);
+      setWaterLevelMeters(Math.round(seaLevelForYearsBP(step.yearsBP)));
+      setViewState({
+        ...step.viewState,
+        transitionDuration: step.flyMs,
+        transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+      } as MapViewState);
+      await sleep(step.flyMs + step.holdMs);
+    }
+
+    if (tourRunId.current !== myRun) return; // superseded during the final hold
+    // Clear transition props so subsequent user drags are not re-animated.
+    setViewState((current) => ({ ...current, transitionDuration: 0, transitionInterpolator: undefined } as MapViewState));
+    setIsTouring(false);
+    setTourCaption(null);
+  }, []);
+
+  const handleToggleTour = useCallback(() => {
+    if (isTouring) {
+      stopTour();
+    } else {
+      void runTour();
+    }
+  }, [isTouring, runTour, stopTour]);
+
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-gray-950 text-white">
       <DeckGL
         layers={layers}
         viewState={viewState}
         controller
-        onViewStateChange={({ viewState: nextViewState }) => setViewState(nextViewState as MapViewState)}
+        onViewStateChange={({ viewState: nextViewState, interactionState }) => {
+          if (interactionState?.isDragging && isTouring) {
+            tourRunId.current += 1; // cancel the in-flight tour loop
+            setIsTouring(false);
+            setTourCaption(null);
+          }
+          setViewState(nextViewState as MapViewState);
+        }}
         getTooltip={({ object }) => getPaleoTooltip(object)}
       >
         <Map mapStyle={DARK_MAP_STYLE} reuseMaps />
@@ -494,6 +555,8 @@ function App() {
           exposedAreaKm2={exposedAreaForMeters(seaLevelStats, waterLevelMeters ?? -120)}
           onYearsChange={handleYearsChange}
           onToggleTimeMode={handleToggleTimeMode}
+          isTouring={isTouring}
+          onToggleTour={handleToggleTour}
           onTogglePlaceLabels={() => setShowPlaceLabels((shown) => !shown)}
           onWaterLevelChange={(level) => {
             setIsPlaying(false);
@@ -526,6 +589,13 @@ function App() {
           </div>
         ) : null}
       </aside>
+      {tourCaption ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-30 flex justify-center px-4">
+          <div className="max-w-2xl rounded-lg border border-cyan-400/25 bg-gray-950/85 px-5 py-3 text-center text-sm leading-5 text-cyan-50 shadow-2xl backdrop-blur-md">
+            {tourCaption}
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
