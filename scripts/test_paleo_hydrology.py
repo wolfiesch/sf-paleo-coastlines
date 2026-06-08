@@ -62,7 +62,8 @@ def test_d8_marks_invalid_as_sentinel():
 
 def test_accumulation_grows_downstream():
     from paleo_hydrology import d8_flow_directions, flow_accumulation
-    # 1x4 ramp draining west: each cell collects everything east of it.
+    # 1x4 ramp draining east (high col 0 -> low col 3): accumulation grows
+    # downstream, so the col-3 outlet collects all four cells.
     dem = np.array([[4, 3, 2, 1]], dtype=np.float32)
     valid = np.ones((1, 4), dtype=bool)
     flowdir = d8_flow_directions(dem, valid)

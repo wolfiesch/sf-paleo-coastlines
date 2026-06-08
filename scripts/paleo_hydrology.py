@@ -97,12 +97,11 @@ def d8_flow_directions(filled: np.ndarray, valid: np.ndarray) -> np.ndarray:
 def flow_accumulation(flowdir: np.ndarray, valid: np.ndarray) -> np.ndarray:
     """Number of upstream cells draining through each cell (self-inclusive).
 
-    Processes valid cells in descending flow-direction-consistent order by
-    pushing each cell's running total to its single D8 downstream neighbour.
-    Iterating cells from the most upstream (highest) toward outlets guarantees a
-    cell's total is final before it is consumed. We approximate that order by
-    repeatedly relaxing along the (acyclic) D8 graph using a processed counter:
-    a topological pass keyed on in-degree.
+    Each valid cell starts with a count of 1 and pushes its running total to its
+    single D8 downstream neighbour. Kahn's algorithm gives the exact processing
+    order over the acyclic D8 graph: a cell is only consumed once all of its
+    upstream contributors (its in-degree) have been processed, so its total is
+    final before it is pushed downstream.
     """
     rows, cols = flowdir.shape
     acc = valid.astype(np.float64)
