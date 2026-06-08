@@ -7,6 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { PaleoCoastlineControls } from "./components/PaleoCoastlineControls";
 import { createPaleoCoastlineLayers, getPaleoTooltip } from "./layers/paleoCoastlineLayer";
 import { DARK_MAP_STYLE } from "./lib/mapStyles";
+import { MAX_YEARS_BP, seaLevelForYearsBP } from "./lib/seaLevelCurve";
 import type {
   BaySourceFootprintCollection,
   PaleoManifest,
@@ -17,6 +18,7 @@ import type {
   PaleoTimeSliceManifestItem,
   PaleoWaterlineProbeIndex,
   SceneProfile,
+  SeaLevelStats,
   TerrainDetailLevel,
   TerrainTextureMode,
 } from "./types";
@@ -67,6 +69,23 @@ const VIEW_PRESETS = [
 
 const BAY_SOURCE_FOOTPRINTS_URL = "/data/paleo-coastlines/usgs_sf_bay_source_footprints.geojson";
 const RIVERS_URL = "/data/paleo-coastlines/paleo_rivers.geojson";
+const SEALEVEL_STATS_URL = "/data/paleo-coastlines/sealevel_stats.json";
+
+function exposedAreaForMeters(stats: SeaLevelStats | null, meters: number): number | null {
+  if (!stats || !stats.levels.length) return null;
+  const sorted = [...stats.levels].sort((a, b) => a.meters - b.meters);
+  if (meters <= sorted[0].meters) return sorted[0].exposed_vs_present_km2;
+  if (meters >= sorted[sorted.length - 1].meters) return sorted[sorted.length - 1].exposed_vs_present_km2;
+  for (let i = 1; i < sorted.length; i += 1) {
+    if (meters <= sorted[i].meters) {
+      const a = sorted[i - 1];
+      const b = sorted[i];
+      const t = (meters - a.meters) / (b.meters - a.meters);
+      return a.exposed_vs_present_km2 + t * (b.exposed_vs_present_km2 - a.exposed_vs_present_km2);
+    }
+  }
+  return sorted[sorted.length - 1].exposed_vs_present_km2;
+}
 
 function nearestProbeLevel(level: number, levels: number[]): number | null {
   if (!levels.length) return null;
@@ -109,6 +128,10 @@ function App() {
   const [showRivers, setShowRivers] = useState(true);
   const [paleoRivers, setPaleoRivers] = useState<PaleoRiverCollection | null>(null);
   const [loadingRivers, setLoadingRivers] = useState(false);
+  const [timeMode, setTimeMode] = useState(true);
+  const [yearsBeforePresent, setYearsBeforePresent] = useState(MAX_YEARS_BP);
+  const [showPlaceLabels, setShowPlaceLabels] = useState(true);
+  const [seaLevelStats, setSeaLevelStats] = useState<SeaLevelStats | null>(null);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("bottom");
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");
@@ -144,6 +167,22 @@ function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStats() {
+      try {
+        const response = await fetch(SEALEVEL_STATS_URL);
+        if (!response.ok) return;
+        const payload = await response.json() as SeaLevelStats;
+        if (!cancelled) setSeaLevelStats(payload);
+      } catch {
+        // Stats are a non-critical enhancement; ignore load failures.
+      }
+    }
+    void loadStats();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -188,15 +227,25 @@ function App() {
   useEffect(() => {
     if (!isPlaying) return;
 
+    if (timeMode) {
+      const timer = window.setInterval(() => {
+        setYearsBeforePresent((current) => {
+          const next = current <= 0 ? MAX_YEARS_BP : current - 200;
+          setWaterLevelMeters(Math.round(seaLevelForYearsBP(next)));
+          return next;
+        });
+      }, 120);
+      return () => window.clearInterval(timer);
+    }
+
     const timer = window.setInterval(() => {
       setWaterLevelMeters((current) => {
         const level = current ?? 2;
         return level <= -120 ? 2 : level - 1;
       });
     }, 220);
-
     return () => window.clearInterval(timer);
-  }, [isPlaying]);
+  }, [isPlaying, timeMode]);
 
   const activeProbeLevel = useMemo(() => nearestProbeLevel(
     waterLevelMeters ?? loadedSlices[activeSliceId]?.seaLevelMeters ?? sliceCatalog.find((item) => item.id === activeSliceId)?.seaLevelMeters ?? -120,
@@ -369,7 +418,9 @@ function App() {
     terrainDetail,
     terrainTextureMode,
     sceneProfile,
-  }, baySourceFootprints, paleoRivers), [activeSliceId, baySourceFootprints, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showRivers, showTerrainFootprints, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters]);
+    showPlaceLabels,
+    currentYearsBP: yearsBeforePresent,
+  }, baySourceFootprints, paleoRivers), [activeSliceId, baySourceFootprints, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showTerrainFootprints, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -379,6 +430,20 @@ function App() {
       setWaterLevelMeters(nextSlice.seaLevelMeters);
     }
   }, [sliceCatalog]);
+
+  const handleYearsChange = useCallback((years: number) => {
+    setIsPlaying(false);
+    setYearsBeforePresent(years);
+    setWaterLevelMeters(Math.round(seaLevelForYearsBP(years)));
+  }, []);
+
+  const handleToggleTimeMode = useCallback(() => {
+    setTimeMode((mode) => {
+      const next = !mode;
+      if (next) setWaterLevelMeters(Math.round(seaLevelForYearsBP(yearsBeforePresent)));
+      return next;
+    });
+  }, [yearsBeforePresent]);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-gray-950 text-white">
@@ -423,6 +488,13 @@ function App() {
           onToggleBaySourceFootprints={() => setShowBaySourceFootprints((shown) => !shown)}
           showRivers={showRivers}
           onToggleRivers={() => setShowRivers((shown) => !shown)}
+          timeMode={timeMode}
+          yearsBeforePresent={yearsBeforePresent}
+          showPlaceLabels={showPlaceLabels}
+          exposedAreaKm2={exposedAreaForMeters(seaLevelStats, waterLevelMeters ?? -120)}
+          onYearsChange={handleYearsChange}
+          onToggleTimeMode={handleToggleTimeMode}
+          onTogglePlaceLabels={() => setShowPlaceLabels((shown) => !shown)}
           onWaterLevelChange={(level) => {
             setIsPlaying(false);
             setWaterLevelMeters(level);

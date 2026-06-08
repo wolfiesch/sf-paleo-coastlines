@@ -111,6 +111,19 @@ export interface PaleoRiverCollection {
   features: PaleoRiverFeature[];
 }
 
+export interface SeaLevelStatsRow {
+  meters: number;
+  land_km2: number;
+  exposed_vs_present_km2: number;
+}
+
+export interface SeaLevelStats {
+  source_dem: string;
+  present_level_m: number;
+  levels: SeaLevelStatsRow[];
+  note: string;
+}
+
 export interface PaleoTimeSlice {
   id: PaleoTimeSliceId;
   label: string;
