@@ -34,6 +34,7 @@ class TerrainTileset:
 
 DEFAULT_TILESETS = [
   TerrainTileset("usgs_2023_sf_lidar_dem", 12, 16),
+  TerrainTileset("usgs_coned_sf_2m_gate_shelf", 12, 15),
 ]
 
 
@@ -208,10 +209,14 @@ def main() -> None:
     terrain = load_terrain(args.manifest, source_id)
     generated.append(generate_tileset(terrain, args.output_root, min_zoom, max_zoom, args.clean))
 
-  manifest = {
-    "generated": generated,
-  }
   args.output_root.mkdir(parents=True, exist_ok=True)
+  all_tilesets = [
+    json.loads(path.read_text())
+    for path in sorted(args.output_root.glob("*/tileset.json"))
+  ]
+  manifest = {
+    "generated": all_tilesets,
+  }
   (args.output_root / "terrain_tiles_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
   for item in generated:

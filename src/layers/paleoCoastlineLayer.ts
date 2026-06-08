@@ -102,6 +102,15 @@ const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
     maxZoom: 16,
     tileSize: 256,
   },
+  usgs_coned_sf_2m_gate_shelf: {
+    elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_gate_shelf/elevation/{z}/{x}/{y}.png",
+    textures: {
+      shadedRelief: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_gate_shelf/relief/{z}/{x}/{y}.png",
+    },
+    minZoom: 12,
+    maxZoom: 14,
+    tileSize: 256,
+  },
 };
 
 interface SceneProfileConfig {
@@ -302,9 +311,10 @@ function bestAvailableTerrainStackForSlice(slice: PaleoTimeSlice): PaleoTerrainC
     ?? terrainById.get("usgs_coned_sf_2m")
     ?? terrains[0];
   const best = bestAvailableTerrainForSlice(slice);
+  const gateShelfDetail = terrainById.get("usgs_coned_sf_2m_gate_shelf");
   const landDetail = terrainById.get("usgs_2023_sf_lidar_dem");
 
-  return uniqueTerrains([broadSupport, best, landDetail]);
+  return uniqueTerrains([broadSupport, best, gateShelfDetail, landDetail]);
 }
 
 function terrainStackForRender(slice: PaleoTimeSlice, context: PaleoRenderContext): PaleoTerrainConfig[] {
@@ -397,6 +407,7 @@ function terrainVisualLiftMeters(terrain: PaleoTerrainConfig): number {
   const sourceJitter = stableSourceOffsetMeters(terrain.sourceId);
   if (terrain.sourceId.includes("crm")) return 0;
   if (terrain.sourceId.includes("cudem")) return 4;
+  if (terrain.sourceId.includes("usgs_coned_sf_2m_gate_shelf")) return 11 + sourceJitter;
   if (tier === "bay_mosaic") return 8 + sourceJitter;
   if (tier === "source_survey") return sourceSurveyLiftMeters(terrain) + sourceJitter;
   if (tier === "nearshore_detail") return 20 + sourceJitter;
