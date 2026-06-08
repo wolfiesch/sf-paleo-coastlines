@@ -94,7 +94,7 @@ const ANNOTATION_PARAMETERS = {
   depthWriteEnabled: false,
 } as const;
 
-const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
+export const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
   usgs_2023_sf_lidar_dem: {
     elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/elevation/{z}/{x}/{y}.png",
     textures: {
