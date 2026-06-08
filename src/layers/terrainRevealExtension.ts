@@ -49,13 +49,15 @@ in float terrainReveal_heightZ;
 
       if (terrainReveal.enabled > 0.5) {
         vec2 heightGradient = vec2(dFdx(terrainReveal_heightZ), dFdy(terrainReveal_heightZ));
-        float slope = clamp(length(heightGradient) * 0.12, 0.0, 1.0);
-        vec3 reliefNormal = normalize(vec3(-heightGradient.x * 0.08, -heightGradient.y * 0.08, 1.0));
-        vec3 reliefLight = normalize(vec3(-0.58, 0.46, 0.68));
+        float gradientSize = length(heightGradient);
+        float slope = smoothstep(0.02, 1.45, gradientSize * 0.08);
+        vec2 softenedGradient = heightGradient / (1.0 + gradientSize * 0.28);
+        vec3 reliefNormal = normalize(vec3(-softenedGradient.x * 0.045, -softenedGradient.y * 0.045, 1.0));
+        vec3 reliefLight = normalize(vec3(-0.48, 0.38, 0.78));
         float reliefShade = dot(reliefNormal, reliefLight);
-        float reliefContrast = clamp((reliefShade - 0.54) * 2.85, -0.58, 0.72);
+        float reliefContrast = clamp((reliefShade - 0.62) * 1.85, -0.34, 0.42);
         color.rgb *= 1.0 + reliefContrast * slope * terrainReveal.reliefStrength;
-        color.rgb += vec3(0.09, 0.10, 0.085) * slope * terrainReveal.reliefStrength;
+        color.rgb += vec3(0.055, 0.06, 0.05) * slope * terrainReveal.reliefStrength;
 
         float aboveWater = smoothstep(terrainReveal.waterLevelZ - 0.4, terrainReveal.waterLevelZ + 1.2, terrainReveal_heightZ);
         float nearWaterline = 1.0 - smoothstep(
