@@ -25,6 +25,10 @@ The generation script uses local GDAL tools and writes browser-ready terrain and
 
 See `docs/paleo-coastline.md` for the data sources, assumptions, and current limits.
 
+See `docs/public-claim-audit.md` for defensible public wording about how this
+project compares with similar Bay Area shoreline, bathymetry, and sea-level
+mapping projects.
+
 The paleo-drainage river layer is generated separately; see the "Paleo-Drainage Network" section in `docs/paleo-coastline.md`.
 
 The app defaults to a years-before-present time mode driven by a relative sea-level curve, with a guided tour; see "Time-True Sea Level and Guided Tour" in `docs/paleo-coastline.md`.
