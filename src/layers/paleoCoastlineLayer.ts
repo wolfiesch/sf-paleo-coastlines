@@ -13,6 +13,9 @@ import type {
   PaleoTerrainConfig,
   PaleoTimeSlice,
   SceneProfile,
+  SourceQualityGapCollection,
+  SourceQualityGapFeature,
+  SourceQualityGapProperties,
   TerrainDetailLevel,
   TerrainQualityTier,
   TerrainTextureMode,
@@ -26,6 +29,10 @@ interface PickedPaleoFeature {
 
 interface PickedBaySourceFeature {
   properties: BaySourceFootprintProperties;
+}
+
+interface PickedSourceQualityGapFeature {
+  properties: SourceQualityGapProperties;
 }
 
 interface EmergencePoint {
@@ -63,6 +70,7 @@ const Z_BANDS = {
   shorelineGlow: 26,
   emergencePoint: 34,
   contourLabel: 52,
+  sourceQualityGap: 58,
   sourceFootprint: 62,
   sourceLabel: 84,
 } as const;
@@ -504,6 +512,32 @@ function baySourceLineWidth(feature: PickedBaySourceFeature): number {
   return 1.8;
 }
 
+function sourceQualityGapFillColor(feature: PickedSourceQualityGapFeature): [number, number, number, number] {
+  const tier = feature.properties.tier;
+  if (tier === "critical_gap") return [244, 63, 94, 46];
+  if (tier === "support_gap") return [251, 146, 60, 40];
+  if (tier === "coned_foundation") return [250, 204, 21, 24];
+  if (tier === "mixed_foundation") return [163, 230, 53, 24];
+  if (tier === "measured_detail") return [45, 212, 191, 28];
+  return [103, 232, 249, 30];
+}
+
+function sourceQualityGapLineColor(feature: PickedSourceQualityGapFeature): [number, number, number, number] {
+  const tier = feature.properties.tier;
+  if (tier === "critical_gap") return [251, 113, 133, 170];
+  if (tier === "support_gap") return [253, 186, 116, 150];
+  if (tier === "coned_foundation") return [253, 224, 71, 96];
+  if (tier === "mixed_foundation") return [190, 242, 100, 94];
+  if (tier === "measured_detail") return [94, 234, 212, 108];
+  return [125, 249, 255, 118];
+}
+
+function sourceQualityGapLineWidth(feature: PickedSourceQualityGapFeature): number {
+  if (feature.properties.tier === "critical_gap") return 1.4;
+  if (feature.properties.tier === "support_gap") return 1.2;
+  return 0.75;
+}
+
 function meshMaxErrorForTerrain(
   terrain: PaleoTerrainConfig,
   detail: TerrainDetailLevel,
@@ -562,6 +596,22 @@ function elevatedBaySourceFeature(
   profile: SceneProfileConfig,
 ): BaySourceFootprintFeature {
   const zMeters = terrain ? terrainZ(terrain, activeWaterLevel, profile, Z_BANDS.sourceFootprint) : 0;
+  return {
+    ...feature,
+    geometry: {
+      ...feature.geometry,
+      coordinates: addZToCoordinates(feature.geometry.coordinates, zMeters),
+    },
+  };
+}
+
+function elevatedSourceQualityGapFeature(
+  feature: SourceQualityGapFeature,
+  terrain: PaleoTerrainConfig | null,
+  activeWaterLevel: number,
+  profile: SceneProfileConfig,
+): SourceQualityGapFeature {
+  const zMeters = terrain ? terrainZ(terrain, activeWaterLevel, profile, Z_BANDS.sourceQualityGap) : 0;
   return {
     ...feature,
     geometry: {
@@ -740,6 +790,7 @@ export function createPaleoCoastlineLayers(
   context: PaleoRenderContext,
   baySourceFootprints?: BaySourceFootprintCollection | null,
   paleoRivers?: PaleoRiverCollection | null,
+  sourceQualityGaps?: SourceQualityGapCollection | null,
 ) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
@@ -757,6 +808,9 @@ export function createPaleoCoastlineLayers(
     : [];
   const riverFeatures = context.showRivers && paleoRivers
     ? paleoRivers.features.map((feature) => drapedRiverFeature(feature, terrain, profile))
+    : [];
+  const sourceQualityGapFeatures = context.showSourceQualityGaps && sourceQualityGaps
+    ? sourceQualityGaps.features.map((feature) => elevatedSourceQualityGapFeature(feature, terrain, activeWaterLevel, profile))
     : [];
   const features = [
     ...slice.coastline.features,
@@ -842,6 +896,25 @@ export function createPaleoCoastlineLayers(
     getLineWidth: baySourceLineWidth,
     autoHighlight: true,
     highlightColor: [255, 255, 255, 92],
+    parameters: ANNOTATION_PARAMETERS,
+  });
+
+  const sourceQualityGapLayer = new GeoJsonLayer<SourceQualityGapProperties>({
+    id: "paleo-source-quality-gaps",
+    data: {
+      type: "FeatureCollection",
+      features: sourceQualityGapFeatures,
+    } as never,
+    pickable: true,
+    stroked: true,
+    filled: true,
+    lineWidthUnits: "pixels",
+    lineWidthMinPixels: 0.6,
+    getFillColor: sourceQualityGapFillColor,
+    getLineColor: sourceQualityGapLineColor,
+    getLineWidth: sourceQualityGapLineWidth,
+    autoHighlight: true,
+    highlightColor: [255, 255, 255, 86],
     parameters: ANNOTATION_PARAMETERS,
   });
 
@@ -1008,6 +1081,7 @@ export function createPaleoCoastlineLayers(
     terrainFootprintFillLayer,
     terrainFootprintLabelLayer,
     baySourceFootprintLayer,
+    sourceQualityGapLayer,
     depthContourLayer,
     contourLabelLayer,
     shorelineGlowOuterLayer,
@@ -1053,6 +1127,22 @@ export function getPaleoTooltip(object: unknown) {
   }
 
   if (!("properties" in object)) return null;
+
+  const maybeSourceQualityGap = object as Partial<PickedSourceQualityGapFeature>;
+  if (maybeSourceQualityGap.properties?.cellId && "gapPriorityScore" in maybeSourceQualityGap.properties) {
+    const props = maybeSourceQualityGap.properties;
+    return {
+      text: `${props.tierLabel}\n${props.dominantCategory} dominates ${props.dominantPercent}%\nBroad ${props.broadFallbackPercent}% / CoNED ${props.conedFoundationPercent}% / detail ${props.measuredDetailPercent}%\nGap score ${props.gapPriorityScore}: ${props.nextAction}`,
+      style: {
+        backgroundColor: "rgba(4, 20, 28, 0.94)",
+        color: "#fff7ed",
+        fontSize: "13px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        border: "1px solid rgba(251, 191, 36, 0.42)",
+      },
+    };
+  }
 
   const maybeBaySource = object as Partial<PickedBaySourceFeature>;
   if (maybeBaySource.properties?.survey && "sensor_type" in maybeBaySource.properties) {

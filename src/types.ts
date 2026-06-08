@@ -124,6 +124,49 @@ export interface SeaLevelStats {
   note: string;
 }
 
+export type SourceQualityGapTier =
+  | "critical_gap"
+  | "support_gap"
+  | "coned_foundation"
+  | "mixed_foundation"
+  | "measured_detail"
+  | "high_detail";
+
+export interface SourceQualityGapProperties {
+  cellId: string;
+  gridColumn: number;
+  gridRow: number;
+  center: [number, number];
+  dominantCategory: string;
+  dominantPercent: number;
+  broadFallbackPercent: number;
+  conedFoundationPercent: number;
+  measuredDetailPercent: number;
+  qualityScore: number;
+  gapPriorityScore: number;
+  tier: SourceQualityGapTier;
+  tierLabel: string;
+  approxAreaSqKm: number;
+  validPixelCount: number;
+  categoryPercents: Record<string, number>;
+  nextAction: string;
+}
+
+export interface SourceQualityGapFeature {
+  type: "Feature";
+  properties: SourceQualityGapProperties;
+  geometry: {
+    type: string;
+    coordinates: unknown;
+  };
+}
+
+export interface SourceQualityGapCollection {
+  type: "FeatureCollection";
+  name?: string;
+  features: SourceQualityGapFeature[];
+}
+
 export interface PaleoTimeSlice {
   id: PaleoTimeSliceId;
   label: string;
@@ -179,6 +222,7 @@ export interface PaleoRenderContext {
   showTerrainFootprints: boolean;
   showBaySourceFootprints: boolean;
   showRivers: boolean;
+  showSourceQualityGaps: boolean;
   paleoWaterLevelMeters: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;

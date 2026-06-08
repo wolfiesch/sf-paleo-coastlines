@@ -1,4 +1,4 @@
-import { Clapperboard, Clock, Database, Gauge, Layers3, MapPin, MapPinned, Pause, Play, RotateCcw, Waves } from "lucide-react";
+import { Clapperboard, Clock, Database, Gauge, Layers3, MapPin, MapPinned, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
 import type { PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
@@ -15,6 +15,7 @@ interface PaleoCoastlineControlsProps {
   showUncertainty: boolean;
   showTerrainFootprints: boolean;
   showBaySourceFootprints: boolean;
+  showSourceQualityGaps: boolean;
   showRivers: boolean;
   waterLevelMeters: number | null;
   isPlaying: boolean;
@@ -30,6 +31,7 @@ interface PaleoCoastlineControlsProps {
   onToggleUncertainty: () => void;
   onToggleTerrainFootprints: () => void;
   onToggleBaySourceFootprints: () => void;
+  onToggleSourceQualityGaps: () => void;
   onToggleRivers: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
@@ -128,6 +130,7 @@ export function PaleoCoastlineControls({
   showUncertainty,
   showTerrainFootprints,
   showBaySourceFootprints,
+  showSourceQualityGaps,
   showRivers,
   waterLevelMeters,
   isPlaying,
@@ -143,6 +146,7 @@ export function PaleoCoastlineControls({
   onToggleUncertainty,
   onToggleTerrainFootprints,
   onToggleBaySourceFootprints,
+  onToggleSourceQualityGaps,
   onToggleRivers,
   onWaterLevelChange,
   onTogglePlayback,
@@ -246,7 +250,7 @@ export function PaleoCoastlineControls({
             <MapPinned size={12} />
             View
           </span>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap justify-end gap-1">
             <button
               type="button"
               onClick={onToggleTerrainFootprints}
@@ -303,6 +307,20 @@ export function PaleoCoastlineControls({
               <MapPin size={13} />
               Labels
             </button>
+            <button
+              type="button"
+              onClick={onToggleSourceQualityGaps}
+              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                showSourceQualityGaps
+                  ? "border-amber-300/40 bg-amber-300 text-gray-950"
+                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
+              }`}
+              aria-pressed={showSourceQualityGaps}
+              title="Show source-quality gap cells derived from the fused terrain provenance texture"
+            >
+              <TriangleAlert size={13} />
+              Gaps
+            </button>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
@@ -345,6 +363,26 @@ export function PaleoCoastlineControls({
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-4 rounded-full bg-cyan-300" />
               Multibeam
+            </span>
+          </div>
+        ) : null}
+        {showSourceQualityGaps ? (
+          <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-rose-400" />
+              Broad gap
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-amber-300" />
+              CoNED base
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-cyan-300" />
+              Survey detail
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-emerald-300" />
+              Strong area
             </span>
           </div>
         ) : null}

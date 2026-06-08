@@ -21,6 +21,7 @@ import type {
   PaleoWaterlineProbeIndex,
   SceneProfile,
   SeaLevelStats,
+  SourceQualityGapCollection,
   TerrainDetailLevel,
   TerrainTextureMode,
 } from "./types";
@@ -72,6 +73,7 @@ const VIEW_PRESETS = [
 const BAY_SOURCE_FOOTPRINTS_URL = "/data/paleo-coastlines/usgs_sf_bay_source_footprints.geojson";
 const RIVERS_URL = "/data/paleo-coastlines/paleo_rivers.geojson";
 const SEALEVEL_STATS_URL = "/data/paleo-coastlines/sealevel_stats.json";
+const SOURCE_QUALITY_GAPS_URL = "/data/paleo-coastlines/source_quality_gaps.geojson";
 
 function exposedAreaForMeters(stats: SeaLevelStats | null, meters: number): number | null {
   if (!stats || !stats.levels.length) return null;
@@ -134,6 +136,9 @@ function App() {
   const [yearsBeforePresent, setYearsBeforePresent] = useState(MAX_YEARS_BP);
   const [showPlaceLabels, setShowPlaceLabels] = useState(true);
   const [seaLevelStats, setSeaLevelStats] = useState<SeaLevelStats | null>(null);
+  const [showSourceQualityGaps, setShowSourceQualityGaps] = useState(false);
+  const [sourceQualityGaps, setSourceQualityGaps] = useState<SourceQualityGapCollection | null>(null);
+  const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("bottom");
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");
@@ -388,6 +393,41 @@ function App() {
     };
   }, [paleoRivers, showRivers]);
 
+  useEffect(() => {
+    if (!showSourceQualityGaps || sourceQualityGaps) return;
+
+    let cancelled = false;
+
+    async function loadSourceQualityGaps() {
+      setLoadingSourceQualityGaps(true);
+      try {
+        const response = await fetch(SOURCE_QUALITY_GAPS_URL);
+        if (!response.ok) {
+          throw new Error(`Failed to load source quality gaps: ${response.status}`);
+        }
+        const payload = await response.json() as SourceQualityGapCollection;
+        if (!cancelled) {
+          setSourceQualityGaps(payload);
+          setError(null);
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : "Failed to load source quality gaps.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingSourceQualityGaps(false);
+        }
+      }
+    }
+
+    void loadSourceQualityGaps();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showSourceQualityGaps, sourceQualityGaps]);
+
   const activeSlice = useMemo(
     () => {
       const slice = loadedSlices[activeSliceId]
@@ -426,13 +466,14 @@ function App() {
     showTerrainFootprints,
     showBaySourceFootprints,
     showRivers,
+    showSourceQualityGaps,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
     terrainTextureMode,
     sceneProfile,
     showPlaceLabels,
     currentYearsBP: yearsBeforePresent,
-  }, baySourceFootprints, paleoRivers), [activeSliceId, baySourceFootprints, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showTerrainFootprints, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
+  }, baySourceFootprints, paleoRivers, sourceQualityGaps), [activeSliceId, baySourceFootprints, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showTerrainFootprints, showUncertainty, sourceQualityGaps, terrainDetail, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -542,11 +583,13 @@ function App() {
           sceneProfile={sceneProfile}
           showTerrainFootprints={showTerrainFootprints}
           showBaySourceFootprints={showBaySourceFootprints}
+          showSourceQualityGaps={showSourceQualityGaps}
           viewPresets={VIEW_PRESETS}
           onSliceChange={handleSliceChange}
           onToggleUncertainty={() => setShowUncertainty((shown) => !shown)}
           onToggleTerrainFootprints={() => setShowTerrainFootprints((shown) => !shown)}
           onToggleBaySourceFootprints={() => setShowBaySourceFootprints((shown) => !shown)}
+          onToggleSourceQualityGaps={() => setShowSourceQualityGaps((shown) => !shown)}
           showRivers={showRivers}
           onToggleRivers={() => setShowRivers((shown) => !shown)}
           timeMode={timeMode}
@@ -586,6 +629,7 @@ function App() {
         {!isLoadingData && probeLoading ? <p>Loading waterline probe...</p> : null}
         {!isLoadingData && loadingBaySourceFootprints ? <p>Loading Bay source footprints...</p> : null}
         {!isLoadingData && loadingRivers ? <p>Loading paleo rivers...</p> : null}
+        {!isLoadingData && loadingSourceQualityGaps ? <p>Loading source quality gaps...</p> : null}
         {error ? <p className="text-red-200">{error}</p> : null}
         {!isLoadingData && !error && activeSlice ? (
           <div className="space-y-2">
