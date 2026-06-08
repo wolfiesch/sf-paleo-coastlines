@@ -22,6 +22,7 @@ import type {
   SceneProfile,
   SeaLevelStats,
   SourceQualityGapCollection,
+  SourceQualityGapSummary,
   TerrainDetailLevel,
   PaleoTerrainConfig,
   TerrainSourceMode,
@@ -77,6 +78,7 @@ const BAY_SOURCE_FOOTPRINTS_URL = "/data/paleo-coastlines/usgs_sf_bay_source_foo
 const RIVERS_URL = "/data/paleo-coastlines/paleo_rivers.geojson";
 const SEALEVEL_STATS_URL = "/data/paleo-coastlines/sealevel_stats.json";
 const SOURCE_QUALITY_GAPS_URL = "/data/paleo-coastlines/source_quality_gaps.geojson";
+const SOURCE_QUALITY_GAPS_SUMMARY_URL = "/data/paleo-coastlines/source_quality_gaps_summary.json";
 
 function exposedAreaForMeters(stats: SeaLevelStats | null, meters: number): number | null {
   if (!stats || !stats.levels.length) return null;
@@ -153,6 +155,7 @@ function App() {
   const [seaLevelStats, setSeaLevelStats] = useState<SeaLevelStats | null>(null);
   const [showSourceQualityGaps, setShowSourceQualityGaps] = useState(false);
   const [sourceQualityGaps, setSourceQualityGaps] = useState<SourceQualityGapCollection | null>(null);
+  const [sourceQualityGapSummary, setSourceQualityGapSummary] = useState<SourceQualityGapSummary | null>(null);
   const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("ultra");
   const [terrainSurfaceSmoothing, setTerrainSurfaceSmoothing] = useState<TerrainSurfaceSmoothing>("smooth");
@@ -412,20 +415,28 @@ function App() {
   }, [paleoRivers, showRivers]);
 
   useEffect(() => {
-    if (!showSourceQualityGaps || sourceQualityGaps) return;
+    if (!showSourceQualityGaps || (sourceQualityGaps && sourceQualityGapSummary)) return;
 
     let cancelled = false;
 
     async function loadSourceQualityGaps() {
       setLoadingSourceQualityGaps(true);
       try {
-        const response = await fetch(SOURCE_QUALITY_GAPS_URL);
-        if (!response.ok) {
-          throw new Error(`Failed to load source quality gaps: ${response.status}`);
+        const [gapsResponse, summaryResponse] = await Promise.all([
+          sourceQualityGaps ? Promise.resolve(null) : fetch(SOURCE_QUALITY_GAPS_URL),
+          sourceQualityGapSummary ? Promise.resolve(null) : fetch(SOURCE_QUALITY_GAPS_SUMMARY_URL),
+        ]);
+        if (gapsResponse && !gapsResponse.ok) {
+          throw new Error(`Failed to load source quality gaps: ${gapsResponse.status}`);
         }
-        const payload = await response.json() as SourceQualityGapCollection;
+        if (summaryResponse && !summaryResponse.ok) {
+          throw new Error(`Failed to load source quality summary: ${summaryResponse.status}`);
+        }
+        const payload = gapsResponse ? await gapsResponse.json() as SourceQualityGapCollection : null;
+        const summary = summaryResponse ? await summaryResponse.json() as SourceQualityGapSummary : null;
         if (!cancelled) {
-          setSourceQualityGaps(payload);
+          if (payload) setSourceQualityGaps(payload);
+          if (summary) setSourceQualityGapSummary(summary);
           setError(null);
         }
       } catch (cause) {
@@ -444,7 +455,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [showSourceQualityGaps, sourceQualityGaps]);
+  }, [showSourceQualityGaps, sourceQualityGaps, sourceQualityGapSummary]);
 
   const activeSlice = useMemo(
     () => {
@@ -637,6 +648,7 @@ function App() {
           showTerrainFootprints={showTerrainFootprints}
           showBaySourceFootprints={showBaySourceFootprints}
           showSourceQualityGaps={showSourceQualityGaps}
+          sourceQualityGapSummary={sourceQualityGapSummary}
           viewPresets={VIEW_PRESETS}
           onSliceChange={handleSliceChange}
           onToggleUncertainty={() => setShowUncertainty((shown) => !shown)}

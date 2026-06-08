@@ -169,6 +169,26 @@ export interface SourceQualityGapCollection {
   features: SourceQualityGapFeature[];
 }
 
+export interface SourceQualityPriorityZone {
+  id: string;
+  label: string;
+  tierLabel: string;
+  broadFallbackPercent: number;
+  conedFoundationPercent: number;
+  measuredDetailPercent: number;
+  nextAction: string;
+  whyItMatters: string;
+}
+
+export interface SourceQualityGapSummary {
+  sourceFamilyPercents: {
+    broadFallbackOrSupport: number;
+    conedFoundation: number;
+    measuredDetail: number;
+  };
+  priorityZones: SourceQualityPriorityZone[];
+}
+
 export interface PaleoTimeSlice {
   id: PaleoTimeSliceId;
   label: string;

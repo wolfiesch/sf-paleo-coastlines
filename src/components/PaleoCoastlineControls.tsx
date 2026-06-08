@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Clapperboard, Clock, Database, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
-import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainSourceMode, TerrainSurfaceSmoothing, TerrainTextureMode } from "../types";
+import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, SourceQualityGapSummary, TerrainDetailLevel, TerrainSourceMode, TerrainSurfaceSmoothing, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
 import { Legend, Section, SegmentedControl, TogglePill, sectionTitleClass, valueClass, type LegendItem } from "./PaleoControlPrimitives";
 
@@ -19,6 +19,7 @@ interface PaleoCoastlineControlsProps {
   showTerrainFootprints: boolean;
   showBaySourceFootprints: boolean;
   showSourceQualityGaps: boolean;
+  sourceQualityGapSummary: SourceQualityGapSummary | null;
   showRivers: boolean;
   waterLevelMeters: number | null;
   isPlaying: boolean;
@@ -200,6 +201,10 @@ function terrainSourceMeta(source: PaleoTerrainConfig): string {
   return `${resolution}, ${low} to ${high} m`;
 }
 
+function percentLabel(value: number): string {
+  return `${Math.round(value)}%`;
+}
+
 export function PaleoCoastlineControls({
   slices,
   activeSliceId,
@@ -207,6 +212,7 @@ export function PaleoCoastlineControls({
   showTerrainFootprints,
   showBaySourceFootprints,
   showSourceQualityGaps,
+  sourceQualityGapSummary,
   showRivers,
   waterLevelMeters,
   isPlaying,
@@ -455,7 +461,38 @@ export function PaleoCoastlineControls({
 
         {showTerrainFootprints ? <Legend items={COVERAGE_LEGEND} /> : null}
         {showBaySourceFootprints ? <Legend items={BAY_SOURCE_LEGEND} /> : null}
-        {showSourceQualityGaps ? <Legend items={GAP_LEGEND} /> : null}
+        {showSourceQualityGaps ? (
+          <div className="space-y-2">
+            <Legend items={GAP_LEGEND} />
+            {sourceQualityGapSummary ? (
+              <div className="rounded-lg border border-amber-300/15 bg-amber-300/[0.06] p-2.5">
+                <div className="mb-2 grid grid-cols-3 gap-1 text-center">
+                  <div>
+                    <div className="font-mono text-[13px] font-semibold text-rose-200">{percentLabel(sourceQualityGapSummary.sourceFamilyPercents.broadFallbackOrSupport)}</div>
+                    <div className="text-[10px] leading-3 text-gray-500">broad support</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-[13px] font-semibold text-amber-200">{percentLabel(sourceQualityGapSummary.sourceFamilyPercents.conedFoundation)}</div>
+                    <div className="text-[10px] leading-3 text-gray-500">2 m base</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-[13px] font-semibold text-cyan-200">{percentLabel(sourceQualityGapSummary.sourceFamilyPercents.measuredDetail)}</div>
+                    <div className="text-[10px] leading-3 text-gray-500">measured detail</div>
+                  </div>
+                </div>
+                {sourceQualityGapSummary.priorityZones[0] ? (
+                  <div className="border-t border-white/[0.07] pt-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-xs font-semibold text-gray-200">{sourceQualityGapSummary.priorityZones[0].label}</span>
+                      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-200">{sourceQualityGapSummary.priorityZones[0].tierLabel}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] leading-4 text-gray-400">{sourceQualityGapSummary.priorityZones[0].nextAction}</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <div>
           <span className={`mb-1.5 block ${sectionTitleClass}`}>Fly to</span>
