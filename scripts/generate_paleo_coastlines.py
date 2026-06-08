@@ -1042,6 +1042,48 @@ TIME_SLICES = [
 # if the sea surface is here?"
 WATERLINE_PROBE_LEVELS = [float(level) for level in range(-120, 5, 5)]
 
+USGS_CONED_SF_2M_FOCUS_BLOCKS: list[dict[str, Any]] = [
+    {
+        "sourceId": "usgs_coned_sf_2m_gate_shelf",
+        "sourceLabel": "USGS CoNED 2 m focus clip, Golden Gate and SF Bar",
+        "sourceName": "USGS CoNED San Francisco 2 m topobathymetry, Golden Gate focus clip",
+        "sourceUrl": "https://topotools.cr.usgs.gov/topobathy_viewer/",
+        "role": "Higher-pixel-density CoNED WCS clip around the Golden Gate, San Francisco Bar, Ocean Beach, and inner shelf.",
+        "fileName": "coned_sf_2m_gate_shelf_8192.tif",
+        "terrainStem": "usgs_coned_sf_2m_gate_shelf",
+        "terrainSize": 8192,
+        "terrainMinimum": -500.0,
+        "terrainMaximum": 500.0,
+        "note": "USGS CoNED 2 m focus clip for the Golden Gate, San Francisco Bar, Ocean Beach, and inner shelf. It preserves more CoNED pixels per mile than the broad all-region clip, while true survey patches still draw above it.",
+    },
+    {
+        "sourceId": "usgs_coned_sf_2m_farallon_shelf",
+        "sourceLabel": "USGS CoNED 2 m focus clip, Farallon shelf",
+        "sourceName": "USGS CoNED San Francisco 2 m topobathymetry, Farallon shelf focus clip",
+        "sourceUrl": "https://topotools.cr.usgs.gov/topobathy_viewer/",
+        "role": "Higher-pixel-density CoNED WCS clip across the Farallon Islands approach and outer shelf.",
+        "fileName": "coned_sf_2m_farallon_shelf_8192.tif",
+        "terrainStem": "usgs_coned_sf_2m_farallon_shelf",
+        "terrainSize": 8192,
+        "terrainMinimum": -2200.0,
+        "terrainMaximum": 500.0,
+        "note": "USGS CoNED 2 m focus clip for the Farallon Islands approach and outer shelf. It improves the broad CoNED base where the user is looking far west of today's coast.",
+    },
+    {
+        "sourceId": "usgs_coned_sf_2m_south_bay_edge",
+        "sourceLabel": "USGS CoNED 2 m focus clip, south Bay edge",
+        "sourceName": "USGS CoNED San Francisco 2 m topobathymetry, south Bay edge focus clip",
+        "sourceUrl": "https://topotools.cr.usgs.gov/topobathy_viewer/",
+        "role": "Higher-pixel-density CoNED WCS clip for the south and lower-central Bay edge inside the public CoNED layer bounds.",
+        "fileName": "coned_sf_2m_south_bay_edge_8192.tif",
+        "terrainStem": "usgs_coned_sf_2m_south_bay_edge",
+        "terrainSize": 8192,
+        "terrainMinimum": -120.0,
+        "terrainMaximum": 500.0,
+        "note": "USGS CoNED 2 m focus clip for the south and lower-central Bay edge. It helps offset the currently blocked USGS south Bay 1 m NAVD88 ScienceBase download.",
+    },
+]
+
 SOURCES = [
     {
         "name": "NOAA ETOPO 2022 15 arc-second Global Relief Model",
@@ -1063,6 +1105,14 @@ SOURCES = [
         "url": "https://topotools.cr.usgs.gov/topobathy_viewer/",
         "role": "Unified San Francisco land-plus-seafloor topobathymetry surface clipped from the official USGS CoNED WCS layer.",
     },
+    *[
+        {
+            "name": block["sourceName"],
+            "url": block["sourceUrl"],
+            "role": block["role"],
+        }
+        for block in USGS_CONED_SF_2M_FOCUS_BLOCKS
+    ],
     *[
         {
             "name": block["sourceName"],
@@ -1352,6 +1402,38 @@ def active_usgs_2023_sf_lidar_dem() -> bool:
 
 def active_usgs_coned_sf_2m() -> bool:
     return USGS_CONED_SF_2M_TIF.exists()
+
+
+def usgs_coned_sf_2m_focus_dataset(block: dict[str, Any]) -> Path:
+    return USGS_CONED_SF_2M_DIR / str(block["fileName"])
+
+
+def usgs_coned_sf_2m_focus_terrain_wgs84(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_terrain_wgs84.tif"
+
+
+def usgs_coned_sf_2m_focus_elevation_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_elevation.png"
+
+
+def usgs_coned_sf_2m_focus_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_color.png"
+
+
+def usgs_coned_sf_2m_focus_relief_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_relief.png"
+
+
+def usgs_coned_sf_2m_focus_composite_texture_png(block: dict[str, Any]) -> Path:
+    return TERRAIN_PUBLIC_DIR / f"{block['terrainStem']}_composite.png"
+
+
+def active_usgs_coned_sf_2m_focus_blocks() -> list[dict[str, Any]]:
+    return [
+        block
+        for block in USGS_CONED_SF_2M_FOCUS_BLOCKS
+        if usgs_coned_sf_2m_focus_dataset(block).exists()
+    ]
 
 
 def build_usgs_2023_sf_lidar_dem_vrt() -> None:
@@ -2192,8 +2274,10 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
         return {"qualityTier": "broad", "renderPriority": 10, "resolutionMeters": None}
     if source_id.startswith("noaa_cudem"):
         return {"qualityTier": "broad", "renderPriority": 20, "resolutionMeters": None}
-    if source_id.startswith("usgs_coned_sf_2m"):
+    if source_id == "usgs_coned_sf_2m":
         return {"qualityTier": "bay_mosaic", "renderPriority": 30, "resolutionMeters": 2}
+    if source_id.startswith("usgs_coned_sf_2m_"):
+        return {"qualityTier": "bay_mosaic", "renderPriority": 32, "resolutionMeters": 2}
     if source_id.startswith("best_available"):
         return {"qualityTier": "bay_mosaic", "renderPriority": 35, "resolutionMeters": 20}
     if source_id.startswith("noaa_ocm_area_a_interferometric"):
@@ -2302,6 +2386,55 @@ def generate_usgs_coned_sf_2m_terrain_asset() -> dict[str, Any]:
         USGS_CONED_SF_2M_TERRAIN_MIN_M,
         USGS_CONED_SF_2M_TERRAIN_MAX_M,
         "USGS CoNED San Francisco 2 m topobathymetry clipped from the official WCS layer. It gives the app a unified local land-plus-seafloor continuity surface underneath sharper survey patches.",
+    )
+
+
+def generate_usgs_coned_sf_2m_focus_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
+    terrain_wgs84 = usgs_coned_sf_2m_focus_terrain_wgs84(block)
+    run([
+        "gdalwarp",
+        "-q",
+        "-overwrite",
+        "-t_srs",
+        "EPSG:4326",
+        "-ts",
+        str(block["terrainSize"]),
+        "0",
+        "-r",
+        "bilinear",
+        "-ot",
+        "Float32",
+        "-srcnodata",
+        str(USGS_CONED_SF_2M_NODATA_M),
+        "-dstnodata",
+        "-9999",
+        str(usgs_coned_sf_2m_focus_dataset(block)),
+        str(terrain_wgs84),
+    ])
+    write_terrain_pngs_from_wgs84(
+        terrain_wgs84,
+        usgs_coned_sf_2m_focus_elevation_png(block),
+        usgs_coned_sf_2m_focus_texture_png(block),
+        usgs_coned_sf_2m_focus_relief_texture_png(block),
+        usgs_coned_sf_2m_focus_composite_texture_png(block),
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        18,
+    )
+    return terrain_metadata(
+        str(block["sourceId"]),
+        str(block["sourceLabel"]),
+        terrain_wgs84,
+        usgs_coned_sf_2m_focus_elevation_png(block),
+        usgs_coned_sf_2m_focus_texture_png(block),
+        usgs_coned_sf_2m_focus_relief_texture_png(block),
+        usgs_coned_sf_2m_focus_composite_texture_png(block),
+        None,
+        None,
+        None,
+        float(block["terrainMinimum"]),
+        float(block["terrainMaximum"]),
+        str(block["note"]),
     )
 
 
@@ -2856,6 +2989,15 @@ def best_available_fusion_input_records() -> list[tuple[str, Path]]:
             if active_usgs_coned_sf_2m()
             else []
         ),
+        *[
+            (
+                32,
+                index,
+                str(block["sourceId"]),
+                usgs_coned_sf_2m_focus_terrain_wgs84(block),
+            )
+            for index, block in enumerate(active_usgs_coned_sf_2m_focus_blocks())
+        ],
         (
             40,
             0,
@@ -3142,6 +3284,8 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         nos_bag_terrain_wgs84(block).unlink(missing_ok=True)
     for block in NOAA_OCM_AREA_A_BLOCKS:
         noaa_ocm_area_a_terrain_wgs84(block).unlink(missing_ok=True)
+    for block in active_usgs_coned_sf_2m_focus_blocks():
+        usgs_coned_sf_2m_focus_terrain_wgs84(block).unlink(missing_ok=True)
     for block in BATHYMETRY_BLOCKS:
         bathymetry_block_terrain_wgs84(block).unlink(missing_ok=True)
         bathymetry_block_backscatter_wgs84(block).unlink(missing_ok=True)
@@ -3154,6 +3298,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         generate_crm_terrain_asset(),
         generate_cudem_terrain_asset(),
         *([generate_usgs_coned_sf_2m_terrain_asset()] if active_usgs_coned_sf_2m() else []),
+        *[generate_usgs_coned_sf_2m_focus_terrain_asset(block) for block in active_usgs_coned_sf_2m_focus_blocks()],
         generate_noaa_ocm_area_a_interferometric_terrain_asset(),
         *[generate_usgs_sf_bay_1m_terrain_asset(block) for block in active_usgs_sf_bay_1m_blocks()],
         *[generate_noaa_ocm_area_a_terrain_asset(block) for block in NOAA_OCM_AREA_A_BLOCKS],
@@ -3347,6 +3492,9 @@ def source_label(source_id: str) -> str:
         return "USGS 2023 San Francisco 1 m LiDAR DEM"
     if source_id == "usgs_coned_sf_2m":
         return "USGS CoNED San Francisco 2 m topobathymetry"
+    for block in USGS_CONED_SF_2M_FOCUS_BLOCKS:
+        if source_id == block["sourceId"]:
+            return str(block["sourceLabel"])
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
     if source_id == "best_available_gate_shelf_fusion":
@@ -3508,11 +3656,15 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added smaller high-pixel-density USGS CoNED focus clips when present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
             *([str(USGS_CONED_SF_2M_TIF.relative_to(ROOT))] if active_usgs_coned_sf_2m() else []),
+            *[
+                str(usgs_coned_sf_2m_focus_dataset(block).relative_to(ROOT))
+                for block in active_usgs_coned_sf_2m_focus_blocks()
+            ],
             *CUDEM_TILE_URLS,
             *[str(nos_bag_dataset(block).relative_to(ROOT)) for block in NOS_BAG_BLOCKS],
             *[
@@ -3562,6 +3714,17 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 str(USGS_CONED_SF_2M_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
                 str(USGS_CONED_SF_2M_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
             ] if active_usgs_coned_sf_2m() else []),
+            *[
+                str(path.relative_to(ROOT))
+                for block in active_usgs_coned_sf_2m_focus_blocks()
+                for path in (
+                    usgs_coned_sf_2m_focus_elevation_png(block),
+                    usgs_coned_sf_2m_focus_texture_png(block),
+                    usgs_coned_sf_2m_focus_relief_texture_png(block),
+                    usgs_coned_sf_2m_focus_composite_texture_png(block),
+                )
+                if path.exists()
+            ],
             str(BEST_AVAILABLE_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),

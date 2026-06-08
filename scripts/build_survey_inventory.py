@@ -295,6 +295,10 @@ def raw_file_candidates(module: Any, source_id: str) -> list[Path]:
     if source_id == "usgs_coned_sf_2m":
         return [module.USGS_CONED_SF_2M_TIF]
 
+    for block in module.USGS_CONED_SF_2M_FOCUS_BLOCKS:
+        if block["sourceId"] == source_id:
+            return [module.usgs_coned_sf_2m_focus_dataset(block)]
+
     if source_id == "noaa_crm_vol7_3as":
         paths.append(module.CRM_TIF)
     elif source_id == "noaa_cudem_1_9as":
@@ -313,7 +317,13 @@ def source_url(module: Any, source_id: str) -> str | None:
     if source_id == module.NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceId"]:
         return str(module.NOAA_OCM_AREA_A_INTERFEROMETRIC_MOSAIC["sourceUrl"])
 
-    for block in [*module.NOS_BAG_BLOCKS, *module.NOAA_OCM_AREA_A_BLOCKS, *module.BATHYMETRY_BLOCKS, *module.USGS_SF_BAY_1M_BLOCKS]:
+    for block in [
+        *module.USGS_CONED_SF_2M_FOCUS_BLOCKS,
+        *module.NOS_BAG_BLOCKS,
+        *module.NOAA_OCM_AREA_A_BLOCKS,
+        *module.BATHYMETRY_BLOCKS,
+        *module.USGS_SF_BAY_1M_BLOCKS,
+    ]:
         if block["sourceId"] == source_id:
             return str(block["sourceUrl"])
     if source_id == "noaa_crm_vol7_3as":

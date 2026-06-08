@@ -13,14 +13,16 @@ Plain-English purpose: this is a unified land-plus-seafloor elevation surface fo
 
 ## Local Output
 
-- GeoTIFF: `data/paleo-coastlines/raw/usgs-coned-sf-2m/coned_sf_2m_best_available_8192.tif`
-- Size: 185.0 MB
-- Request width/height: 8192 x 5920
-- Bounds: -123.55, 37.35 to -122.15, 38.15
+| Clip | GeoTIFF | Size | Request | Bounds |
+|---|---|---:|---:|---|
+| best_available | `data/paleo-coastlines/raw/usgs-coned-sf-2m/coned_sf_2m_best_available_8192.tif` | 185.0 MB | 8192 x 5920 | -123.55, 37.35 to -122.15, 38.15 |
+| gate_shelf | `data/paleo-coastlines/raw/usgs-coned-sf-2m/coned_sf_2m_gate_shelf_8192.tif` | 217.0 MB | 8192 x 6907 | -122.92, 37.55 to -122.32, 37.95 |
+| farallon_shelf | `data/paleo-coastlines/raw/usgs-coned-sf-2m/coned_sf_2m_farallon_shelf_8192.tif` | 270.0 MB | 8192 x 8572 | -123.34, 37.42 to -122.7, 37.95 |
+| south_bay_edge | `data/paleo-coastlines/raw/usgs-coned-sf-2m/coned_sf_2m_south_bay_edge_8192.tif` | 320.0 MB | 8192 x 10100 | -122.58, 37.35 to -122.14, 37.78 |
 
 ## Caveats
 
-- This is a WCS clip, not the full enormous native CoNED raster.
-- The native source is 2 m, but this app-facing clip is downsampled to keep the local project usable.
+- These are WCS clips, not the full enormous native CoNED raster.
+- The native source is 2 m. Larger broad clips are still downsampled; smaller focus clips keep more pixels per mile.
 - Use it as a strong local continuity surface, then let higher-resolution BAG, OCM, CSMP, DS684, LiDAR, and source-survey patches win where they overlap.
 - CoNED still needs datum comparison before exact sea-level claims.

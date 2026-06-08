@@ -24,16 +24,31 @@ WCS_BASE_URL = "https://dmsdata.cr.usgs.gov/geoserver/wcs"
 VIEWER_URL = "https://topotools.cr.usgs.gov/topobathy_viewer/"
 SOURCE_URL = "https://www.usgs.gov/special-topics/coastal-national-elevation-database-applications-project/science/topobathymetric-0"
 LAYER_NAME = "topo:San_Francisco_TopoBathy_Elevation_2m"
-TARGET_NAME = "coned_sf_2m_best_available_8192.tif"
-
-# Match the app's fused Golden Gate-to-Farallones focus rectangle. The source
-# itself only covers the San Francisco CoNED region, so empty offshore areas are
-# expected outside the WCS layer bounds.
-DEFAULT_BOUNDS = {
-    "west": -123.55,
-    "south": 37.35,
-    "east": -122.15,
-    "north": 38.15,
+CONED_CLIPS: dict[str, dict[str, Any]] = {
+    "best_available": {
+        "targetName": "coned_sf_2m_best_available_8192.tif",
+        "width": 8192,
+        "bounds": {"west": -123.55, "south": 37.35, "east": -122.15, "north": 38.15},
+        "description": "Broad Bay-to-Farallones continuity clip used as the first CoNED app source.",
+    },
+    "gate_shelf": {
+        "targetName": "coned_sf_2m_gate_shelf_8192.tif",
+        "width": 8192,
+        "bounds": {"west": -122.92, "south": 37.55, "east": -122.32, "north": 37.95},
+        "description": "Higher-pixel-density clip around the Golden Gate, San Francisco Bar, Ocean Beach, and the inner shelf.",
+    },
+    "farallon_shelf": {
+        "targetName": "coned_sf_2m_farallon_shelf_8192.tif",
+        "width": 8192,
+        "bounds": {"west": -123.34, "south": 37.42, "east": -122.70, "north": 37.95},
+        "description": "Higher-pixel-density clip across the Farallon Islands approach and outer shelf.",
+    },
+    "south_bay_edge": {
+        "targetName": "coned_sf_2m_south_bay_edge_8192.tif",
+        "width": 8192,
+        "bounds": {"west": -122.58, "south": 37.35, "east": -122.14, "north": 37.78},
+        "description": "Higher-pixel-density clip for the south and lower-central Bay edge inside the public CoNED layer bounds.",
+    },
 }
 
 
@@ -89,7 +104,7 @@ def write_json(path: Path, payload: Any) -> None:
 
 
 def write_markdown(payload: dict[str, Any]) -> None:
-    local_path = payload["localPath"]
+    clips = payload["clips"]
     lines = [
         "# USGS CoNED San Francisco 2 m Topobathy",
         "",
@@ -106,15 +121,17 @@ def write_markdown(payload: dict[str, Any]) -> None:
         "",
         "## Local Output",
         "",
-        f"- GeoTIFF: `{local_path}`",
-        f"- Size: {payload['localSizeHuman']}",
-        f"- Request width/height: {payload['request']['width']} x {payload['request']['height']}",
-        f"- Bounds: {payload['bounds']['west']}, {payload['bounds']['south']} to {payload['bounds']['east']}, {payload['bounds']['north']}",
+        "| Clip | GeoTIFF | Size | Request | Bounds |",
+        "|---|---|---:|---:|---|",
+        *[
+            f"| {clip['id']} | `{clip['localPath']}` | {clip['localSizeHuman']} | {clip['request']['width']} x {clip['request']['height']} | {clip['bounds']['west']}, {clip['bounds']['south']} to {clip['bounds']['east']}, {clip['bounds']['north']} |"
+            for clip in clips
+        ],
         "",
         "## Caveats",
         "",
-        "- This is a WCS clip, not the full enormous native CoNED raster.",
-        "- The native source is 2 m, but this app-facing clip is downsampled to keep the local project usable.",
+        "- These are WCS clips, not the full enormous native CoNED raster.",
+        "- The native source is 2 m. Larger broad clips are still downsampled; smaller focus clips keep more pixels per mile.",
         "- Use it as a strong local continuity surface, then let higher-resolution BAG, OCM, CSMP, DS684, LiDAR, and source-survey patches win where they overlap.",
         "- CoNED still needs datum comparison before exact sea-level claims.",
         "",
@@ -175,16 +192,45 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--download", action="store_true", help="Download the WCS GeoTIFF clip.")
     parser.add_argument("--force", action="store_true", help="Redownload even if the local file exists.")
-    parser.add_argument("--width", type=int, default=8192, help="Requested WCS output width in pixels.")
+    parser.add_argument(
+        "--clip",
+        choices=[*CONED_CLIPS.keys(), "all"],
+        default="best_available",
+        help="Named CoNED clip to process. Use all for every configured clip.",
+    )
+    parser.add_argument("--width", type=int, default=None, help="Override requested WCS output width in pixels.")
     args = parser.parse_args()
 
-    bounds = DEFAULT_BOUNDS.copy()
-    height = target_height(bounds, args.width)
-    target = RAW_DIR / TARGET_NAME
-    url = wcs_url(bounds, args.width, height)
+    clip_ids = list(CONED_CLIPS.keys()) if args.clip == "all" else [args.clip]
+    clips: list[dict[str, Any]] = []
 
-    if args.download:
-        download(url, target, args.force)
+    for clip_id in clip_ids:
+        clip = CONED_CLIPS[clip_id]
+        bounds = dict(clip["bounds"])
+        width = int(args.width or clip["width"])
+        height = target_height(bounds, width)
+        target = RAW_DIR / str(clip["targetName"])
+        url = wcs_url(bounds, width, height)
+
+        if args.download:
+            download(url, target, args.force)
+
+        local_size = target.stat().st_size if target.exists() else 0
+        clips.append({
+            "id": clip_id,
+            "description": clip["description"],
+            "bounds": bounds,
+            "projectedBoundsEpsg3857": projected_bbox(bounds),
+            "request": {
+                "width": width,
+                "height": height,
+                "url": url,
+            },
+            "localPath": str(target.relative_to(ROOT)),
+            "localPresent": target.exists(),
+            "localSizeBytes": local_size,
+            "localSizeHuman": human_size(local_size) if target.exists() else "not downloaded",
+        })
 
     payload = {
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -195,17 +241,8 @@ def main() -> int:
             "wcsBaseUrl": WCS_BASE_URL,
             "layerName": LAYER_NAME,
         },
-        "bounds": bounds,
-        "projectedBoundsEpsg3857": projected_bbox(bounds),
-        "request": {
-            "width": args.width,
-            "height": height,
-            "url": url,
-        },
-        "localPath": str(target.relative_to(ROOT)),
-        "localPresent": target.exists(),
-        "localSizeBytes": target.stat().st_size if target.exists() else 0,
-        "localSizeHuman": human_size(target.stat().st_size) if target.exists() else "not downloaded",
+        "selection": args.clip,
+        "clips": clips,
     }
     write_json(OUT_JSON, payload)
     write_markdown(payload)
@@ -213,10 +250,17 @@ def main() -> int:
     print(f"Wrote {OUT_MD.relative_to(ROOT)}")
     print(json.dumps({
         "downloaded": bool(args.download),
-        "localPresent": payload["localPresent"],
-        "localSize": payload["localSizeHuman"],
-        "width": args.width,
-        "height": height,
+        "selection": args.clip,
+        "clips": [
+            {
+                "id": clip["id"],
+                "localPresent": clip["localPresent"],
+                "localSize": clip["localSizeHuman"],
+                "width": clip["request"]["width"],
+                "height": clip["request"]["height"],
+            }
+            for clip in clips
+        ],
     }, indent=2))
     return 0
 
