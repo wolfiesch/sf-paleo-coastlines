@@ -15,7 +15,8 @@
     "paleo-coastlines:usgs-coned-sf": "python3 scripts/acquire_usgs_coned_sf_2m.py",
     "paleo-coastlines:usgs-bay-dem": "python3 scripts/acquire_usgs_sf_bay_1m_dem.py",
     "paleo-coastlines:bay-source-footprints": "python3 scripts/acquire_usgs_sf_bay_source_footprints.py",
-    "paleo-coastlines:rivers": "python3 scripts/generate_paleo_rivers.py"
+    "paleo-coastlines:rivers": "python3 scripts/generate_paleo_rivers.py",
+    "paleo-coastlines:stats": "python3 scripts/generate_sealevel_stats.py"
   },
   "dependencies": {
     "@deck.gl/geo-layers": "^9.2.11",
