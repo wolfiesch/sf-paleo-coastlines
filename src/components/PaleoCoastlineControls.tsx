@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Clapperboard, Clock, Database, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
-import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainSourceMode, TerrainTextureMode } from "../types";
+import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainSourceMode, TerrainSurfaceSmoothing, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
 import { Legend, Section, SegmentedControl, TogglePill, sectionTitleClass, valueClass, type LegendItem } from "./PaleoControlPrimitives";
 
@@ -27,6 +27,7 @@ interface PaleoCoastlineControlsProps {
   showPlaceLabels: boolean;
   exposedAreaKm2: number | null;
   terrainDetail: TerrainDetailLevel;
+  terrainSurfaceSmoothing: TerrainSurfaceSmoothing;
   terrainTextureMode: TerrainTextureMode;
   terrainSourceMode: TerrainSourceMode;
   selectedTerrainSourceId: string | null;
@@ -48,6 +49,7 @@ interface PaleoCoastlineControlsProps {
   onToggleTour: () => void;
   onTogglePlaceLabels: () => void;
   onTerrainDetailChange: (level: TerrainDetailLevel) => void;
+  onTerrainSurfaceSmoothingChange: (mode: TerrainSurfaceSmoothing) => void;
   onTerrainTextureModeChange: (mode: TerrainTextureMode) => void;
   onTerrainSourceModeChange: (mode: TerrainSourceMode) => void;
   onTerrainSourceChange: (sourceId: string) => void;
@@ -62,6 +64,11 @@ const TERRAIN_DETAIL_OPTIONS: { id: TerrainDetailLevel; label: string; title: st
   { id: "detailed", label: "Detailed", title: "Balanced mesh density" },
   { id: "survey", label: "Survey", title: "High mesh density for survey review" },
   { id: "ultra", label: "Ultra", title: "Close-up mesh density for smoother hills" },
+];
+
+const TERRAIN_SURFACE_SMOOTHING_OPTIONS: { id: TerrainSurfaceSmoothing; label: string; title: string }[] = [
+  { id: "smooth", label: "Smooth", title: "Gently softens visual terrain heights for presentation close-ups" },
+  { id: "sharp", label: "Sharp", title: "Keeps original mesh heights for stricter terrain inspection" },
 ];
 
 const TERRAIN_TEXTURE_OPTIONS: { id: TerrainTextureMode; label: string; title: string }[] = [
@@ -208,6 +215,7 @@ export function PaleoCoastlineControls({
   showPlaceLabels,
   exposedAreaKm2,
   terrainDetail,
+  terrainSurfaceSmoothing,
   terrainTextureMode,
   terrainSourceMode,
   selectedTerrainSourceId,
@@ -229,6 +237,7 @@ export function PaleoCoastlineControls({
   onToggleTour,
   onTogglePlaceLabels,
   onTerrainDetailChange,
+  onTerrainSurfaceSmoothingChange,
   onTerrainTextureModeChange,
   onTerrainSourceModeChange,
   onTerrainSourceChange,
@@ -481,6 +490,10 @@ export function PaleoCoastlineControls({
         <div className="space-y-1.5">
           <span className={`block ${sectionTitleClass}`}>Mesh detail</span>
           <SegmentedControl options={TERRAIN_DETAIL_OPTIONS} value={terrainDetail} onChange={onTerrainDetailChange} ariaLabel="Terrain mesh detail" />
+        </div>
+        <div className="space-y-1.5">
+          <span className={`block ${sectionTitleClass}`}>Mesh finish</span>
+          <SegmentedControl options={TERRAIN_SURFACE_SMOOTHING_OPTIONS} value={terrainSurfaceSmoothing} onChange={onTerrainSurfaceSmoothingChange} ariaLabel="Terrain mesh finish" />
         </div>
         <div className="space-y-1.5">
           <span className={`block ${sectionTitleClass}`}>Surface style</span>

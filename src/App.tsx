@@ -25,6 +25,7 @@ import type {
   TerrainDetailLevel,
   PaleoTerrainConfig,
   TerrainSourceMode,
+  TerrainSurfaceSmoothing,
   TerrainTextureMode,
 } from "./types";
 
@@ -154,6 +155,7 @@ function App() {
   const [sourceQualityGaps, setSourceQualityGaps] = useState<SourceQualityGapCollection | null>(null);
   const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("ultra");
+  const [terrainSurfaceSmoothing, setTerrainSurfaceSmoothing] = useState<TerrainSurfaceSmoothing>("smooth");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("relief");
   const [terrainSourceMode, setTerrainSourceMode] = useState<TerrainSourceMode>("best");
   const [selectedTerrainSourceId, setSelectedTerrainSourceId] = useState<string | null>(null);
@@ -492,13 +494,14 @@ function App() {
     showSourceQualityGaps,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
+    terrainSurfaceSmoothing,
     terrainTextureMode,
     terrainSourceMode,
     selectedTerrainSourceId: effectiveTerrainSourceId,
     sceneProfile,
     showPlaceLabels,
     currentYearsBP: yearsBeforePresent,
-  }, baySourceFootprints, paleoRivers, sourceQualityGaps), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showTerrainFootprints, showUncertainty, sourceQualityGaps, terrainDetail, terrainSourceMode, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
+  }, baySourceFootprints, paleoRivers, sourceQualityGaps), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showTerrainFootprints, showUncertainty, sourceQualityGaps, terrainDetail, terrainSourceMode, terrainSurfaceSmoothing, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -625,6 +628,7 @@ function App() {
           waterLevelMeters={waterLevelMeters}
           isPlaying={isPlaying}
           terrainDetail={terrainDetail}
+          terrainSurfaceSmoothing={terrainSurfaceSmoothing}
           terrainTextureMode={terrainTextureMode}
           terrainSourceMode={terrainSourceMode}
           selectedTerrainSourceId={effectiveTerrainSourceId}
@@ -667,6 +671,7 @@ function App() {
             }
           }}
           onTerrainDetailChange={setTerrainDetail}
+          onTerrainSurfaceSmoothingChange={setTerrainSurfaceSmoothing}
           onTerrainTextureModeChange={setTerrainTextureMode}
           onTerrainSourceModeChange={handleTerrainSourceModeChange}
           onTerrainSourceChange={handleTerrainSourceChange}

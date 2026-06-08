@@ -1067,6 +1067,7 @@ export function createPaleoCoastlineLayers(
           type: SmoothTerrainMeshLayer,
           extensions: [terrainRevealExtension],
           flatShading: false,
+          terrainSmoothHeights: context.terrainSurfaceSmoothing === "smooth",
           terrainRevealBandMeters: terrainRevealBandMeters(terrain),
           terrainRevealDepthFogStrength: terrainDepthFogStrength(terrain) * profile.waterDepthFogStrength,
           terrainRevealEnabled: true,

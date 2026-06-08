@@ -25,8 +25,13 @@ interface SmoothTerrainState {
   hasSmoothedTerrainNormals?: boolean;
 }
 
+interface SmoothTerrainMeshProps {
+  terrainSmoothHeights?: boolean;
+}
+
 const TERRAIN_HEIGHT_SMOOTHING_STRENGTH = 0.18;
 
+const sharpMeshCache = new WeakMap<object, TerrainMesh>();
 const smoothedMeshCache = new WeakMap<object, TerrainMesh>();
 
 function attributeValue(attribute: TerrainMeshAttribute | undefined): NumericArray | undefined {
@@ -127,9 +132,10 @@ function smoothedPositionAttribute(
   return { size: positionSize, value: smoothedPositions };
 }
 
-function smoothMesh(mesh: TerrainMesh): TerrainMesh {
-  if (smoothedMeshCache.has(mesh)) {
-    return smoothedMeshCache.get(mesh)!;
+function smoothMesh(mesh: TerrainMesh, smoothHeights: boolean): TerrainMesh {
+  const cache = smoothHeights ? smoothedMeshCache : sharpMeshCache;
+  if (cache.has(mesh)) {
+    return cache.get(mesh)!;
   }
 
   const attributes = mesh.attributes;
@@ -149,7 +155,7 @@ function smoothMesh(mesh: TerrainMesh): TerrainMesh {
     return mesh;
   }
 
-  const smoothedPosition = smoothedPositionAttribute(positions, positionSize, indices);
+  const smoothedPosition = smoothHeights ? smoothedPositionAttribute(positions, positionSize, indices) : null;
   const normalPositions = smoothedPosition?.value ?? positions;
   const normals = new Float32Array(vertexCount * 3);
 
@@ -219,13 +225,14 @@ function smoothMesh(mesh: TerrainMesh): TerrainMesh {
     },
   };
 
-  smoothedMeshCache.set(mesh, smoothedMesh);
+  cache.set(mesh, smoothedMesh);
   return smoothedMesh;
 }
 
 export class SmoothTerrainMeshLayer<DataT = unknown> extends SimpleMeshLayer<DataT> {
   protected getModel(mesh: TerrainMesh) {
-    const smoothedMesh = smoothMesh(mesh);
+    const props = this.props as SmoothTerrainMeshProps;
+    const smoothedMesh = smoothMesh(mesh, props.terrainSmoothHeights ?? true);
     (this.state as SmoothTerrainState).hasSmoothedTerrainNormals = smoothedMesh !== mesh;
     return super.getModel(smoothedMesh);
   }
