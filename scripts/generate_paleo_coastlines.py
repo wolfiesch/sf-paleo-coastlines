@@ -189,6 +189,60 @@ CUDEM_TILE_NAMES = [
 CUDEM_TILE_URLS = [f"{CUDEM_BASE_URL}/{name}" for name in CUDEM_TILE_NAMES]
 CUDEM_GDAL_INPUTS = [f"/vsicurl/{url}" for url in CUDEM_TILE_URLS]
 
+
+def build_nautilus_nos_bag_blocks() -> list[dict[str, Any]]:
+    """NOAA Nautilus transect surveys that sharpen the northwest shelf gap."""
+
+    survey_specs = [
+        {
+            "survey": "W00442",
+            "label": "north coast",
+            "source_name": "San Francisco Bay to Strait of Juan de Fuca",
+        },
+        {
+            "survey": "W00431",
+            "label": "California/Oregon coast",
+            "source_name": "Channel Islands to Cape Blanco",
+        },
+    ]
+    resolution_specs = [
+        {"meters": 8, "part": 1, "minimum": -85.0, "maximum": -35.0},
+        {"meters": 16, "part": 2, "minimum": -170.0, "maximum": -65.0},
+        {"meters": 32, "part": 3, "minimum": -330.0, "maximum": -135.0},
+        {"meters": 64, "part": 4, "minimum": -1050.0, "maximum": -275.0},
+    ]
+    blocks: list[dict[str, Any]] = []
+    for survey_spec in survey_specs:
+        survey = survey_spec["survey"]
+        source_url = f"https://www.ngdc.noaa.gov/nos/W00001-W02000/{survey}.html"
+        for resolution in resolution_specs:
+            meters = resolution["meters"]
+            terrain_size = 2048 if meters <= 32 else 1536
+            blocks.append({
+                "sourceId": f"noaa_nos_{survey.lower()}_{meters}m_bag",
+                "sourceLabel": f"NOAA NOS {survey}, {meters} m BAG {survey_spec['label']} bathymetry",
+                "sourceName": f"NOAA/NOS {survey} Bathymetric Attributed Grid, {meters} m, MLLW, {survey_spec['source_name']}",
+                "sourceUrl": source_url,
+                "role": "Measured E/V Nautilus multibeam BAG transect used to sharpen the northwest outer-shelf gap.",
+                "folder": f"noaa-nos-{survey.lower()}",
+                "fileName": f"{survey}_MB_{meters}m_MLLW_{resolution['part']}of5.bag",
+                "url": f"https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/{survey}/BAG/{survey}_MB_{meters}m_MLLW_{resolution['part']}of5.bag",
+                "terrainStem": f"noaa_nos_{survey.lower()}_{meters}m",
+                "terrainSize": terrain_size,
+                "terrainMinimum": resolution["minimum"],
+                "terrainMaximum": resolution["maximum"],
+                "contourMinimum": resolution["minimum"],
+                "contourMaximum": resolution["maximum"],
+                "contourSimplify": 18,
+                "minDegreesLength": 0.004,
+                "clipBounds": BEST_AVAILABLE_BOUNDS,
+                "skipContours": True,
+                "sourceNoData": 1_000_000.0,
+                "note": f"NOAA NOS {survey} {meters} m BAG survey patch in MLLW, clipped to the current Bay-to-Farallones study box to add measured E/V Nautilus seafloor texture in the northwest shelf gap.",
+            })
+    return blocks
+
+
 NOS_BAG_BLOCKS: list[dict[str, Any]] = [
     {
         "sourceId": "noaa_nos_h12109_1m_bag",
@@ -550,6 +604,7 @@ NOS_BAG_BLOCKS: list[dict[str, Any]] = [
         "sourceNoData": 1_000_000.0,
         "note": "NOAA NOS W00614 VR BAG survey patch in MLLW, adding broader sanctuary bathymetry detail across the Farallones-region shelf.",
     },
+    *build_nautilus_nos_bag_blocks(),
 ]
 
 BATHYMETRY_BLOCKS: list[dict[str, Any]] = [
@@ -1724,6 +1779,8 @@ def generate_contours() -> None:
     ])
 
     for block in NOS_BAG_BLOCKS:
+        if block.get("skipContours"):
+            continue
         block_levels = [
             str(level)
             for level in contour_levels()
@@ -2286,7 +2343,14 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
     if source_id.startswith("usgs_sf_bay_1m") or source_id.startswith("noaa_ocm_area_a"):
         return {"qualityTier": "source_survey", "renderPriority": 70, "resolutionMeters": 1}
     if source_id.startswith("noaa_nos"):
-        resolution = 1 if "_1m" in source_id else 2 if "_2m" in source_id else None
+        resolution = next(
+            (
+                meters
+                for meters in (1, 2, 4, 8, 10, 16, 32, 64, 128)
+                if f"_{meters}m" in source_id
+            ),
+            None,
+        )
         return {"qualityTier": "source_survey", "renderPriority": 80, "resolutionMeters": resolution}
     if source_id.startswith("usgs_2023_sf_lidar"):
         return {"qualityTier": "nearshore_detail", "renderPriority": 82, "resolutionMeters": 1}
@@ -2789,7 +2853,7 @@ def generate_noaa_ocm_area_a_interferometric_terrain_asset() -> dict[str, Any]:
 
 
 def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
-    run([
+    command = [
         "gdalwarp",
         "-q",
         "-overwrite",
@@ -2797,6 +2861,19 @@ def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
         "1",
         "-t_srs",
         "EPSG:4326",
+    ]
+    clip_bounds = block.get("clipBounds")
+    if clip_bounds:
+        command.extend([
+            "-te_srs",
+            "EPSG:4326",
+            "-te",
+            str(clip_bounds["west"]),
+            str(clip_bounds["south"]),
+            str(clip_bounds["east"]),
+            str(clip_bounds["north"]),
+        ])
+    command.extend([
         "-ts",
         str(block["terrainSize"]),
         "0",
@@ -2811,6 +2888,7 @@ def generate_nos_bag_terrain_asset(block: dict[str, Any]) -> dict[str, Any]:
         str(nos_bag_dataset(block)),
         str(nos_bag_terrain_wgs84(block)),
     ])
+    run(command)
     write_terrain_pngs_from_wgs84(
         nos_bag_terrain_wgs84(block),
         nos_bag_elevation_png(block),
@@ -2973,11 +3051,21 @@ def fusion_resolution_rank(source_id: str) -> int:
     if "_2m" in source_id:
         return 20
     if "_4m" in source_id:
+        return 16
+    if "_8m" in source_id:
+        return 14
+    if "_10m" in source_id or "farallon_escarpment" in source_id:
         return 12
+    if "_16m" in source_id:
+        return 10
     if "vr" in source_id:
         return 10
-    if "_10m" in source_id or "farallon_escarpment" in source_id:
+    if "_32m" in source_id:
         return 8
+    if "_64m" in source_id:
+        return 6
+    if "_128m" in source_id:
+        return 4
     return 0
 
 
@@ -3567,6 +3655,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             False,
         )
         for block in NOS_BAG_BLOCKS
+        if not block.get("skipContours")
     ])
     bathymetry_by_level = merge_level_indexes([
         build_level_index(
@@ -3703,7 +3792,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added smaller high-pixel-density USGS CoNED focus clips when present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, and W00614 Farallon-region BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added smaller high-pixel-density USGS CoNED focus clips when present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, W00614, W00431, and W00442 Farallon-region / northwest shelf BAG survey patches, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
