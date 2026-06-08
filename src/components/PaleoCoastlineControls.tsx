@@ -14,6 +14,7 @@ interface PaleoCoastlineControlsProps {
   showUncertainty: boolean;
   showTerrainFootprints: boolean;
   showBaySourceFootprints: boolean;
+  showRivers: boolean;
   waterLevelMeters: number | null;
   isPlaying: boolean;
   terrainDetail: TerrainDetailLevel;
@@ -24,6 +25,7 @@ interface PaleoCoastlineControlsProps {
   onToggleUncertainty: () => void;
   onToggleTerrainFootprints: () => void;
   onToggleBaySourceFootprints: () => void;
+  onToggleRivers: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
   onResetWaterLevel: () => void;
@@ -110,6 +112,7 @@ export function PaleoCoastlineControls({
   showUncertainty,
   showTerrainFootprints,
   showBaySourceFootprints,
+  showRivers,
   waterLevelMeters,
   isPlaying,
   terrainDetail,
@@ -120,6 +123,7 @@ export function PaleoCoastlineControls({
   onToggleUncertainty,
   onToggleTerrainFootprints,
   onToggleBaySourceFootprints,
+  onToggleRivers,
   onWaterLevelChange,
   onTogglePlayback,
   onResetWaterLevel,
@@ -231,6 +235,20 @@ export function PaleoCoastlineControls({
             >
               <Database size={13} />
               Bay sources
+            </button>
+            <button
+              type="button"
+              onClick={onToggleRivers}
+              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                showRivers
+                  ? "border-sky-300/40 bg-sky-300 text-gray-950"
+                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
+              }`}
+              aria-pressed={showRivers}
+              title="Show the last-glacial-lowstand paleo-drainage network"
+            >
+              <Waves size={13} />
+              Rivers
             </button>
           </div>
         </div>

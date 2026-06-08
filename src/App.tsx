@@ -11,6 +11,7 @@ import type {
   BaySourceFootprintCollection,
   PaleoManifest,
   PaleoFeatureCollection,
+  PaleoRiverCollection,
   PaleoTimeSlice,
   PaleoTimeSliceId,
   PaleoTimeSliceManifestItem,
@@ -65,6 +66,7 @@ const VIEW_PRESETS = [
 ] satisfies { id: string; label: string; viewState: MapViewState }[];
 
 const BAY_SOURCE_FOOTPRINTS_URL = "/data/paleo-coastlines/usgs_sf_bay_source_footprints.geojson";
+const RIVERS_URL = "/data/paleo-coastlines/paleo_rivers.geojson";
 
 function nearestProbeLevel(level: number, levels: number[]): number | null {
   if (!levels.length) return null;
@@ -104,6 +106,9 @@ function App() {
   const [showBaySourceFootprints, setShowBaySourceFootprints] = useState(false);
   const [baySourceFootprints, setBaySourceFootprints] = useState<BaySourceFootprintCollection | null>(null);
   const [loadingBaySourceFootprints, setLoadingBaySourceFootprints] = useState(false);
+  const [showRivers, setShowRivers] = useState(true);
+  const [paleoRivers, setPaleoRivers] = useState<PaleoRiverCollection | null>(null);
+  const [loadingRivers, setLoadingRivers] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("bottom");
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");
@@ -287,6 +292,41 @@ function App() {
     };
   }, [baySourceFootprints, showBaySourceFootprints]);
 
+  useEffect(() => {
+    if (!showRivers || paleoRivers) return;
+
+    let cancelled = false;
+
+    async function loadRivers() {
+      setLoadingRivers(true);
+      try {
+        const response = await fetch(RIVERS_URL);
+        if (!response.ok) {
+          throw new Error(`Failed to load paleo rivers: ${response.status}`);
+        }
+        const payload = await response.json() as PaleoRiverCollection;
+        if (!cancelled) {
+          setPaleoRivers(payload);
+          setError(null);
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : "Failed to load paleo rivers.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingRivers(false);
+        }
+      }
+    }
+
+    void loadRivers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [paleoRivers, showRivers]);
+
   const activeSlice = useMemo(
     () => {
       const slice = loadedSlices[activeSliceId]
@@ -324,11 +364,12 @@ function App() {
     showPaleoUncertainty: showUncertainty,
     showTerrainFootprints,
     showBaySourceFootprints,
+    showRivers,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
     terrainTextureMode,
     sceneProfile,
-  }, baySourceFootprints), [activeSliceId, baySourceFootprints, renderSlices, sceneProfile, showBaySourceFootprints, showTerrainFootprints, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters]);
+  }, baySourceFootprints, paleoRivers), [activeSliceId, baySourceFootprints, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showRivers, showTerrainFootprints, showUncertainty, terrainDetail, terrainTextureMode, waterLevelMeters]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -380,6 +421,8 @@ function App() {
           onToggleUncertainty={() => setShowUncertainty((shown) => !shown)}
           onToggleTerrainFootprints={() => setShowTerrainFootprints((shown) => !shown)}
           onToggleBaySourceFootprints={() => setShowBaySourceFootprints((shown) => !shown)}
+          showRivers={showRivers}
+          onToggleRivers={() => setShowRivers((shown) => !shown)}
           onWaterLevelChange={(level) => {
             setIsPlaying(false);
             setWaterLevelMeters(level);
@@ -400,6 +443,7 @@ function App() {
         {isLoadingData ? <p>Loading terrain and coastline data...</p> : null}
         {!isLoadingData && probeLoading ? <p>Loading waterline probe...</p> : null}
         {!isLoadingData && loadingBaySourceFootprints ? <p>Loading Bay source footprints...</p> : null}
+        {!isLoadingData && loadingRivers ? <p>Loading paleo rivers...</p> : null}
         {error ? <p className="text-red-200">{error}</p> : null}
         {!isLoadingData && !error && activeSlice ? (
           <div className="space-y-2">
