@@ -712,10 +712,10 @@ function meshMaxErrorForTerrain(
   }
 
   if (detail === "ultra") {
-    if (tier === "broad") return 0.25;
-    if (tier === "bay_mosaic") return 0.08;
-    if (tier === "offshore_survey") return 0.08;
-    return 0.04;
+    if (tier === "broad") return 0.18;
+    if (tier === "bay_mosaic") return 0.045;
+    if (tier === "offshore_survey") return 0.055;
+    return 0.025;
   }
 
   if (tier === "broad") return 1.8;
