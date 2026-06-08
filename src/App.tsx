@@ -483,12 +483,6 @@ function App() {
       : defaultTerrainSourceId(terrainSources)
   ), [selectedTerrainSourceId, terrainSources]);
 
-  useEffect(() => {
-    if (effectiveTerrainSourceId && effectiveTerrainSourceId !== selectedTerrainSourceId) {
-      setSelectedTerrainSourceId(effectiveTerrainSourceId);
-    }
-  }, [effectiveTerrainSourceId, selectedTerrainSourceId]);
-
   const layers = useMemo(() => createPaleoCoastlineLayers(renderSlices, {
     paleoTimeSliceId: activeSliceId,
     showPaleoUncertainty: showUncertainty,
