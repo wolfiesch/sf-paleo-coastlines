@@ -1,6 +1,7 @@
-import { Database, Gauge, Layers3, MapPinned, Pause, Play, RotateCcw, Waves } from "lucide-react";
+import { Clock, Database, Gauge, Layers3, MapPin, MapPinned, Pause, Play, RotateCcw, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
 import type { PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainTextureMode } from "../types";
+import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
 
 interface ViewPreset {
   id: string;
@@ -17,6 +18,10 @@ interface PaleoCoastlineControlsProps {
   showRivers: boolean;
   waterLevelMeters: number | null;
   isPlaying: boolean;
+  timeMode: boolean;
+  yearsBeforePresent: number;
+  showPlaceLabels: boolean;
+  exposedAreaKm2: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;
   sceneProfile: SceneProfile;
@@ -29,6 +34,9 @@ interface PaleoCoastlineControlsProps {
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
   onResetWaterLevel: () => void;
+  onYearsChange: (years: number) => void;
+  onToggleTimeMode: () => void;
+  onTogglePlaceLabels: () => void;
   onTerrainDetailChange: (level: TerrainDetailLevel) => void;
   onTerrainTextureModeChange: (mode: TerrainTextureMode) => void;
   onSceneProfileChange: (profile: SceneProfile) => void;
@@ -99,6 +107,12 @@ function waterlineStage(level: number): string {
   return "Glacial lowstand range";
 }
 
+function yearLabel(yearsBP: number): string {
+  if (yearsBP <= 0) return "Present day";
+  if (yearsBP < 1000) return `${Math.round(yearsBP)} yr ago`;
+  return `${(yearsBP / 1000).toFixed(1)}k yr ago`;
+}
+
 function terrainSummary(slice: PaleoTimeSlice): string | null {
   const terrains = slice.terrains?.length ? slice.terrains : slice.terrain ? [slice.terrain] : [];
   if (!terrains.length) return null;
@@ -115,6 +129,10 @@ export function PaleoCoastlineControls({
   showRivers,
   waterLevelMeters,
   isPlaying,
+  timeMode,
+  yearsBeforePresent,
+  showPlaceLabels,
+  exposedAreaKm2,
   terrainDetail,
   terrainTextureMode,
   sceneProfile,
@@ -127,6 +145,9 @@ export function PaleoCoastlineControls({
   onWaterLevelChange,
   onTogglePlayback,
   onResetWaterLevel,
+  onYearsChange,
+  onToggleTimeMode,
+  onTogglePlaceLabels,
   onTerrainDetailChange,
   onTerrainTextureModeChange,
   onSceneProfileChange,
@@ -250,6 +271,20 @@ export function PaleoCoastlineControls({
               <Waves size={13} />
               Rivers
             </button>
+            <button
+              type="button"
+              onClick={onTogglePlaceLabels}
+              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                showPlaceLabels
+                  ? "border-amber-300/40 bg-amber-300 text-gray-950"
+                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
+              }`}
+              aria-pressed={showPlaceLabels}
+              title="Show paleo-geography place labels"
+            >
+              <MapPin size={13} />
+              Labels
+            </button>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
@@ -297,20 +332,65 @@ export function PaleoCoastlineControls({
         ) : null}
       </div>
 
-      <label className="mb-3 block rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <span className="text-[11px] uppercase leading-4 text-gray-500">Waterline</span>
-          <span className="font-mono text-sm text-cyan-100">{activeWaterLevel} m</span>
+      <div className="mb-3 rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-[11px] uppercase leading-4 text-gray-500">
+            <Clock size={12} />
+            {timeMode ? "Time" : "Depth"}
+          </span>
+          <button
+            type="button"
+            onClick={onToggleTimeMode}
+            className="rounded-md border border-cyan-400/25 bg-cyan-400/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-100 transition-colors hover:bg-cyan-300 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            aria-pressed={timeMode}
+            title="Switch between years-before-present and raw water depth"
+          >
+            {timeMode ? "Years" : "Meters"}
+          </button>
         </div>
-        <input
-          type="range"
-          min="-120"
-          max="2"
-          step="1"
-          value={activeWaterLevel}
-          onChange={(event) => onWaterLevelChange(Number(event.currentTarget.value))}
-          className="w-full accent-cyan-300"
-        />
+        {timeMode ? (
+          <div className="mb-3">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="font-mono text-sm text-cyan-100">{yearLabel(yearsBeforePresent)}</span>
+              <span className="font-mono text-[11px] text-gray-500">
+                <span className="sr-only">Derived sea level </span>
+                {activeWaterLevel} m
+              </span>
+            </div>
+            <input
+              type="range"
+              min={MIN_YEARS_BP}
+              max={MAX_YEARS_BP}
+              step={100}
+              value={yearsBeforePresent}
+              onChange={(event) => onYearsChange(Number(event.currentTarget.value))}
+              className="w-full accent-cyan-300"
+              aria-label="Years before present"
+            />
+            {exposedAreaKm2 != null && exposedAreaKm2 > 0 ? (
+              <div className="mt-1 text-xs text-gray-300">
+                ~{Math.round(exposedAreaKm2).toLocaleString()} km² more land than today
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-[11px] uppercase leading-4 text-gray-500">Waterline</span>
+              <span className="font-mono text-sm text-cyan-100">{activeWaterLevel} m</span>
+            </div>
+            <input
+              type="range"
+              min="-120"
+              max="2"
+              step="1"
+              value={activeWaterLevel}
+              onChange={(event) => onWaterLevelChange(Number(event.currentTarget.value))}
+              className="w-full accent-cyan-300"
+              aria-label="Water level in meters"
+            />
+          </>
+        )}
         <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
           <div className="min-w-0">
             <div className="truncate text-xs text-gray-300">{waterlineStage(activeWaterLevel)}</div>
@@ -355,7 +435,7 @@ export function PaleoCoastlineControls({
             Depth
           </span>
         </div>
-      </label>
+      </div>
 
       <div className="mb-3 rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
         <div className="mb-2 flex items-center justify-between gap-3">
