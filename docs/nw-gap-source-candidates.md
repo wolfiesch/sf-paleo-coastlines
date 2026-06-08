@@ -10,6 +10,9 @@ Bounds: `[-123.55, 37.95, -123.15, 38.15]`
 
 - New candidate source groups: 40
 - Candidate groups already in the local stack: 3
+- Downloadable new BAG source groups: W00433, W00443, W00444
+- Downloadable new BAG files found: 15
+- Downloadable new BAG file size: 172.5 MB
 
 ## NOAA/NCEI BAG bathymetry
 
@@ -18,13 +21,13 @@ Unique source groups: 7
 
 | Source | Status | Records | Sample names / links |
 |---|---|---:|---|
-| W00433 | new candidate | 5 | W00433_MB_128m_MLLW_5of5; W00433_MB_128m_MLLW_Combined; W00433_MB_16m_MLLW_2of5 |
-| W00443 | new candidate | 5 | W00443_MB_128m_MLLW_4of4; W00443_MB_128m_MLLW_Combined; W00443_MB_16m_MLLW_1of4 |
-| W00444 | new candidate | 5 | W00444_MB_128m_MLLW_5of5; W00444_MB_128m_MLLW_Combined; W00444_MB_16m_MLLW_2of5 |
-| W00478 | new candidate | 1 | W00478_MB_VR_MLLW_interp4m |
-| W00431 | already local | 5 | W00431_MB_128m_MLLW_5of5; W00431_MB_128m_MLLW_Combined; W00431_MB_16m_MLLW_2of5 |
-| W00442 | already local | 4 | W00442_MB_128m_MLLW_Combined; W00442_MB_16m_MLLW_2of5; W00442_MB_32m_MLLW_3of5 |
-| W00614 | already local | 1 | W00614_MB_VR_MLLW_1of1_interp4m |
+| W00433 | new candidate | 5 | [W00433_MB_128m_MLLW_5of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00433/BAG/W00433_MB_128m_MLLW_5of5.bag) (ok, 12.4 MB); [W00433_MB_128m_MLLW_Combined](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00433/BAG/W00433_MB_128m_MLLW_Combined.bag) (ok, 7.5 MB); [W00433_MB_16m_MLLW_2of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00433/BAG/W00433_MB_16m_MLLW_2of5.bag) (ok, 24.2 MB); [W00433_MB_32m_MLLW_3of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00433/BAG/W00433_MB_32m_MLLW_3of5.bag) (ok, 11.3 MB); [W00433_MB_64m_MLLW_4of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00433/BAG/W00433_MB_64m_MLLW_4of5.bag) (ok, 14.8 MB) |
+| W00443 | new candidate | 5 | [W00443_MB_128m_MLLW_4of4](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00443/BAG/W00443_MB_128m_MLLW_4of4.bag) (ok, 3.9 MB); [W00443_MB_128m_MLLW_Combined](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00443/BAG/W00443_MB_128m_MLLW_Combined.bag) (ok, 13.2 MB); [W00443_MB_16m_MLLW_1of4](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00443/BAG/W00443_MB_16m_MLLW_1of4.bag) (ok, 18.9 MB); [W00443_MB_32m_MLLW_2of4](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00443/BAG/W00443_MB_32m_MLLW_2of4.bag) (ok, 19.6 MB); [W00443_MB_64m_MLLW_3of4](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00443/BAG/W00443_MB_64m_MLLW_3of4.bag) (ok, 14.7 MB) |
+| W00444 | new candidate | 5 | [W00444_MB_128m_MLLW_5of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00444/BAG/W00444_MB_128m_MLLW_5of5.bag) (ok, 5.4 MB); [W00444_MB_128m_MLLW_Combined](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00444/BAG/W00444_MB_128m_MLLW_Combined.bag) (ok, 13.6 MB); [W00444_MB_16m_MLLW_2of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00444/BAG/W00444_MB_16m_MLLW_2of5.bag) (ok, 5.5 MB); [W00444_MB_32m_MLLW_3of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00444/BAG/W00444_MB_32m_MLLW_3of5.bag) (ok, 4.5 MB); [W00444_MB_64m_MLLW_4of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00444/BAG/W00444_MB_64m_MLLW_4of5.bag) (ok, 3.3 MB) |
+| W00478 | new candidate | 1 | [W00478_MB_VR_MLLW_interp4m](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00478/BAG/W00478_MB_VR_MLLW_interp4m.bag) (status 404, 6.3 KB) |
+| W00431 | already local | 5 | [W00431_MB_128m_MLLW_5of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00431/BAG/W00431_MB_128m_MLLW_5of5.bag) (ok, 8.4 MB); [W00431_MB_128m_MLLW_Combined](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00431/BAG/W00431_MB_128m_MLLW_Combined.bag) (ok, 6.9 MB); [W00431_MB_16m_MLLW_2of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00431/BAG/W00431_MB_16m_MLLW_2of5.bag) (ok, 16.4 MB); [W00431_MB_32m_MLLW_3of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00431/BAG/W00431_MB_32m_MLLW_3of5.bag) (ok, 10.6 MB); [W00431_MB_64m_MLLW_4of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00431/BAG/W00431_MB_64m_MLLW_4of5.bag) (ok, 21.4 MB) |
+| W00442 | already local | 4 | [W00442_MB_128m_MLLW_Combined](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00442/BAG/W00442_MB_128m_MLLW_Combined.bag) (ok, 5.0 MB); [W00442_MB_16m_MLLW_2of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00442/BAG/W00442_MB_16m_MLLW_2of5.bag) (ok, 12.4 MB); [W00442_MB_32m_MLLW_3of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00442/BAG/W00442_MB_32m_MLLW_3of5.bag) (ok, 6.7 MB); [W00442_MB_8m_MLLW_1of5](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00442/BAG/W00442_MB_8m_MLLW_1of5.bag) (ok, 2.7 MB) |
+| W00614 | already local | 1 | [W00614_MB_VR_MLLW_1of1_interp4m](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00614/BAG/W00614_MB_VR_MLLW_1of1_interp4m.bag) (status 404, 6.3 KB) |
 
 ## NOAA/NCEI multibeam footprints
 

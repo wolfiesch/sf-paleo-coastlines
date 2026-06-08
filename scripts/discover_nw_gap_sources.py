@@ -7,6 +7,7 @@ import json
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+from urllib.error import HTTPError, URLError
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +58,72 @@ KNOWN_LOCAL_SURVEYS = {
     "W00614",
 }
 
+BAG_ARCHIVE_ROOT = "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000"
+BAG_SURVEY_PAGE_ROOT = "https://www.ngdc.noaa.gov/nos/W00001-W02000"
+
+
+def bag_download_url(survey_id: str, name: str) -> str:
+    return f"{BAG_ARCHIVE_ROOT}/{survey_id}/BAG/{urllib.parse.quote(name)}.bag"
+
+
+def bag_survey_page_url(survey_id: str) -> str:
+    return f"{BAG_SURVEY_PAGE_ROOT}/{survey_id}.html"
+
+
+def parse_content_length(headers: Any) -> int | None:
+    value = headers.get("Content-Length")
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def probe_download(url: str) -> dict[str, Any]:
+    request = urllib.request.Request(url, method="HEAD")
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            return {
+                "url": url,
+                "status": response.status,
+                "ok": 200 <= response.status < 400,
+                "bytes": parse_content_length(response.headers),
+                "contentType": response.headers.get("Content-Type"),
+                "probeMethod": "HEAD",
+            }
+    except HTTPError as error:
+        return {
+            "url": url,
+            "status": error.code,
+            "ok": False,
+            "bytes": parse_content_length(error.headers),
+            "contentType": error.headers.get("Content-Type"),
+            "probeMethod": "HEAD",
+            "error": error.reason,
+        }
+    except URLError as error:
+        return {
+            "url": url,
+            "status": None,
+            "ok": False,
+            "bytes": None,
+            "contentType": None,
+            "probeMethod": "HEAD",
+            "error": str(error.reason),
+        }
+
+
+def enrich_bag_record(record: dict[str, Any]) -> dict[str, Any]:
+    enriched = dict(record)
+    survey_id = str(record.get("SurveyID") or "").strip()
+    name = str(record.get("Name") or "").strip()
+    if survey_id and name:
+        enriched["downloadUrl"] = bag_download_url(survey_id, name)
+        enriched["downloadProbe"] = probe_download(enriched["downloadUrl"])
+        enriched["surveyPageUrl"] = bag_survey_page_url(survey_id)
+    return enriched
+
 
 def query_service(service: dict[str, Any]) -> list[dict[str, Any]]:
     params = {
@@ -90,6 +157,8 @@ def summarize_records(service_key: str, service: dict[str, Any], records: list[d
     name_field = service["nameField"]
     groups: dict[str, dict[str, Any]] = {}
     for record in records:
+        if service_key == "noaa_ncei_bag":
+            record = enrich_bag_record(record)
         source_id = str(record.get(id_field) or "").strip()
         if not source_id:
             continue
@@ -137,6 +206,21 @@ def build_report() -> dict[str, Any]:
         for source in (bag_summary["sources"] if bag_summary else [])
         if not source["alreadyInLocalStack"]
     ]
+    downloadable_bag_source_ids = sorted({
+        source["id"]
+        for source in (bag_summary["sources"] if bag_summary else [])
+        if not source["alreadyInLocalStack"]
+        for sample in source["sampleRecords"]
+        if sample.get("downloadProbe", {}).get("ok")
+    })
+    downloadable_bag_files = [
+        sample
+        for source in (bag_summary["sources"] if bag_summary else [])
+        if not source["alreadyInLocalStack"]
+        for sample in source["sampleRecords"]
+        if sample.get("downloadProbe", {}).get("ok")
+    ]
+    downloadable_bag_bytes = sum(sample.get("downloadProbe", {}).get("bytes") or 0 for sample in downloadable_bag_files)
 
     return {
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -150,9 +234,24 @@ def build_report() -> dict[str, Any]:
             "alreadyLocalCandidateCountByService": local_by_service,
             "recordCountByService": record_counts,
             "newBagCandidateIds": new_bag_sources,
+            "downloadableNewBagCandidateIds": downloadable_bag_source_ids,
+            "downloadableNewBagFileCount": len(downloadable_bag_files),
+            "downloadableNewBagBytes": downloadable_bag_bytes,
         },
         "services": service_summaries,
     }
+
+
+def format_bytes(value: int | None) -> str:
+    if value is None:
+        return "unknown size"
+    units = ["B", "KB", "MB", "GB", "TB"]
+    amount = float(value)
+    for unit in units:
+        if amount < 1024 or unit == units[-1]:
+            return f"{amount:.1f} {unit}" if unit != "B" else f"{int(amount)} B"
+        amount /= 1024
+    return f"{value} B"
 
 
 def write_markdown(report: dict[str, Any]) -> None:
@@ -169,6 +268,9 @@ def write_markdown(report: dict[str, Any]) -> None:
         "",
         f"- New candidate source groups: {report['summary']['newCandidateCount']}",
         f"- Candidate groups already in the local stack: {report['summary']['alreadyLocalCandidateCount']}",
+        f"- Downloadable new BAG source groups: {', '.join(report['summary']['downloadableNewBagCandidateIds']) or 'none'}",
+        f"- Downloadable new BAG files found: {report['summary']['downloadableNewBagFileCount']}",
+        f"- Downloadable new BAG file size: {format_bytes(report['summary']['downloadableNewBagBytes'])}",
         "",
     ]
 
@@ -185,10 +287,17 @@ def write_markdown(report: dict[str, Any]) -> None:
         for source in service["sources"][:20]:
             status = "already local" if source["alreadyInLocalStack"] else "new candidate"
             samples = []
-            for sample in source["sampleRecords"][:3]:
+            sample_limit = 5 if service["service"] == "noaa_ncei_bag" else 3
+            for sample in source["sampleRecords"][:sample_limit]:
                 name = sample.get("Name") or sample.get("DATASET_NAME") or sample.get("PLATFORM") or source["label"]
-                url = sample.get("DOWNLOAD_URL")
-                samples.append(f"[{name}]({url})" if url else str(name))
+                url = sample.get("downloadUrl") or sample.get("DOWNLOAD_URL")
+                probe = sample.get("downloadProbe")
+                if probe:
+                    state = "ok" if probe.get("ok") else f"status {probe.get('status') or 'unknown'}"
+                    size = format_bytes(probe.get("bytes"))
+                    samples.append(f"[{name}]({url}) ({state}, {size})")
+                else:
+                    samples.append(f"[{name}]({url})" if url else str(name))
             lines.append(f"| {source['id']} | {status} | {source['recordCount']} | {'; '.join(samples)} |")
         lines.append("")
 
