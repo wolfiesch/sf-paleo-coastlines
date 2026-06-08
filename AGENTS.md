@@ -9,3 +9,4 @@ Keep this project separate from `cityscope-sf`:
 - Put GIS source files under `data/paleo-coastlines`.
 - Put browser-ready generated files under `public/data/paleo-coastlines`.
 - Use `pnpm paleo-coastlines:generate` after changing the GIS pipeline.
+- Use `pnpm paleo-coastlines:terrain-tiles` after changing only browser terrain tiles.

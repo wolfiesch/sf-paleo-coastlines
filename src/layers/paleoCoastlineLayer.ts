@@ -67,6 +67,8 @@ interface TerrainTileConfig {
   elevationData: string;
   textures: {
     shadedRelief: string;
+    depthColor?: string;
+    surveyComposite?: string;
   };
   minZoom: number;
   maxZoom: number;
@@ -106,6 +108,8 @@ const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
     elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_gate_shelf/elevation/{z}/{x}/{y}.png",
     textures: {
       shadedRelief: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_gate_shelf/relief/{z}/{x}/{y}.png",
+      depthColor: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_gate_shelf/color/{z}/{x}/{y}.png",
+      surveyComposite: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_gate_shelf/composite/{z}/{x}/{y}.png",
     },
     minZoom: 12,
     maxZoom: 15,
@@ -115,6 +119,8 @@ const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
     elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_south_bay_edge/elevation/{z}/{x}/{y}.png",
     textures: {
       shadedRelief: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_south_bay_edge/relief/{z}/{x}/{y}.png",
+      depthColor: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_south_bay_edge/color/{z}/{x}/{y}.png",
+      surveyComposite: "/data/paleo-coastlines/terrain-tiles/usgs_coned_sf_2m_south_bay_edge/composite/{z}/{x}/{y}.png",
     },
     minZoom: 12,
     maxZoom: 14,
@@ -230,8 +236,8 @@ function depthContourColor(feature: PickedPaleoFeature, activeWaterLevel: number
   // No white "waterline" branch here: the active shoreline is a single contour
   // drawn by the glow + coastline layers. Every contour this layer draws is
   // context, so it always reads as a quiet exposed/submerged depth ring.
-  if (offsetMeters > 0) return [255, 224, 98, scaleAlpha(36 + fade * 64, profile.contourAlphaScale)];
-  return [48, 205, 255, scaleAlpha(30 + fade * 60, profile.contourAlphaScale)];
+  if (offsetMeters > 0) return [255, 224, 98, scaleAlpha(22 + fade * 38, profile.contourAlphaScale)];
+  return [48, 205, 255, scaleAlpha(18 + fade * 34, profile.contourAlphaScale)];
 }
 
 function depthContourWidth(feature: PickedPaleoFeature, profile: SceneProfileConfig): number {
@@ -264,7 +270,7 @@ function shorelineGlowColor(feature: PickedPaleoFeature, activeWaterLevel: numbe
   const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
   const distance = Math.abs(offsetMeters);
   const fade = Math.max(0, 1 - distance / 5.5);
-  const baseAlpha = strength === "outer" ? 58 : 170;
+  const baseAlpha = strength === "outer" ? 42 : 170;
   const alpha = scaleAlpha(baseAlpha * fade, profile.contourAlphaScale);
   if (offsetMeters > 0) return [255, 230, 118, alpha];
   return strength === "outer" ? [88, 228, 255, alpha] : [232, 255, 255, alpha];
@@ -275,7 +281,7 @@ function shorelineGlowWidth(feature: PickedPaleoFeature, activeWaterLevel: numbe
   const fade = Math.max(0, 1 - distance / 5.5);
   // Slim soft halo (outer) over a crisp core (inner). Kept narrow so the active
   // waterline reads as a clean glowing line rather than a thick painted band.
-  return (strength === "outer" ? 6 + fade * 4 : 2.5 + fade * 1.5) * profile.contourWidthScale;
+  return (strength === "outer" ? 4 + fade * 2.5 : 2.5 + fade * 1.5) * profile.contourWidthScale;
 }
 
 function selectedSlice(data: PaleoTimeSlice[], context: PaleoRenderContext): PaleoTimeSlice | null {
@@ -512,9 +518,14 @@ function terrainMaterial(terrain: PaleoTerrainConfig, profile: SceneProfileConfi
   const specularColor: [number, number, number] = tier === "broad" ? [60, 70, 78] : [78, 88, 96];
 
   if (textureMode === "relief" || textureMode === "survey") {
+    // The relief texture is a baked grayscale hillshade, so it is lit flatly
+    // (diffuse near zero). Ambient was 0.96, which pushed every light-gray
+    // hillshade pixel to near-white - tolerable when only peaks were exposed,
+    // but a blinding white sheet once a whole valley sits above the waterline.
+    // A calmer ambient keeps the relief readable as soft pale terrain instead.
     return {
-      ambient: 0.96,
-      diffuse: 0.06,
+      ambient: 0.64,
+      diffuse: 0.08,
       shininess: 1,
       specularColor: [8, 10, 12] as [number, number, number],
     };
@@ -726,16 +737,15 @@ function terrainTileConfigForRender(
 }
 
 function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode, tileConfig?: TerrainTileConfig | null): string {
-  // The current tiled source only includes relief texture tiles. Keeping the
-  // texture tiled avoids stretching one big image over each small mesh tile.
-  if (tileConfig) return tileConfig.textures.shadedRelief;
-  if (mode === "color") return terrain.textures?.depthColor ?? terrain.texture;
-  if (mode === "bottom") return terrain.textures?.seafloorCharacter ?? terrain.textures?.surveySonarHybrid ?? terrain.textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
-  if (mode === "hybrid") return terrain.textures?.surveySonarHybrid ?? terrain.textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
-  if (mode === "sonar") return terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
-  if (mode === "source") return terrain.textures?.sourceConfidence ?? terrain.textures?.surveyComposite ?? terrain.textures?.shadedRelief ?? terrain.texture;
-  if (mode === "survey") return terrain.textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
-  return terrain.textures?.shadedRelief ?? terrain.texture;
+  const textures = tileConfig?.textures ?? terrain.textures;
+  const fallback = tileConfig?.textures.shadedRelief ?? terrain.texture;
+  if (mode === "color") return textures?.depthColor ?? fallback;
+  if (mode === "bottom") return terrain.textures?.seafloorCharacter ?? terrain.textures?.surveySonarHybrid ?? textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? textures?.shadedRelief ?? fallback;
+  if (mode === "hybrid") return terrain.textures?.surveySonarHybrid ?? textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? textures?.shadedRelief ?? fallback;
+  if (mode === "sonar") return terrain.textures?.sonarBackscatter ?? textures?.shadedRelief ?? fallback;
+  if (mode === "source") return terrain.textures?.sourceConfidence ?? textures?.surveyComposite ?? textures?.shadedRelief ?? fallback;
+  if (mode === "survey") return textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? textures?.shadedRelief ?? fallback;
+  return textures?.shadedRelief ?? fallback;
 }
 
 function elevationDecoderForTerrain(
@@ -1046,7 +1056,7 @@ export function createPaleoCoastlineLayers(
     .filter((feature) => {
       if (waterlineLevel !== null && feature.properties.elevation_m === waterlineLevel) return false;
       const offset = Math.abs(feature.properties.elevation_m - activeWaterLevel);
-      return offset <= 12 || Math.abs(feature.properties.elevation_m % 10) < 0.1;
+      return offset <= 8 || Math.abs(feature.properties.elevation_m % 10) < 0.1;
     })
     .map((feature) => elevatedFeature(feature, terrain, undefined, profile));
 

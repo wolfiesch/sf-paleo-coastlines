@@ -131,6 +131,7 @@ def write_tiles(
   min_zoom: int,
   max_zoom: int,
   resampling: str,
+  skip_existing: bool,
 ) -> int:
   image = np.asarray(Image.open(image_path))
   written = 0
@@ -139,13 +140,16 @@ def write_tiles(
     x_range, y_range = tile_range(bounds, zoom)
     for x in x_range:
       for y in y_range:
+        tile_path = output_dir / str(zoom) / str(x) / f"{y}.png"
+        if skip_existing and tile_path.exists():
+          continue
+
         src_x, src_y = tile_sample_grid(bounds, zoom, x, y)
         if resampling == "nearest":
           tile = nearest_tile(image, src_x, src_y)
         else:
           tile = bilinear_tile(image, src_x, src_y)
 
-        tile_path = output_dir / str(zoom) / str(x) / f"{y}.png"
         tile_path.parent.mkdir(parents=True, exist_ok=True)
         Image.fromarray(tile).save(tile_path, optimize=True)
         written += 1
@@ -162,26 +166,38 @@ def count_tiles(output_dir: Path, min_zoom: int, max_zoom: int) -> int:
   return total
 
 
-def generate_tileset(terrain: dict, output_root: Path, min_zoom: int, max_zoom: int, clean: bool) -> dict:
+def generate_tileset(terrain: dict, output_root: Path, min_zoom: int, max_zoom: int, clean: bool, skip_existing: bool) -> dict:
   source_id = terrain["sourceId"]
   source_output = output_root / source_id
   if clean and source_output.exists():
     shutil.rmtree(source_output)
 
   elevation_output = source_output / "elevation"
-  relief_output = source_output / "relief"
   elevation_path = terrain_asset_path(terrain["elevationData"])
-  relief_path = terrain_asset_path(terrain["textures"]["shadedRelief"])
+  texture_sources = {
+    "shadedRelief": ("relief", terrain["textures"].get("shadedRelief")),
+    "depthColor": ("color", terrain["textures"].get("depthColor")),
+    "surveyComposite": ("composite", terrain["textures"].get("surveyComposite")),
+  }
 
   existing_metadata_path = source_output / "tileset.json"
   existing_metadata = json.loads(existing_metadata_path.read_text()) if existing_metadata_path.exists() else {}
   metadata_min_zoom = min(min_zoom, int(existing_metadata.get("minZoom", min_zoom)))
   metadata_max_zoom = max(max_zoom, int(existing_metadata.get("maxZoom", max_zoom)))
 
-  write_tiles(elevation_path, terrain["bounds"], elevation_output, min_zoom, max_zoom, "nearest")
-  write_tiles(relief_path, terrain["bounds"], relief_output, min_zoom, max_zoom, "bilinear")
+  write_tiles(elevation_path, terrain["bounds"], elevation_output, min_zoom, max_zoom, "nearest", skip_existing)
   elevation_count = count_tiles(elevation_output, metadata_min_zoom, metadata_max_zoom)
-  relief_count = count_tiles(relief_output, metadata_min_zoom, metadata_max_zoom)
+  tiled_textures = {}
+  texture_counts = {}
+
+  for texture_name, (folder_name, texture_url) in texture_sources.items():
+    if not texture_url:
+      continue
+    texture_output = source_output / folder_name
+    texture_path = terrain_asset_path(texture_url)
+    write_tiles(texture_path, terrain["bounds"], texture_output, min_zoom, max_zoom, "bilinear", skip_existing)
+    tiled_textures[texture_name] = f"/data/paleo-coastlines/terrain-tiles/{source_id}/{folder_name}/{{z}}/{{x}}/{{y}}.png"
+    texture_counts[texture_name] = count_tiles(texture_output, metadata_min_zoom, metadata_max_zoom)
 
   metadata = {
     "sourceId": source_id,
@@ -190,12 +206,10 @@ def generate_tileset(terrain: dict, output_root: Path, min_zoom: int, max_zoom: 
     "maxZoom": metadata_max_zoom,
     "tileSize": TILE_SIZE,
     "elevationData": f"/data/paleo-coastlines/terrain-tiles/{source_id}/elevation/{{z}}/{{x}}/{{y}}.png",
-    "textures": {
-      "shadedRelief": f"/data/paleo-coastlines/terrain-tiles/{source_id}/relief/{{z}}/{{x}}/{{y}}.png",
-    },
+    "textures": tiled_textures,
     "tileCounts": {
       "elevation": elevation_count,
-      "shadedRelief": relief_count,
+      **texture_counts,
     },
   }
   (source_output / "tileset.json").write_text(json.dumps(metadata, indent=2) + "\n")
@@ -210,6 +224,7 @@ def parse_args() -> argparse.Namespace:
   parser.add_argument("--min-zoom", type=int, default=None)
   parser.add_argument("--max-zoom", type=int, default=None)
   parser.add_argument("--clean", action="store_true", help="Delete the selected source's tile folder before writing.")
+  parser.add_argument("--skip-existing", action="store_true", help="Leave existing tile PNGs in place and write only missing tiles.")
   return parser.parse_args()
 
 
@@ -224,7 +239,7 @@ def main() -> None:
     min_zoom = args.min_zoom if args.min_zoom is not None else default.min_zoom
     max_zoom = args.max_zoom if args.max_zoom is not None else default.max_zoom
     terrain = load_terrain(args.manifest, source_id)
-    generated.append(generate_tileset(terrain, args.output_root, min_zoom, max_zoom, args.clean))
+    generated.append(generate_tileset(terrain, args.output_root, min_zoom, max_zoom, args.clean, args.skip_existing and not args.clean))
 
   args.output_root.mkdir(parents=True, exist_ok=True)
   all_tilesets = [
@@ -238,7 +253,8 @@ def main() -> None:
 
   for item in generated:
     total = sum(item["tileCounts"].values())
-    print(f"{item['sourceId']}: wrote {total} tiles at z{item['minZoom']}-z{item['maxZoom']}")
+    action = "has" if args.skip_existing and not args.clean else "wrote"
+    print(f"{item['sourceId']}: {action} {total} tiles at z{item['minZoom']}-z{item['maxZoom']}")
 
 
 if __name__ == "__main__":
