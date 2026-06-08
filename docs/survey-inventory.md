@@ -30,7 +30,10 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS H12113, 1 m BAG Lake Merced to Shelter Cove bathymetry | NOAA NOS BAG | 1 m | 186.3 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12113, 2 m BAG Lake Merced to Shelter Cove bathymetry | NOAA NOS BAG | 2 m | 230.0 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00431, 32 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00433, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00442, 32 m BAG north coast bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00444, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA OCM Area A CA1B08, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 0.3 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
 | NOAA OCM Area A CA1B09, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 4.5 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
 | NOAA OCM Area A CA1B22, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 8.5 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
@@ -63,9 +66,17 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS W00431, 16 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00431, 64 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00431, 8 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00433, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00433, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00433, 8 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00442, 16 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00442, 64 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00442, 8 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00443, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00443, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00444, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00444, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00444, 8 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 
 ## Highest-Value Next Data Chases
 

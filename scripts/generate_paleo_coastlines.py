@@ -198,24 +198,62 @@ def build_nautilus_nos_bag_blocks() -> list[dict[str, Any]]:
             "survey": "W00442",
             "label": "north coast",
             "source_name": "San Francisco Bay to Strait of Juan de Fuca",
+            "resolutions": [
+                {"meters": 8, "part": 1, "total": 5, "minimum": -85.0, "maximum": -35.0},
+                {"meters": 16, "part": 2, "total": 5, "minimum": -170.0, "maximum": -65.0},
+                {"meters": 32, "part": 3, "total": 5, "minimum": -330.0, "maximum": -135.0},
+                {"meters": 64, "part": 4, "total": 5, "minimum": -1050.0, "maximum": -275.0},
+            ],
         },
         {
             "survey": "W00431",
             "label": "California/Oregon coast",
             "source_name": "Channel Islands to Cape Blanco",
+            "resolutions": [
+                {"meters": 8, "part": 1, "total": 5, "minimum": -85.0, "maximum": -35.0},
+                {"meters": 16, "part": 2, "total": 5, "minimum": -170.0, "maximum": -65.0},
+                {"meters": 32, "part": 3, "total": 5, "minimum": -330.0, "maximum": -135.0},
+                {"meters": 64, "part": 4, "total": 5, "minimum": -1050.0, "maximum": -275.0},
+            ],
         },
-    ]
-    resolution_specs = [
-        {"meters": 8, "part": 1, "minimum": -85.0, "maximum": -35.0},
-        {"meters": 16, "part": 2, "minimum": -170.0, "maximum": -65.0},
-        {"meters": 32, "part": 3, "minimum": -330.0, "maximum": -135.0},
-        {"meters": 64, "part": 4, "minimum": -1050.0, "maximum": -275.0},
+        {
+            "survey": "W00433",
+            "label": "northwest shelf",
+            "source_name": "Greater Farallones northwest shelf",
+            "resolutions": [
+                {"meters": 8, "part": 1, "total": 5, "minimum": -85.0, "maximum": -35.0},
+                {"meters": 16, "part": 2, "total": 5, "minimum": -170.0, "maximum": -65.0},
+                {"meters": 32, "part": 3, "total": 5, "minimum": -330.0, "maximum": -135.0},
+                {"meters": 64, "part": 4, "total": 5, "minimum": -1050.0, "maximum": -275.0},
+            ],
+        },
+        {
+            "survey": "W00443",
+            "label": "northwest shelf",
+            "source_name": "Greater Farallones northwest shelf",
+            "resolutions": [
+                {"meters": 16, "part": 1, "total": 4, "minimum": -170.0, "maximum": -65.0},
+                {"meters": 32, "part": 2, "total": 4, "minimum": -330.0, "maximum": -135.0},
+                {"meters": 64, "part": 3, "total": 4, "minimum": -1050.0, "maximum": -275.0},
+            ],
+        },
+        {
+            "survey": "W00444",
+            "label": "northwest shelf",
+            "source_name": "Greater Farallones northwest shelf",
+            "resolutions": [
+                {"meters": 8, "part": 1, "total": 5, "minimum": -85.0, "maximum": -35.0},
+                {"meters": 16, "part": 2, "total": 5, "minimum": -170.0, "maximum": -65.0},
+                {"meters": 32, "part": 3, "total": 5, "minimum": -330.0, "maximum": -135.0},
+                {"meters": 64, "part": 4, "total": 5, "minimum": -1050.0, "maximum": -275.0},
+            ],
+        },
     ]
     blocks: list[dict[str, Any]] = []
     for survey_spec in survey_specs:
         survey = survey_spec["survey"]
         source_url = f"https://www.ngdc.noaa.gov/nos/W00001-W02000/{survey}.html"
-        for resolution in resolution_specs:
+        for resolution in survey_spec["resolutions"]:
             meters = resolution["meters"]
             terrain_size = 2048 if meters <= 32 else 1536
             blocks.append({
@@ -225,8 +263,8 @@ def build_nautilus_nos_bag_blocks() -> list[dict[str, Any]]:
                 "sourceUrl": source_url,
                 "role": "Measured E/V Nautilus multibeam BAG transect used to sharpen the northwest outer-shelf gap.",
                 "folder": f"noaa-nos-{survey.lower()}",
-                "fileName": f"{survey}_MB_{meters}m_MLLW_{resolution['part']}of5.bag",
-                "url": f"https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/{survey}/BAG/{survey}_MB_{meters}m_MLLW_{resolution['part']}of5.bag",
+                "fileName": f"{survey}_MB_{meters}m_MLLW_{resolution['part']}of{resolution['total']}.bag",
+                "url": f"https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/{survey}/BAG/{survey}_MB_{meters}m_MLLW_{resolution['part']}of{resolution['total']}.bag",
                 "terrainStem": f"noaa_nos_{survey.lower()}_{meters}m",
                 "terrainSize": terrain_size,
                 "terrainMinimum": resolution["minimum"],
