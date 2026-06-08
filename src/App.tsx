@@ -565,7 +565,14 @@ function App() {
           onTogglePlayback={() => setIsPlaying((playing) => !playing)}
           onResetWaterLevel={() => {
             setIsPlaying(false);
-            setWaterLevelMeters(2);
+            if (timeMode) {
+              // In time mode, reset to the default lowstand year and derive its
+              // sea level so the year readout and the meters stay consistent.
+              setYearsBeforePresent(MAX_YEARS_BP);
+              setWaterLevelMeters(Math.round(seaLevelForYearsBP(MAX_YEARS_BP)));
+            } else {
+              setWaterLevelMeters(2);
+            }
           }}
           onTerrainDetailChange={setTerrainDetail}
           onTerrainTextureModeChange={setTerrainTextureMode}

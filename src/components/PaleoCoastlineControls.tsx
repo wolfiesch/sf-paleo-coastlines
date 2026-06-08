@@ -382,7 +382,8 @@ export function PaleoCoastlineControls({
               step={100}
               value={yearsBeforePresent}
               onChange={(event) => onYearsChange(Number(event.currentTarget.value))}
-              className="w-full accent-cyan-300"
+              disabled={isTouring}
+              className="w-full accent-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Years before present"
             />
             {exposedAreaKm2 != null && exposedAreaKm2 > 0 ? (
@@ -418,7 +419,8 @@ export function PaleoCoastlineControls({
             <button
               type="button"
               onClick={onTogglePlayback}
-              className="grid h-8 w-8 place-items-center rounded-md border border-cyan-400/25 bg-cyan-400/10 text-cyan-100 transition-colors hover:bg-cyan-300 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              disabled={isTouring}
+              className="grid h-8 w-8 place-items-center rounded-md border border-cyan-400/25 bg-cyan-400/10 text-cyan-100 transition-colors hover:bg-cyan-300 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-cyan-400/10 disabled:hover:text-cyan-100"
               aria-label={isPlaying ? "Pause waterline playback" : "Play waterline playback"}
               title={isPlaying ? "Pause" : "Play"}
             >
@@ -427,7 +429,8 @@ export function PaleoCoastlineControls({
             <button
               type="button"
               onClick={onResetWaterLevel}
-              className="grid h-8 w-8 place-items-center rounded-md border border-gray-700/70 bg-gray-950/60 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              disabled={isTouring}
+              className="grid h-8 w-8 place-items-center rounded-md border border-gray-700/70 bg-gray-950/60 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-gray-950/60 disabled:hover:text-gray-300"
               aria-label="Reset waterline to high water"
               title="Reset"
             >
