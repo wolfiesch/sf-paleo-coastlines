@@ -153,8 +153,8 @@ function App() {
   const [showSourceQualityGaps, setShowSourceQualityGaps] = useState(false);
   const [sourceQualityGaps, setSourceQualityGaps] = useState<SourceQualityGapCollection | null>(null);
   const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
-  const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
-  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("bottom");
+  const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("ultra");
+  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("relief");
   const [terrainSourceMode, setTerrainSourceMode] = useState<TerrainSourceMode>("best");
   const [selectedTerrainSourceId, setSelectedTerrainSourceId] = useState<string | null>(null);
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");

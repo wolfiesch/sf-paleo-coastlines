@@ -62,6 +62,17 @@ interface ContourLabel {
 
 type GeoJsonCoordinates = number[] | GeoJsonCoordinates[];
 
+interface TerrainTileConfig {
+  elevationData: string;
+  textures: {
+    shadedRelief: string;
+  };
+  minZoom: number;
+  maxZoom: number;
+  tileSize: number;
+  extent: [number, number, number, number];
+}
+
 const DEPTH_CONTOUR_BAND_METERS = 30;
 const Z_BANDS = {
   probeContour: 18,
@@ -79,6 +90,18 @@ const ANNOTATION_PARAMETERS = {
   depthCompare: "always",
   depthWriteEnabled: false,
 } as const;
+
+const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
+  usgs_2023_sf_lidar_dem: {
+    elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/elevation/{z}/{x}/{y}.png",
+    textures: {
+      shadedRelief: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/relief/{z}/{x}/{y}.png",
+    },
+    minZoom: 12,
+    maxZoom: 16,
+    tileSize: 256,
+  },
+};
 
 interface SceneProfileConfig {
   verticalScale: number;
@@ -185,15 +208,15 @@ function depthContourColor(feature: PickedPaleoFeature, activeWaterLevel: number
   const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
   const distance = Math.abs(offsetMeters);
   const fade = Math.max(0, 1 - distance / DEPTH_CONTOUR_BAND_METERS);
-  if (distance <= 2.5) return [255, 255, 255, scaleAlpha(248, profile.contourAlphaScale)];
-  if (offsetMeters > 0) return [255, 224, 98, scaleAlpha(86 + fade * 112, profile.contourAlphaScale)];
-  return [48, 205, 255, scaleAlpha(66 + fade * 102, profile.contourAlphaScale)];
+  // No white "waterline" branch here: the active shoreline is a single contour
+  // drawn by the glow + coastline layers. Every contour this layer draws is
+  // context, so it always reads as a quiet exposed/submerged depth ring.
+  if (offsetMeters > 0) return [255, 224, 98, scaleAlpha(36 + fade * 64, profile.contourAlphaScale)];
+  return [48, 205, 255, scaleAlpha(30 + fade * 60, profile.contourAlphaScale)];
 }
 
-function depthContourWidth(feature: PickedPaleoFeature, activeWaterLevel: number, profile: SceneProfileConfig): number {
-  const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
-  if (distance <= 2.5) return 3.2 * profile.contourWidthScale;
-  return (Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.35 : 0.78) * profile.contourWidthScale;
+function depthContourWidth(feature: PickedPaleoFeature, profile: SceneProfileConfig): number {
+  return (Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.0 : 0.55) * profile.contourWidthScale;
 }
 
 function contourLabelColor(label: ContourLabel, profile: SceneProfileConfig): [number, number, number, number] {
@@ -213,7 +236,7 @@ function contourLabelText(elevationMeters: number, offsetMeters: number): string
 }
 
 function contourLabelQuota(kind: ContourLabel["kind"]): number {
-  if (kind === "waterline") return 8;
+  if (kind === "waterline") return 4;
   if (kind === "exposed") return 5;
   return 4;
 }
@@ -222,7 +245,7 @@ function shorelineGlowColor(feature: PickedPaleoFeature, activeWaterLevel: numbe
   const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
   const distance = Math.abs(offsetMeters);
   const fade = Math.max(0, 1 - distance / 5.5);
-  const baseAlpha = strength === "outer" ? 82 : 168;
+  const baseAlpha = strength === "outer" ? 58 : 170;
   const alpha = scaleAlpha(baseAlpha * fade, profile.contourAlphaScale);
   if (offsetMeters > 0) return [255, 230, 118, alpha];
   return strength === "outer" ? [88, 228, 255, alpha] : [232, 255, 255, alpha];
@@ -231,7 +254,9 @@ function shorelineGlowColor(feature: PickedPaleoFeature, activeWaterLevel: numbe
 function shorelineGlowWidth(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner", profile: SceneProfileConfig): number {
   const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
   const fade = Math.max(0, 1 - distance / 5.5);
-  return (strength === "outer" ? 15 + fade * 9 : 6 + fade * 5) * profile.contourWidthScale;
+  // Slim soft halo (outer) over a crisp core (inner). Kept narrow so the active
+  // waterline reads as a clean glowing line rather than a thick painted band.
+  return (strength === "outer" ? 6 + fade * 4 : 2.5 + fade * 1.5) * profile.contourWidthScale;
 }
 
 function selectedSlice(data: PaleoTimeSlice[], context: PaleoRenderContext): PaleoTimeSlice | null {
@@ -316,6 +341,28 @@ function probeFeaturesForWaterLevel(
   return probe.contours.features.filter((feature) => Math.abs(feature.properties.elevation_m - level) <= DEPTH_CONTOUR_BAND_METERS);
 }
 
+// The single contour elevation closest to the active sea level. The waterline is
+// drawn as just this one contour - a continuous line, offshore islands included -
+// instead of a +/-2.5 m band. A band made gently sloping shelves show several
+// parallel "shorelines" when there is really only one: those extra lines were
+// just neighbouring depth contours all being painted as the waterline.
+function activeWaterlineLevel(
+  features: PaleoCoastlineFeature[],
+  activeWaterLevel: number,
+): number | null {
+  let nearest: number | null = null;
+  let nearestDistance = Infinity;
+  for (const feature of features) {
+    if (feature.properties.line_role !== "waterline_probe") continue;
+    const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = feature.properties.elevation_m;
+    }
+  }
+  return nearest;
+}
+
 function terrainQualityTier(terrain: PaleoTerrainConfig): TerrainQualityTier {
   if (terrain.qualityTier) return terrain.qualityTier;
   if (terrain.sourceId.includes("crm") || terrain.sourceId.includes("cudem") || terrain.sourceId.includes("etopo")) return "broad";
@@ -384,8 +431,8 @@ function terrainDepthBiasParameters(terrain: PaleoTerrainConfig) {
 
 function terrainLayerOpacity(terrain: PaleoTerrainConfig, context: PaleoRenderContext): number {
   if (context.terrainSourceMode !== "best") return 1;
-  if (terrain.sourceId.includes("best_available") || terrain.sourceId.includes("fusion")) return 0.64;
-  if (terrain.sourceId.includes("2023_sf_lidar")) return 0.82;
+  if (terrain.sourceId.includes("best_available") || terrain.sourceId.includes("fusion")) return 1;
+  if (terrain.sourceId.includes("2023_sf_lidar")) return 1;
   return 1;
 }
 
@@ -425,10 +472,20 @@ function terrainDepthFogStrength(terrain: PaleoTerrainConfig): number {
   return 0.88;
 }
 
-function terrainMaterial(terrain: PaleoTerrainConfig, profile: SceneProfileConfig) {
+function terrainMaterial(terrain: PaleoTerrainConfig, profile: SceneProfileConfig, textureMode: TerrainTextureMode) {
   const tier = terrainQualityTier(terrain);
   const detailBoost = tier === "broad" ? 0 : tier === "bay_mosaic" ? 0.08 : 0.14;
   const specularColor: [number, number, number] = tier === "broad" ? [60, 70, 78] : [78, 88, 96];
+
+  if (textureMode === "relief" || textureMode === "survey") {
+    return {
+      ambient: 0.96,
+      diffuse: 0.06,
+      shininess: 1,
+      specularColor: [8, 10, 12] as [number, number, number],
+    };
+  }
+
   return {
     ambient: Math.max(0.22, profile.terrainAmbient - detailBoost * 0.7),
     diffuse: Math.min(1, profile.terrainDiffuse + detailBoost),
@@ -609,12 +666,35 @@ function meshMaxErrorForTerrain(
     return 0.12;
   }
 
+  if (detail === "ultra") {
+    if (tier === "broad") return 0.25;
+    if (tier === "bay_mosaic") return 0.08;
+    if (tier === "offshore_survey") return 0.08;
+    return 0.04;
+  }
+
   if (tier === "broad") return 1.8;
   if (tier === "bay_mosaic") return 0.42;
   return 0.32;
 }
 
-function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode): string {
+function terrainTileConfigForRender(
+  terrain: PaleoTerrainConfig,
+  detail: TerrainDetailLevel,
+): TerrainTileConfig | null {
+  if (detail !== "ultra") return null;
+  const tileset = TERRAIN_TILESETS[terrain.sourceId];
+  if (!tileset) return null;
+  return {
+    ...tileset,
+    extent: terrain.bounds,
+  };
+}
+
+function textureForTerrain(terrain: PaleoTerrainConfig, mode: TerrainTextureMode, tileConfig?: TerrainTileConfig | null): string {
+  // The current tiled source only includes relief texture tiles. Keeping the
+  // texture tiled avoids stretching one big image over each small mesh tile.
+  if (tileConfig) return tileConfig.textures.shadedRelief;
   if (mode === "color") return terrain.textures?.depthColor ?? terrain.texture;
   if (mode === "bottom") return terrain.textures?.seafloorCharacter ?? terrain.textures?.surveySonarHybrid ?? terrain.textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
   if (mode === "hybrid") return terrain.textures?.surveySonarHybrid ?? terrain.textures?.surveyComposite ?? terrain.textures?.sonarBackscatter ?? terrain.textures?.shadedRelief ?? terrain.texture;
@@ -794,7 +874,7 @@ function emergencePointsForWaterLevel(
     if (offsetMeters <= 0 || offsetMeters > 15) continue;
 
     const positions = extractPositions(feature.geometry.coordinates);
-    const stride = Math.max(1, Math.ceil(positions.length / 18));
+    const stride = Math.max(1, Math.ceil(positions.length / 40));
     const zMeters = terrainZ(terrain, feature.properties.elevation_m, profile, Z_BANDS.emergencePoint);
 
     for (let index = 0; index < positions.length; index += stride) {
@@ -815,6 +895,7 @@ function contourLabelsForWaterLevel(
   features: PaleoCoastlineFeature[],
   terrain: PaleoTerrainConfig | null,
   activeWaterLevel: number,
+  waterlineLevel: number | null,
   profile: SceneProfileConfig,
 ): ContourLabel[] {
   if (!terrain) return [];
@@ -827,7 +908,9 @@ function contourLabelsForWaterLevel(
     const elevationMeters = feature.properties.elevation_m;
     const offsetMeters = elevationMeters - activeWaterLevel;
     const distance = Math.abs(offsetMeters);
-    const isWaterline = distance <= 2.5;
+    // Only the single waterline contour is labelled "WL"; everything else is a
+    // depth label, so the slope no longer shows a row of repeated "WL" tags.
+    const isWaterline = waterlineLevel !== null && elevationMeters === waterlineLevel;
     const isNearestTenMeterStep = Math.abs(distance - 10) <= 2.5;
     if (!isWaterline && !isNearestTenMeterStep) continue;
 
@@ -891,9 +974,16 @@ export function createPaleoCoastlineLayers(
     ? bestAvailableTerrainForSlice(slice) ?? visibleTerrainStack[0] ?? primaryTerrainForSlice(slice)
     : visibleTerrainStack[0] ?? primaryTerrainForSlice(slice);
   const rawProbeFeatures = probeFeaturesForWaterLevel(data, slice, activeWaterLevel);
-  const activeProbeFeatures = rawProbeFeatures.filter((feature) => Math.abs(feature.properties.elevation_m - activeWaterLevel) <= 2.5);
+  const waterlineLevel = activeWaterlineLevel(rawProbeFeatures, activeWaterLevel);
+  const activeProbeFeatures = waterlineLevel === null
+    ? []
+    : rawProbeFeatures.filter(
+        (feature) =>
+          feature.properties.line_role === "waterline_probe" &&
+          feature.properties.elevation_m === waterlineLevel,
+      );
   const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
-  const contourLabels = contourLabelsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
+  const contourLabels = contourLabelsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, waterlineLevel, profile);
   const terrainFootprints = context.showTerrainFootprints ? terrainFootprintsForSlice(slice, activeWaterLevel, profile) : [];
   const baySourceFeatures = context.showBaySourceFootprints && baySourceFootprints
     ? baySourceFootprints.features.map((feature) => elevatedBaySourceFeature(feature, terrain, activeWaterLevel, profile))
@@ -909,25 +999,50 @@ export function createPaleoCoastlineLayers(
     ...activeProbeFeatures,
     ...(context.showPaleoUncertainty ? slice.uncertainty.features : []),
   ].map((feature) => elevatedFeature(feature, terrain, undefined, profile));
-  const shorelineGlowFeatures = activeProbeFeatures.map((feature) => elevatedFeature(feature, terrain, 3.2, profile));
-  const depthContourFeatures = rawProbeFeatures.map((feature) => elevatedFeature(feature, terrain, undefined, profile));
+  // The glow must sit at the EXACT same Z as the probe line in `features`
+  // (Z_BANDS.probeContour) so it reads as a halo concentric with that one line.
+  // Annotations render with depthCompare "always", so a differing Z would not
+  // occlude anything but WOULD shift the perspective projection - which is what
+  // made the glow drift off into a second parallel whitish line in tilted views.
+  const shorelineGlowFeatures = activeProbeFeatures.map((feature) => elevatedFeature(feature, terrain, undefined, profile));
+  // Near the active shoreline keep every contour; further out keep only the 10 m
+  // majors so distant rings thin out instead of stacking into a dense band. The
+  // waterline level itself is excluded - it is the glowing shoreline, not a ring.
+  const depthContourFeatures = rawProbeFeatures
+    .filter((feature) => {
+      if (waterlineLevel !== null && feature.properties.elevation_m === waterlineLevel) return false;
+      const offset = Math.abs(feature.properties.elevation_m - activeWaterLevel);
+      return offset <= 12 || Math.abs(feature.properties.elevation_m % 10) < 0.1;
+    })
+    .map((feature) => elevatedFeature(feature, terrain, undefined, profile));
 
   const terrainLayers = visibleTerrainStack.map((terrain) => {
     const zLiftMeters = terrainVisualLiftMeters(terrain);
+    const tileConfig = terrainTileConfigForRender(terrain, context.terrainDetail);
     return new TerrainLayer({
       id: `paleo-terrain-${terrain.sourceId}`,
-      elevationData: terrain.elevationData,
-      texture: textureForTerrain(terrain, context.terrainTextureMode),
-      bounds: terrain.bounds,
+      elevationData: tileConfig?.elevationData ?? terrain.elevationData,
+      texture: textureForTerrain(terrain, context.terrainTextureMode, tileConfig),
+      ...(tileConfig
+        ? {
+            extent: tileConfig.extent,
+            maxZoom: tileConfig.maxZoom,
+            minZoom: tileConfig.minZoom,
+            tileSize: tileConfig.tileSize,
+          }
+        : {
+            bounds: terrain.bounds,
+          }),
       elevationDecoder: elevationDecoderForTerrain(terrain, profile, zLiftMeters),
       meshMaxError: meshMaxErrorForTerrain(terrain, context.terrainDetail),
       opacity: terrainLayerOpacity(terrain, context),
       wireframe: false,
-      material: terrainMaterial(terrain, profile),
+      material: terrainMaterial(terrain, profile, context.terrainTextureMode),
       parameters: terrainDepthBiasParameters(terrain),
       _subLayerProps: {
         mesh: {
           extensions: [terrainRevealExtension],
+          flatShading: false,
           terrainRevealBandMeters: terrainRevealBandMeters(terrain),
           terrainRevealDepthFogStrength: terrainDepthFogStrength(terrain) * profile.waterDepthFogStrength,
           terrainRevealEnabled: true,
@@ -1014,13 +1129,15 @@ export function createPaleoCoastlineLayers(
       type: "FeatureCollection",
       features: depthContourFeatures,
     } as never,
-    pickable: false,
+    pickable: true,
     stroked: true,
     filled: false,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 0.5,
     getLineColor: (feature) => depthContourColor(feature, activeWaterLevel, profile),
-    getLineWidth: (feature) => depthContourWidth(feature, activeWaterLevel, profile),
+    getLineWidth: (feature) => depthContourWidth(feature, profile),
+    autoHighlight: true,
+    highlightColor: [255, 255, 255, 120],
     parameters: ANNOTATION_PARAMETERS,
   });
 
@@ -1084,16 +1201,16 @@ export function createPaleoCoastlineLayers(
     stroked: true,
     filled: true,
     radiusUnits: "meters",
-    radiusMinPixels: 2.2,
-    radiusMaxPixels: 7,
+    radiusMinPixels: 1.4,
+    radiusMaxPixels: 3.5,
     getPosition: (item) => item.position,
-    getRadius: (item) => (180 + (15 - item.offsetMeters) * 14) * profile.emergenceRadiusScale,
+    getRadius: (item) => (90 + (15 - item.offsetMeters) * 7) * profile.emergenceRadiusScale,
     getFillColor: (item) => {
-      const alpha = scaleAlpha(135 + (15 - item.offsetMeters) * 7, profile.emergenceAlphaScale);
+      const alpha = scaleAlpha(90 + (15 - item.offsetMeters) * 5, profile.emergenceAlphaScale);
       return [255, 232, 92, alpha];
     },
-    getLineColor: [255, 255, 255, scaleAlpha(190, profile.emergenceAlphaScale)],
-    getLineWidth: 1,
+    getLineColor: [255, 255, 255, scaleAlpha(120, profile.emergenceAlphaScale)],
+    getLineWidth: 0.6,
     lineWidthUnits: "pixels",
     parameters: ANNOTATION_PARAMETERS,
   });
@@ -1253,8 +1370,24 @@ export function getPaleoTooltip(object: unknown) {
   }
 
   const feature = object as PickedPaleoFeature;
+  const props = feature.properties;
+  if (props.line_role === "waterline_probe") {
+    // Plain-English explanation for the depth rings and waterline trace, so a
+    // hover tells you what the contour means without needing an on-screen legend.
+    return {
+      text: `Paleo shoreline contour\nLand sits at ${props.elevation_m} m elevation here\nWhere the coast would be at this sea level`,
+      style: {
+        backgroundColor: "rgba(4, 20, 28, 0.92)",
+        color: "#c8fbff",
+        fontSize: "13px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        border: "1px solid rgba(103, 232, 249, 0.35)",
+      },
+    };
+  }
   return {
-    text: `${feature.properties.label}\n${lineRoleLabel(feature.properties.line_role)}\nSea level ${feature.properties.elevation_m} m\n${feature.properties.source_label}`,
+    text: `${props.label}\n${lineRoleLabel(props.line_role)}\nSea level ${props.elevation_m} m\n${props.source_label}`,
     style: {
       backgroundColor: "rgba(4, 20, 28, 0.92)",
       color: "#c8fbff",

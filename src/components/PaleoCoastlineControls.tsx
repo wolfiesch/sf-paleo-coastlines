@@ -1,7 +1,10 @@
-import { ChevronLeft, ChevronRight, Clapperboard, Clock, Database, Gauge, Layers3, MapPin, MapPinned, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clapperboard, Clock, Database, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
 import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainSourceMode, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
+import { Legend, Section, SegmentedControl, TogglePill, sectionTitleClass, valueClass, type LegendItem } from "./PaleoControlPrimitives";
+
+const FOCUS_RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70";
 
 interface ViewPreset {
   id: string;
@@ -57,7 +60,8 @@ interface PaleoCoastlineControlsProps {
 const TERRAIN_DETAIL_OPTIONS: { id: TerrainDetailLevel; label: string; title: string }[] = [
   { id: "fast", label: "Fast", title: "Lower mesh density" },
   { id: "detailed", label: "Detailed", title: "Balanced mesh density" },
-  { id: "survey", label: "Survey", title: "Highest mesh density" },
+  { id: "survey", label: "Survey", title: "High mesh density for survey review" },
+  { id: "ultra", label: "Ultra", title: "Close-up mesh density for smoother hills" },
 ];
 
 const TERRAIN_TEXTURE_OPTIONS: { id: TerrainTextureMode; label: string; title: string }[] = [
@@ -82,14 +86,37 @@ const TERRAIN_SOURCE_MODE_OPTIONS: { id: TerrainSourceMode; label: string; title
   { id: "stack", label: "Stack", title: "Render all terrain surfaces for debugging and comparison" },
 ];
 
-const COVERAGE_LEGEND = [
-  { label: "NOAA BAG", className: "bg-cyan-300" },
-  { label: "NOAA OCM 1 m", className: "bg-teal-300" },
-  { label: "USGS CoNED", className: "bg-emerald-400" },
-  { label: "USGS CSMP", className: "bg-amber-300" },
-  { label: "USGS offshore", className: "bg-violet-300" },
-  { label: "USGS LiDAR", className: "bg-stone-100" },
-  { label: "SF Bar", className: "bg-emerald-300" },
+// Hover titles double as the in-place explanation of what each color means, so
+// the map can stay uncluttered without a permanent on-screen legend.
+const WATERLINE_LEGEND: LegendItem[] = [
+  { label: "Waterline", swatch: "bg-white", title: "The shoreline at the selected sea level" },
+  { label: "Exposed", swatch: "bg-amber-300", title: "Land sitting above the current sea level" },
+  { label: "Submerged", swatch: "bg-cyan-300", title: "Seafloor just below the current sea level" },
+  { label: "Depth", swatch: "bg-sky-700", title: "Deeper water, shaded darker with depth" },
+];
+
+const COVERAGE_LEGEND: LegendItem[] = [
+  { label: "NOAA BAG", swatch: "bg-cyan-300", title: "NOAA hydrographic survey patches (1-2 m)" },
+  { label: "NOAA OCM 1 m", swatch: "bg-teal-300", title: "NOAA 1 m Bay-floor mosaic" },
+  { label: "USGS CoNED", swatch: "bg-emerald-400", title: "USGS 2 m land + seafloor topobathymetry" },
+  { label: "USGS CSMP", swatch: "bg-amber-300", title: "USGS 2 m coastal seafloor mapping" },
+  { label: "USGS offshore", swatch: "bg-violet-300", title: "Farallon escarpment / Rittenburg Bank multibeam" },
+  { label: "USGS LiDAR", swatch: "bg-stone-100", title: "2023 USGS land LiDAR (high-res modern terrain)" },
+  { label: "SF Bar", swatch: "bg-emerald-300", title: "Golden Gate / SF Bar detail tile" },
+];
+
+const BAY_SOURCE_LEGEND: LegendItem[] = [
+  { label: "Direct 1 m", swatch: "bg-emerald-300", title: "Directly measured 1 m survey (highest quality)" },
+  { label: "Interp.", swatch: "bg-violet-300", title: "Interpolated coverage where surveys had gaps" },
+  { label: "Single beam", swatch: "bg-amber-300", title: "Single-beam sonar (sparser, often older)" },
+  { label: "Multibeam", swatch: "bg-cyan-300", title: "Multibeam sonar (dense modern survey)" },
+];
+
+const GAP_LEGEND: LegendItem[] = [
+  { label: "Broad gap", swatch: "bg-rose-400", title: "Relies on broad fallback data; needs new survey" },
+  { label: "CoNED base", swatch: "bg-amber-300", title: "Backed by 2 m CoNED; solid but not survey-rich" },
+  { label: "Survey detail", swatch: "bg-cyan-300", title: "Backed by measured local survey data" },
+  { label: "Strong area", swatch: "bg-emerald-300", title: "Top-tier measured detail (quality benchmark)" },
 ];
 
 const FALLBACK_SLICES: PaleoTimeSlice[] = [
@@ -215,8 +242,6 @@ export function PaleoCoastlineControls({
   const activeWaterLevel = waterLevelMeters ?? activeSlice.seaLevelMeters;
   const probeLevel = Math.max(-120, Math.min(0, nearestProbeLevel(activeWaterLevel)));
   const terrainStackSummary = terrainSummary(activeSlice);
-  const activeTerrainDetail = TERRAIN_DETAIL_OPTIONS.find((option) => option.id === terrainDetail);
-  const activeTextureMode = TERRAIN_TEXTURE_OPTIONS.find((option) => option.id === terrainTextureMode);
   const activeSceneProfile = SCENE_PROFILE_OPTIONS.find((option) => option.id === sceneProfile);
   const activeTerrainSource = terrainSources.find((source) => source.sourceId === selectedTerrainSourceId)
     ?? terrainSources.find((source) => source.sourceId.includes("best_available"))
@@ -232,22 +257,28 @@ export function PaleoCoastlineControls({
     return order.indexOf(a) - order.indexOf(b);
   });
 
+  const terrainSourceTrailing = terrainSourceMode === "best"
+    ? "Best available"
+    : terrainSourceMode === "stack"
+      ? "All stacked"
+      : activeTerrainSource ? terrainSourceShortLabel(activeTerrainSource) : "None";
+
   return (
-    <section className="pointer-events-auto max-h-[calc(100vh-6rem)] w-full overflow-y-auto rounded-lg border border-cyan-400/20 bg-gray-950/92 p-3 shadow-2xl backdrop-blur-md">
-      <div className="mb-3 flex items-start gap-2">
-        <div className="mt-0.5 rounded-md border border-cyan-400/25 bg-cyan-400/10 p-1.5 text-cyan-200">
+    <section className="pointer-events-auto max-h-[calc(100vh-6rem)] w-full overflow-y-auto rounded-xl border border-cyan-400/15 bg-gray-950/92 p-4 shadow-2xl backdrop-blur-md">
+      <div className="mb-4 flex items-start gap-2.5">
+        <div className="mt-0.5 rounded-lg border border-cyan-400/25 bg-cyan-400/10 p-2 text-cyan-200">
           <Waves size={16} />
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold leading-5 text-white">SF Paleo Coastline</h2>
-          <p className="text-xs leading-4 text-gray-400">{activeSlice.summary}</p>
+          <p className="mt-0.5 text-xs leading-4 text-gray-400">{activeSlice.summary}</p>
         </div>
       </div>
 
       <button
         type="button"
         onClick={onToggleTour}
-        className={`mb-3 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+        className={`mb-1 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${FOCUS_RING} ${
           isTouring
             ? "border-rose-300/40 bg-rose-300 text-gray-950"
             : "border-cyan-400/30 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-300 hover:text-gray-950"
@@ -258,219 +289,39 @@ export function PaleoCoastlineControls({
         {isTouring ? "Stop tour" : "Play guided tour"}
       </button>
 
-      <div className="mb-3 grid grid-cols-4 gap-1 rounded-lg border border-gray-700/50 bg-gray-900/70 p-1">
-        {options.map((slice) => {
-          const active = slice.id === activeSlice.id;
-          return (
-            <button
-              key={slice.id}
-              type="button"
-              onClick={() => onSliceChange(slice.id)}
-              className={`min-h-9 rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                active
-                  ? "bg-cyan-300 text-gray-950"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
-              aria-pressed={active}
-            >
-              {compactLabel(slice.label)}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mb-3 grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
-          <div className="flex items-center gap-1.5 text-[11px] uppercase leading-4 text-gray-500">
-            <Gauge size={12} />
-            Slice sea level
-          </div>
-          <div className="pt-1 font-mono text-sm text-cyan-100">
-            {activeSlice.seaLevelMeters} m
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onToggleUncertainty}
-          className={`rounded-lg border p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-            showUncertainty
-              ? "border-cyan-400/30 bg-cyan-400/10"
-              : "border-gray-700/50 bg-gray-900/60 hover:bg-gray-800/70"
-          }`}
-          aria-pressed={showUncertainty}
-        >
-          <div className="text-[11px] uppercase leading-4 text-gray-500">Uncertainty</div>
-          <div className="pt-1 font-mono text-sm text-cyan-100">
-            {showUncertainty ? `+/- ${activeSlice.uncertaintyMeters} m` : "hidden"}
-          </div>
-        </button>
-      </div>
-
-      <div className="mb-3 rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 text-[11px] uppercase leading-4 text-gray-500">
-            <MapPinned size={12} />
-            View
-          </span>
-          <div className="flex flex-wrap justify-end gap-1">
-            <button
-              type="button"
-              onClick={onToggleTerrainFootprints}
-              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                showTerrainFootprints
-                  ? "border-cyan-300/40 bg-cyan-300 text-gray-950"
-                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
-              aria-pressed={showTerrainFootprints}
-              title="Show rendered high-detail terrain coverage"
-            >
-              <Layers3 size={13} />
-              Coverage
-            </button>
-            <button
-              type="button"
-              onClick={onToggleBaySourceFootprints}
-              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                showBaySourceFootprints
-                  ? "border-emerald-300/40 bg-emerald-300 text-gray-950"
-                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
-              aria-pressed={showBaySourceFootprints}
-              title="Show source surveys used by the USGS 1 m Bay DEM"
-            >
-              <Database size={13} />
-              Bay sources
-            </button>
-            <button
-              type="button"
-              onClick={onToggleRivers}
-              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                showRivers
-                  ? "border-sky-300/40 bg-sky-300 text-gray-950"
-                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
-              aria-pressed={showRivers}
-              title="Show the last-glacial-lowstand paleo-drainage network"
-            >
-              <Waves size={13} />
-              Rivers
-            </button>
-            <button
-              type="button"
-              onClick={onTogglePlaceLabels}
-              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                showPlaceLabels
-                  ? "border-amber-300/40 bg-amber-300 text-gray-950"
-                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
-              aria-pressed={showPlaceLabels}
-              title="Show paleo-geography place labels"
-            >
-              <MapPin size={13} />
-              Labels
-            </button>
-            <button
-              type="button"
-              onClick={onToggleSourceQualityGaps}
-              className={`flex min-h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                showSourceQualityGaps
-                  ? "border-amber-300/40 bg-amber-300 text-gray-950"
-                  : "border-gray-700/70 bg-gray-950/60 text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
-              aria-pressed={showSourceQualityGaps}
-              title="Show source-quality gap cells derived from the fused terrain provenance texture"
-            >
-              <TriangleAlert size={13} />
-              Gaps
-            </button>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
-          {viewPresets.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => onViewPreset(preset.viewState)}
-              className="min-h-8 rounded px-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-              title={`${preset.label} view`}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-        {showTerrainFootprints ? (
-          <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
-            {COVERAGE_LEGEND.map((item) => (
-              <span key={item.label} className="flex items-center gap-1.5">
-                <span className={`h-1.5 w-4 rounded-full ${item.className}`} />
-                {item.label}
-              </span>
-            ))}
-          </div>
-        ) : null}
-        {showBaySourceFootprints ? (
-          <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-emerald-300" />
-              Direct 1 m
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-violet-300" />
-              Interp.
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-amber-300" />
-              Single beam
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-cyan-300" />
-              Multibeam
-            </span>
-          </div>
-        ) : null}
-        {showSourceQualityGaps ? (
-          <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-rose-400" />
-              Broad gap
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-amber-300" />
-              CoNED base
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-cyan-300" />
-              Survey detail
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-emerald-300" />
-              Strong area
-            </span>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mb-3 rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 text-[11px] uppercase leading-4 text-gray-500">
-            <Clock size={12} />
-            {timeMode ? "Time" : "Depth"}
-          </span>
+      {/* Time / sea level - the primary interaction, given the most visual weight. */}
+      <Section
+        title={timeMode ? "Time" : "Depth"}
+        icon={<Clock size={12} />}
+        trailing={
           <button
             type="button"
             onClick={onToggleTimeMode}
-            className="rounded-md border border-cyan-400/25 bg-cyan-400/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-100 transition-colors hover:bg-cyan-300 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            className={`rounded-md border border-cyan-400/25 bg-cyan-400/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-100 transition-colors hover:bg-cyan-300 hover:text-gray-950 ${FOCUS_RING}`}
             aria-pressed={timeMode}
             title="Switch between years-before-present and raw water depth"
           >
             {timeMode ? "Years" : "Meters"}
           </button>
-        </div>
+        }
+      >
+        <SegmentedControl
+          options={options.map((slice) => ({
+            id: slice.id,
+            label: compactLabel(slice.label),
+            title: `${slice.label} - ${slice.seaLevelMeters} m sea level`,
+          }))}
+          value={activeSlice.id}
+          onChange={onSliceChange}
+          columns={options.length}
+          ariaLabel="Time period"
+        />
+
         {timeMode ? (
-          <div className="mb-3">
-            <div className="mb-1 flex items-center justify-between">
-              <span className="font-mono text-sm text-cyan-100">{yearLabel(yearsBeforePresent)}</span>
-              <span className="font-mono text-[11px] text-gray-500">
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-mono text-lg font-semibold leading-none text-white">{yearLabel(yearsBeforePresent)}</span>
+              <span className={valueClass}>
                 <span className="sr-only">Derived sea level </span>
                 {activeWaterLevel} m
               </span>
@@ -487,16 +338,16 @@ export function PaleoCoastlineControls({
               aria-label="Years before present"
             />
             {exposedAreaKm2 != null && exposedAreaKm2 > 0 ? (
-              <div className="mt-1 text-xs text-gray-300">
+              <div className="text-xs text-gray-400">
                 ~{Math.round(exposedAreaKm2).toLocaleString()} km² more land than today
               </div>
             ) : null}
           </div>
         ) : (
-          <>
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="text-[11px] uppercase leading-4 text-gray-500">Waterline</span>
-              <span className="font-mono text-sm text-cyan-100">{activeWaterLevel} m</span>
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className={sectionTitleClass}>Waterline</span>
+              <span className="font-mono text-lg font-semibold leading-none text-white">{activeWaterLevel} m</span>
             </div>
             <input
               type="range"
@@ -508,9 +359,10 @@ export function PaleoCoastlineControls({
               className="w-full accent-cyan-300"
               aria-label="Water level in meters"
             />
-          </>
+          </div>
         )}
-        <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
+
+        <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="truncate text-xs text-gray-300">{waterlineStage(activeWaterLevel)}</div>
             <div className="font-mono text-[11px] leading-4 text-gray-500">contour band {probeLevel - 30} to {probeLevel + 30} m</div>
@@ -520,7 +372,7 @@ export function PaleoCoastlineControls({
               type="button"
               onClick={onTogglePlayback}
               disabled={isTouring}
-              className="grid h-8 w-8 place-items-center rounded-md border border-cyan-400/25 bg-cyan-400/10 text-cyan-100 transition-colors hover:bg-cyan-300 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-cyan-400/10 disabled:hover:text-cyan-100"
+              className={`grid h-8 w-8 place-items-center rounded-md border border-cyan-300/30 bg-cyan-300/10 text-cyan-100 transition-colors hover:bg-cyan-300 hover:text-gray-950 ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-cyan-300/10 disabled:hover:text-cyan-100`}
               aria-label={isPlaying ? "Pause waterline playback" : "Play waterline playback"}
               title={isPlaying ? "Pause" : "Play"}
             >
@@ -530,7 +382,7 @@ export function PaleoCoastlineControls({
               type="button"
               onClick={onResetWaterLevel}
               disabled={isTouring}
-              className="grid h-8 w-8 place-items-center rounded-md border border-gray-700/70 bg-gray-950/60 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-gray-950/60 disabled:hover:text-gray-300"
+              className={`grid h-8 w-8 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-gray-300 transition-colors hover:bg-white/[0.08] hover:text-white ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/[0.04] disabled:hover:text-gray-300`}
               aria-label="Reset waterline to high water"
               title="Reset"
             >
@@ -538,179 +390,161 @@ export function PaleoCoastlineControls({
             </button>
           </div>
         </div>
-        <div className="mt-2 grid grid-cols-4 gap-1 border-t border-gray-800/80 pt-2 text-[10px] uppercase leading-4 text-gray-500">
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-4 rounded-full bg-white" />
-            Waterline
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-4 rounded-full bg-amber-300" />
-            Exposed
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-4 rounded-full bg-cyan-300" />
-            Submerged
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-4 rounded-full bg-sky-700" />
-            Depth
-          </span>
-        </div>
-      </div>
 
-      <div className="mb-3 rounded-lg border border-gray-700/50 bg-gray-900/60 p-2">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <span className="text-[11px] uppercase leading-4 text-gray-500">Scene</span>
-          <span className="font-mono text-[11px] leading-4 text-cyan-100">{activeSceneProfile?.label}</span>
-        </div>
-        <div className="mb-2 grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
-          {SCENE_PROFILE_OPTIONS.map((option) => {
-            const active = option.id === sceneProfile;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => onSceneProfileChange(option.id)}
-                className={`min-h-8 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                  active
-                    ? "bg-cyan-300 text-gray-950"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-                aria-pressed={active}
-                title={option.title}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <span className="text-[11px] uppercase leading-4 text-gray-500">Terrain mesh</span>
-          <span className="font-mono text-[11px] leading-4 text-cyan-100">{activeTerrainDetail?.label}</span>
-        </div>
-        <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
-          {TERRAIN_DETAIL_OPTIONS.map((option) => {
-            const active = option.id === terrainDetail;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => onTerrainDetailChange(option.id)}
-                className={`min-h-8 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                  active
-                    ? "bg-cyan-300 text-gray-950"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-                aria-pressed={active}
-                title={option.title}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-2 border-t border-gray-800/80 pt-2">
-          <div className="mb-1 flex items-center justify-between gap-3">
-            <span className="text-[11px] uppercase leading-4 text-gray-500">Terrain source</span>
-            <span className="truncate font-mono text-[11px] leading-4 text-cyan-100">
-              {terrainSourceMode === "best" ? "Best available" : terrainSourceMode === "stack" ? "All stacked" : activeTerrainSource ? terrainSourceShortLabel(activeTerrainSource) : "None"}
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
-            {TERRAIN_SOURCE_MODE_OPTIONS.map((option) => {
-              const active = option.id === terrainSourceMode;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => onTerrainSourceModeChange(option.id)}
-                  className={`min-h-7 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                    active
-                      ? "bg-cyan-300 text-gray-950"
-                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                  }`}
-                  aria-pressed={active}
-                  title={option.title}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-1 grid grid-cols-[2rem_1fr_2rem] gap-1">
-            <button
-              type="button"
-              onClick={onPreviousTerrainSource}
-              disabled={!terrainSources.length}
-              className="grid h-8 place-items-center rounded-md border border-gray-700/70 bg-gray-950/60 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Previous terrain source"
-              title="Previous source"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <select
-              value={activeTerrainSource?.sourceId ?? ""}
-              onChange={(event) => onTerrainSourceChange(event.currentTarget.value)}
-              disabled={!terrainSources.length}
-              className="h-8 min-w-0 rounded-md border border-gray-700/70 bg-gray-950/80 px-2 text-xs font-semibold text-gray-100 outline-none transition-colors focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Terrain source"
-              title={activeTerrainSource ? `${activeTerrainSource.sourceLabel} (${terrainSourceMeta(activeTerrainSource)})` : "Terrain source"}
-            >
-              {terrainSourceGroupNames.map((group) => (
-                <optgroup key={group} label={group}>
-                  {terrainSourceGroups[group].map((source) => (
-                    <option key={source.sourceId} value={source.sourceId}>
-                      {terrainSourceShortLabel(source)}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={onNextTerrainSource}
-              disabled={!terrainSources.length}
-              className="grid h-8 place-items-center rounded-md border border-gray-700/70 bg-gray-950/60 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Next terrain source"
-              title="Next source"
-            >
-              <ChevronRight size={15} />
-            </button>
-          </div>
-          {activeTerrainSource ? (
-            <div className="mt-1 truncate font-mono text-[10px] leading-4 text-gray-500" title={activeTerrainSource.sourceLabel}>
-              {terrainSourceMeta(activeTerrainSource)}
-            </div>
-          ) : null}
-        </div>
-        <div className="mt-2 border-t border-gray-800/80 pt-2">
-          <span className="text-[11px] uppercase leading-4 text-gray-500">Surface style</span>
-          <div className="mt-1 grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
-            {TERRAIN_TEXTURE_OPTIONS.map((option) => {
-              const active = option.id === terrainTextureMode;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => onTerrainTextureModeChange(option.id)}
-                  className={`min-h-7 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                    active
-                      ? "bg-cyan-300 text-gray-950"
-                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                  }`}
-                  aria-pressed={active}
-                  title={option.title}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-          <span className="sr-only">{activeTextureMode?.label}</span>
-        </div>
-      </div>
+        <Legend items={WATERLINE_LEGEND} columns={2} />
+      </Section>
 
-      <div className="space-y-2 border-t border-gray-800/70 pt-3 text-xs leading-4 text-gray-400">
+      {/* Layers - the toggles a typical viewer reaches for, plus camera presets. */}
+      <Section title="Layers" icon={<Layers3 size={12} />}>
+        <div className="flex flex-wrap gap-1.5">
+          <TogglePill
+            active={showRivers}
+            onClick={onToggleRivers}
+            icon={<Waves size={13} />}
+            label="Rivers"
+            accent="sky"
+            title="Show the last-glacial-lowstand paleo-drainage network"
+          />
+          <TogglePill
+            active={showPlaceLabels}
+            onClick={onTogglePlaceLabels}
+            icon={<MapPin size={13} />}
+            label="Labels"
+            accent="amber"
+            title="Show paleo-geography place labels"
+          />
+          <TogglePill
+            active={showUncertainty}
+            onClick={onToggleUncertainty}
+            label="Uncertainty"
+            title={`Show the +/- ${activeSlice.uncertaintyMeters} m sea-level uncertainty bands`}
+          />
+          <TogglePill
+            active={showTerrainFootprints}
+            onClick={onToggleTerrainFootprints}
+            icon={<Layers3 size={13} />}
+            label="Coverage"
+            title="Show rendered high-detail terrain coverage"
+          />
+          <TogglePill
+            active={showBaySourceFootprints}
+            onClick={onToggleBaySourceFootprints}
+            icon={<Database size={13} />}
+            label="Bay sources"
+            accent="emerald"
+            title="Show source surveys used by the USGS 1 m Bay DEM"
+          />
+          <TogglePill
+            active={showSourceQualityGaps}
+            onClick={onToggleSourceQualityGaps}
+            icon={<TriangleAlert size={13} />}
+            label="Gaps"
+            accent="amber"
+            title="Show source-quality gap cells derived from the fused terrain provenance"
+          />
+        </div>
+
+        {showTerrainFootprints ? <Legend items={COVERAGE_LEGEND} /> : null}
+        {showBaySourceFootprints ? <Legend items={BAY_SOURCE_LEGEND} /> : null}
+        {showSourceQualityGaps ? <Legend items={GAP_LEGEND} /> : null}
+
+        <div>
+          <span className={`mb-1.5 block ${sectionTitleClass}`}>Fly to</span>
+          <div className="grid grid-cols-3 gap-1 rounded-lg bg-white/[0.04] p-1">
+            {viewPresets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onViewPreset(preset.viewState)}
+                className={`min-h-8 rounded-md px-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white ${FOCUS_RING}`}
+                title={`${preset.label} view`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* Display - aesthetic / rendering controls, collapsed by default. */}
+      <Section
+        title="Display"
+        icon={<Mountain size={12} />}
+        collapsible
+        defaultOpen={false}
+        trailing={<span className={valueClass}>{activeSceneProfile?.label}</span>}
+      >
+        <div className="space-y-1.5">
+          <span className={`block ${sectionTitleClass}`}>Scene</span>
+          <SegmentedControl options={SCENE_PROFILE_OPTIONS} value={sceneProfile} onChange={onSceneProfileChange} ariaLabel="Scene profile" />
+        </div>
+        <div className="space-y-1.5">
+          <span className={`block ${sectionTitleClass}`}>Mesh detail</span>
+          <SegmentedControl options={TERRAIN_DETAIL_OPTIONS} value={terrainDetail} onChange={onTerrainDetailChange} ariaLabel="Terrain mesh detail" />
+        </div>
+        <div className="space-y-1.5">
+          <span className={`block ${sectionTitleClass}`}>Surface style</span>
+          <SegmentedControl options={TERRAIN_TEXTURE_OPTIONS} value={terrainTextureMode} onChange={onTerrainTextureModeChange} columns={4} ariaLabel="Surface style" />
+        </div>
+      </Section>
+
+      {/* Terrain source - power-user / provenance controls, collapsed by default. */}
+      <Section
+        title="Terrain source"
+        icon={<Database size={12} />}
+        collapsible
+        defaultOpen={false}
+        trailing={<span className={`max-w-[8rem] truncate ${valueClass}`}>{terrainSourceTrailing}</span>}
+      >
+        <SegmentedControl options={TERRAIN_SOURCE_MODE_OPTIONS} value={terrainSourceMode} onChange={onTerrainSourceModeChange} ariaLabel="Terrain source mode" />
+        <div className="grid grid-cols-[2rem_1fr_2rem] gap-1">
+          <button
+            type="button"
+            onClick={onPreviousTerrainSource}
+            disabled={!terrainSources.length}
+            className={`grid h-8 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-gray-300 transition-colors hover:bg-white/[0.08] hover:text-white ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-40`}
+            aria-label="Previous terrain source"
+            title="Previous source"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <select
+            value={activeTerrainSource?.sourceId ?? ""}
+            onChange={(event) => onTerrainSourceChange(event.currentTarget.value)}
+            disabled={!terrainSources.length}
+            className="h-8 min-w-0 rounded-md border border-white/10 bg-gray-900/80 px-2 text-xs font-semibold text-gray-100 outline-none transition-colors focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Terrain source"
+            title={activeTerrainSource ? `${activeTerrainSource.sourceLabel} (${terrainSourceMeta(activeTerrainSource)})` : "Terrain source"}
+          >
+            {terrainSourceGroupNames.map((group) => (
+              <optgroup key={group} label={group}>
+                {terrainSourceGroups[group].map((source) => (
+                  <option key={source.sourceId} value={source.sourceId}>
+                    {terrainSourceShortLabel(source)}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={onNextTerrainSource}
+            disabled={!terrainSources.length}
+            className={`grid h-8 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-gray-300 transition-colors hover:bg-white/[0.08] hover:text-white ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-40`}
+            aria-label="Next terrain source"
+            title="Next source"
+          >
+            <ChevronRight size={15} />
+          </button>
+        </div>
+        {activeTerrainSource ? (
+          <div className="truncate font-mono text-[10px] leading-4 text-gray-500" title={activeTerrainSource.sourceLabel}>
+            {terrainSourceMeta(activeTerrainSource)}
+          </div>
+        ) : null}
+      </Section>
+
+      <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 text-xs leading-4 text-gray-400">
         <div className="flex gap-2">
           <Database size={13} className="mt-0.5 shrink-0 text-cyan-300" />
           <span>{activeSlice.sourceModel}</span>
