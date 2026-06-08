@@ -45,4 +45,13 @@ describe("yearsBPForSeaLevel", () => {
     expect(yearsBPForSeaLevel(5)).toBe(MIN_YEARS_BP);
     expect(yearsBPForSeaLevel(-999)).toBe(MAX_YEARS_BP);
   });
+
+  it("interpolates the inverse between control points", () => {
+    // Between [8000,-28] and [9000,-42], depth -35 sits at t=0.5:
+    // t = (-35 - -28) / (-42 - -28) = -7 / -14 = 0.5
+    // year = 8000 + 0.5 * (9000 - 8000) = 8500.
+    expect(yearsBPForSeaLevel(-35)).toBeCloseTo(8500, 5);
+    // Round-trip through a non-anchor year to exercise both directions.
+    expect(yearsBPForSeaLevel(seaLevelForYearsBP(7500))).toBeCloseTo(7500, 5);
+  });
 });
