@@ -15,8 +15,11 @@ __all__ = [
 ]
 
 # 8-neighbour offsets and their planar distances (diagonals = sqrt(2)).
-NEIGHBORS = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+NEIGHBORS: list[tuple[int, int]] = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
 NEIGHBOR_DIST = np.array([2 ** 0.5, 1.0, 2 ** 0.5, 1.0, 1.0, 2 ** 0.5, 1.0, 2 ** 0.5], dtype=np.float64)
+
+# Type alias for 2-D float points used by simplify_polyline.
+Point = tuple[float, float]
 
 
 def fill_depressions(dem: np.ndarray, valid: np.ndarray) -> np.ndarray:
