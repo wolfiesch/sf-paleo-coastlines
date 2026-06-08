@@ -23,6 +23,8 @@ import type {
   SeaLevelStats,
   SourceQualityGapCollection,
   TerrainDetailLevel,
+  PaleoTerrainConfig,
+  TerrainSourceMode,
   TerrainTextureMode,
 } from "./types";
 
@@ -111,6 +113,18 @@ function nearbyProbeLevels(activeLevel: number | null, levels: number[]): number
   return levels.filter((level) => Math.abs(level - nearest) <= 30);
 }
 
+function terrainSourcesForSlice(slice: PaleoTimeSlice | null): PaleoTerrainConfig[] {
+  if (!slice) return [];
+  return slice.terrains?.length ? slice.terrains : slice.terrain ? [slice.terrain] : [];
+}
+
+function defaultTerrainSourceId(sources: PaleoTerrainConfig[]): string | null {
+  return sources.find((source) => source.sourceId.includes("best_available"))?.sourceId
+    ?? sources.find((source) => source.qualityTier === "bay_mosaic")?.sourceId
+    ?? sources[0]?.sourceId
+    ?? null;
+}
+
 function App() {
   const [viewState, setViewState] = useState<MapViewState>(START_VIEW);
   const [sliceCatalog, setSliceCatalog] = useState<PaleoTimeSliceManifestItem[]>([]);
@@ -141,6 +155,8 @@ function App() {
   const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("survey");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("bottom");
+  const [terrainSourceMode, setTerrainSourceMode] = useState<TerrainSourceMode>("best");
+  const [selectedTerrainSourceId, setSelectedTerrainSourceId] = useState<string | null>(null);
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");
   const [isTouring, setIsTouring] = useState(false);
   const [tourCaption, setTourCaption] = useState<string | null>(null);
@@ -457,8 +473,21 @@ function App() {
   );
 
   const renderSlices = useMemo(() => (activeSlice ? [activeSlice] : []), [activeSlice]);
+  const terrainSources = useMemo(() => terrainSourcesForSlice(activeSlice), [activeSlice]);
   const isLoadingData = loading || loadingSliceId === activeSliceId;
   const probeLoading = loadingProbeLevel === (activeProbeLevel == null ? null : probeLevelKey(activeProbeLevel));
+
+  const effectiveTerrainSourceId = useMemo(() => (
+    terrainSources.some((source) => source.sourceId === selectedTerrainSourceId)
+      ? selectedTerrainSourceId
+      : defaultTerrainSourceId(terrainSources)
+  ), [selectedTerrainSourceId, terrainSources]);
+
+  useEffect(() => {
+    if (effectiveTerrainSourceId && effectiveTerrainSourceId !== selectedTerrainSourceId) {
+      setSelectedTerrainSourceId(effectiveTerrainSourceId);
+    }
+  }, [effectiveTerrainSourceId, selectedTerrainSourceId]);
 
   const layers = useMemo(() => createPaleoCoastlineLayers(renderSlices, {
     paleoTimeSliceId: activeSliceId,
@@ -470,10 +499,12 @@ function App() {
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
     terrainTextureMode,
+    terrainSourceMode,
+    selectedTerrainSourceId: effectiveTerrainSourceId,
     sceneProfile,
     showPlaceLabels,
     currentYearsBP: yearsBeforePresent,
-  }, baySourceFootprints, paleoRivers, sourceQualityGaps), [activeSliceId, baySourceFootprints, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showTerrainFootprints, showUncertainty, sourceQualityGaps, terrainDetail, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
+  }, baySourceFootprints, paleoRivers, sourceQualityGaps), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showTerrainFootprints, showUncertainty, sourceQualityGaps, terrainDetail, terrainSourceMode, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -489,6 +520,27 @@ function App() {
     setYearsBeforePresent(years);
     setWaterLevelMeters(Math.round(seaLevelForYearsBP(years)));
   }, []);
+
+  const handleTerrainSourceModeChange = useCallback((mode: TerrainSourceMode) => {
+    setTerrainSourceMode(mode);
+    if (mode === "single" && !selectedTerrainSourceId) {
+      setSelectedTerrainSourceId(defaultTerrainSourceId(terrainSources));
+    }
+  }, [selectedTerrainSourceId, terrainSources]);
+
+  const handleTerrainSourceChange = useCallback((sourceId: string) => {
+    setSelectedTerrainSourceId(sourceId);
+    setTerrainSourceMode("single");
+  }, []);
+
+  const cycleTerrainSource = useCallback((direction: -1 | 1) => {
+    if (!terrainSources.length) return;
+    const currentId = effectiveTerrainSourceId ?? defaultTerrainSourceId(terrainSources);
+    const currentIndex = Math.max(0, terrainSources.findIndex((source) => source.sourceId === currentId));
+    const nextIndex = (currentIndex + direction + terrainSources.length) % terrainSources.length;
+    setSelectedTerrainSourceId(terrainSources[nextIndex].sourceId);
+    setTerrainSourceMode("single");
+  }, [effectiveTerrainSourceId, terrainSources]);
 
   const handleToggleTimeMode = useCallback(() => {
     setTimeMode((mode) => {
@@ -580,6 +632,9 @@ function App() {
           isPlaying={isPlaying}
           terrainDetail={terrainDetail}
           terrainTextureMode={terrainTextureMode}
+          terrainSourceMode={terrainSourceMode}
+          selectedTerrainSourceId={effectiveTerrainSourceId}
+          terrainSources={terrainSources}
           sceneProfile={sceneProfile}
           showTerrainFootprints={showTerrainFootprints}
           showBaySourceFootprints={showBaySourceFootprints}
@@ -619,6 +674,10 @@ function App() {
           }}
           onTerrainDetailChange={setTerrainDetail}
           onTerrainTextureModeChange={setTerrainTextureMode}
+          onTerrainSourceModeChange={handleTerrainSourceModeChange}
+          onTerrainSourceChange={handleTerrainSourceChange}
+          onPreviousTerrainSource={() => cycleTerrainSource(-1)}
+          onNextTerrainSource={() => cycleTerrainSource(1)}
           onSceneProfileChange={setSceneProfile}
           onViewPreset={(nextViewState) => setViewState(nextViewState)}
         />

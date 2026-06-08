@@ -1,6 +1,6 @@
-import { Clapperboard, Clock, Database, Gauge, Layers3, MapPin, MapPinned, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clapperboard, Clock, Database, Gauge, Layers3, MapPin, MapPinned, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
-import type { PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainTextureMode } from "../types";
+import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, TerrainDetailLevel, TerrainSourceMode, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
 
 interface ViewPreset {
@@ -25,6 +25,9 @@ interface PaleoCoastlineControlsProps {
   exposedAreaKm2: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;
+  terrainSourceMode: TerrainSourceMode;
+  selectedTerrainSourceId: string | null;
+  terrainSources: PaleoTerrainConfig[];
   sceneProfile: SceneProfile;
   viewPresets: ViewPreset[];
   onSliceChange: (id: PaleoTimeSliceId) => void;
@@ -43,6 +46,10 @@ interface PaleoCoastlineControlsProps {
   onTogglePlaceLabels: () => void;
   onTerrainDetailChange: (level: TerrainDetailLevel) => void;
   onTerrainTextureModeChange: (mode: TerrainTextureMode) => void;
+  onTerrainSourceModeChange: (mode: TerrainSourceMode) => void;
+  onTerrainSourceChange: (sourceId: string) => void;
+  onPreviousTerrainSource: () => void;
+  onNextTerrainSource: () => void;
   onSceneProfileChange: (profile: SceneProfile) => void;
   onViewPreset: (viewState: MapViewState) => void;
 }
@@ -67,6 +74,12 @@ const SCENE_PROFILE_OPTIONS: { id: SceneProfile; label: string; title: string }[
   { id: "study", label: "Study", title: "Lower contrast view for reading source layers and labels" },
   { id: "relief", label: "Relief", title: "Stronger height, light, and shadow for terrain shape" },
   { id: "emergence", label: "Emerge", title: "Clearer waterline and newly exposed terrain" },
+];
+
+const TERRAIN_SOURCE_MODE_OPTIONS: { id: TerrainSourceMode; label: string; title: string }[] = [
+  { id: "best", label: "Best", title: "Render the clean fused best-available terrain surface" },
+  { id: "single", label: "Source", title: "Render one selected source at a time" },
+  { id: "stack", label: "Stack", title: "Render all terrain surfaces for debugging and comparison" },
 ];
 
 const COVERAGE_LEGEND = [
@@ -124,6 +137,35 @@ function terrainSummary(slice: PaleoTimeSlice): string | null {
   return `${terrains.length} terrain surfaces, drawn from broad support grids up to sharper local survey patches: NOAA CRM/CUDEM Bay-to-coast coverage, USGS CoNED San Francisco 2 m land-plus-seafloor topobathymetry, smaller high-density CoNED focus clips for the Gate, Farallon shelf, and south Bay edge, a derived best-available Golden Gate-to-Farallones fusion surface, NOAA OCM 1 m Area A Bay-floor mosaic, Central Bay source-survey tiles, NOAA BAG Golden Gate/Gulf of the Farallones/Farallon-region survey patches, USGS/CSMP 2 m coastal bathymetry blocks, Farallon Escarpment/Rittenburg Bank offshore multibeam patches, 2023 USGS San Francisco land LiDAR where local tiles are present, and DS684 Golden Gate detail.`;
 }
 
+function terrainSourceGroup(source: PaleoTerrainConfig): string {
+  const id = source.sourceId;
+  if (id.includes("best_available")) return "Best available";
+  if (id.includes("crm") || id.includes("cudem")) return "Broad grids";
+  if (id.includes("coned")) return "USGS CoNED";
+  if (id.includes("noaa_ocm")) return "NOAA OCM";
+  if (id.includes("noaa_nos")) return "NOAA BAG";
+  if (id.includes("csmp") || id.includes("ds684")) return "USGS/CSMP";
+  if (id.includes("lidar")) return "LiDAR";
+  if (id.includes("farallon") || id.includes("rittenburg")) return "Offshore surveys";
+  return "Other";
+}
+
+function terrainSourceShortLabel(source: PaleoTerrainConfig): string {
+  return source.sourceLabel
+    .replace("NOAA NOS ", "")
+    .replace("NOAA OCM ", "")
+    .replace("USGS ", "")
+    .replace("San Francisco", "SF")
+    .replace("bathymetry", "bathy")
+    .replace("topobathymetry", "topobathy");
+}
+
+function terrainSourceMeta(source: PaleoTerrainConfig): string {
+  const resolution = source.resolutionMeters ? `${source.resolutionMeters} m` : "variable";
+  const [low, high] = source.heightRangeMeters;
+  return `${resolution}, ${low} to ${high} m`;
+}
+
 export function PaleoCoastlineControls({
   slices,
   activeSliceId,
@@ -140,6 +182,9 @@ export function PaleoCoastlineControls({
   exposedAreaKm2,
   terrainDetail,
   terrainTextureMode,
+  terrainSourceMode,
+  selectedTerrainSourceId,
+  terrainSources,
   sceneProfile,
   viewPresets,
   onSliceChange,
@@ -158,6 +203,10 @@ export function PaleoCoastlineControls({
   onTogglePlaceLabels,
   onTerrainDetailChange,
   onTerrainTextureModeChange,
+  onTerrainSourceModeChange,
+  onTerrainSourceChange,
+  onPreviousTerrainSource,
+  onNextTerrainSource,
   onSceneProfileChange,
   onViewPreset,
 }: PaleoCoastlineControlsProps) {
@@ -169,6 +218,19 @@ export function PaleoCoastlineControls({
   const activeTerrainDetail = TERRAIN_DETAIL_OPTIONS.find((option) => option.id === terrainDetail);
   const activeTextureMode = TERRAIN_TEXTURE_OPTIONS.find((option) => option.id === terrainTextureMode);
   const activeSceneProfile = SCENE_PROFILE_OPTIONS.find((option) => option.id === sceneProfile);
+  const activeTerrainSource = terrainSources.find((source) => source.sourceId === selectedTerrainSourceId)
+    ?? terrainSources.find((source) => source.sourceId.includes("best_available"))
+    ?? terrainSources[0]
+    ?? null;
+  const terrainSourceGroups = terrainSources.reduce<Record<string, PaleoTerrainConfig[]>>((groups, source) => {
+    const group = terrainSourceGroup(source);
+    groups[group] = [...(groups[group] ?? []), source];
+    return groups;
+  }, {});
+  const terrainSourceGroupNames = Object.keys(terrainSourceGroups).sort((a, b) => {
+    const order = ["Best available", "Broad grids", "USGS CoNED", "NOAA OCM", "NOAA BAG", "USGS/CSMP", "LiDAR", "Offshore surveys", "Other"];
+    return order.indexOf(a) - order.indexOf(b);
+  });
 
   return (
     <section className="pointer-events-auto max-h-[calc(100vh-6rem)] w-full overflow-y-auto rounded-lg border border-cyan-400/20 bg-gray-950/92 p-3 shadow-2xl backdrop-blur-md">
@@ -546,6 +608,80 @@ export function PaleoCoastlineControls({
               </button>
             );
           })}
+        </div>
+        <div className="mt-2 border-t border-gray-800/80 pt-2">
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <span className="text-[11px] uppercase leading-4 text-gray-500">Terrain source</span>
+            <span className="truncate font-mono text-[11px] leading-4 text-cyan-100">
+              {terrainSourceMode === "best" ? "Best available" : terrainSourceMode === "stack" ? "All stacked" : activeTerrainSource ? terrainSourceShortLabel(activeTerrainSource) : "None"}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-1 rounded-md border border-gray-800/80 bg-gray-950/60 p-1">
+            {TERRAIN_SOURCE_MODE_OPTIONS.map((option) => {
+              const active = option.id === terrainSourceMode;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => onTerrainSourceModeChange(option.id)}
+                  className={`min-h-7 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    active
+                      ? "bg-cyan-300 text-gray-950"
+                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                  }`}
+                  aria-pressed={active}
+                  title={option.title}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-1 grid grid-cols-[2rem_1fr_2rem] gap-1">
+            <button
+              type="button"
+              onClick={onPreviousTerrainSource}
+              disabled={!terrainSources.length}
+              className="grid h-8 place-items-center rounded-md border border-gray-700/70 bg-gray-950/60 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Previous terrain source"
+              title="Previous source"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <select
+              value={activeTerrainSource?.sourceId ?? ""}
+              onChange={(event) => onTerrainSourceChange(event.currentTarget.value)}
+              disabled={!terrainSources.length}
+              className="h-8 min-w-0 rounded-md border border-gray-700/70 bg-gray-950/80 px-2 text-xs font-semibold text-gray-100 outline-none transition-colors focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Terrain source"
+              title={activeTerrainSource ? `${activeTerrainSource.sourceLabel} (${terrainSourceMeta(activeTerrainSource)})` : "Terrain source"}
+            >
+              {terrainSourceGroupNames.map((group) => (
+                <optgroup key={group} label={group}>
+                  {terrainSourceGroups[group].map((source) => (
+                    <option key={source.sourceId} value={source.sourceId}>
+                      {terrainSourceShortLabel(source)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={onNextTerrainSource}
+              disabled={!terrainSources.length}
+              className="grid h-8 place-items-center rounded-md border border-gray-700/70 bg-gray-950/60 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Next terrain source"
+              title="Next source"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+          {activeTerrainSource ? (
+            <div className="mt-1 truncate font-mono text-[10px] leading-4 text-gray-500" title={activeTerrainSource.sourceLabel}>
+              {terrainSourceMeta(activeTerrainSource)}
+            </div>
+          ) : null}
         </div>
         <div className="mt-2 border-t border-gray-800/80 pt-2">
           <span className="text-[11px] uppercase leading-4 text-gray-500">Surface style</span>

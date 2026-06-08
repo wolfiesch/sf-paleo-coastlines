@@ -1,6 +1,7 @@
 export type PaleoTimeSliceId = "present" | "5k_years_ago" | "10k_years_ago" | "20k_years_ago";
 export type TerrainDetailLevel = "fast" | "detailed" | "survey";
 export type TerrainTextureMode = "bottom" | "hybrid" | "survey" | "source" | "sonar" | "relief" | "color";
+export type TerrainSourceMode = "best" | "single" | "stack";
 export type SceneProfile = "study" | "relief" | "emergence";
 export type TerrainQualityTier = "broad" | "bay_mosaic" | "source_survey" | "nearshore_detail" | "offshore_survey" | "reference";
 
@@ -226,6 +227,8 @@ export interface PaleoRenderContext {
   paleoWaterLevelMeters: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainTextureMode: TerrainTextureMode;
+  terrainSourceMode: TerrainSourceMode;
+  selectedTerrainSourceId: string | null;
   sceneProfile: SceneProfile;
   showPlaceLabels: boolean;
   currentYearsBP: number;

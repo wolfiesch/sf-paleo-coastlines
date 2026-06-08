@@ -49,38 +49,38 @@ in float terrainReveal_heightZ;
 
       if (terrainReveal.enabled > 0.5) {
         vec2 heightGradient = vec2(dFdx(terrainReveal_heightZ), dFdy(terrainReveal_heightZ));
-        float slope = clamp(length(heightGradient) * 0.085, 0.0, 1.0);
-        vec3 reliefNormal = normalize(vec3(-heightGradient.x * 0.055, -heightGradient.y * 0.055, 1.0));
-        vec3 reliefLight = normalize(vec3(-0.45, 0.62, 0.74));
+        float slope = clamp(length(heightGradient) * 0.12, 0.0, 1.0);
+        vec3 reliefNormal = normalize(vec3(-heightGradient.x * 0.08, -heightGradient.y * 0.08, 1.0));
+        vec3 reliefLight = normalize(vec3(-0.58, 0.46, 0.68));
         float reliefShade = dot(reliefNormal, reliefLight);
-        float reliefContrast = clamp((reliefShade - 0.58) * 2.15, -0.46, 0.58);
+        float reliefContrast = clamp((reliefShade - 0.54) * 2.85, -0.58, 0.72);
         color.rgb *= 1.0 + reliefContrast * slope * terrainReveal.reliefStrength;
-        color.rgb += vec3(0.06, 0.08, 0.08) * slope * terrainReveal.reliefStrength;
+        color.rgb += vec3(0.09, 0.10, 0.085) * slope * terrainReveal.reliefStrength;
 
         float aboveWater = smoothstep(terrainReveal.waterLevelZ - 0.4, terrainReveal.waterLevelZ + 1.2, terrainReveal_heightZ);
         float nearWaterline = 1.0 - smoothstep(
-          terrainReveal.waterLevelZ + 2.0,
-          terrainReveal.waterLevelZ + max(terrainReveal.bandMeters, 3.0),
+          terrainReveal.waterLevelZ + 1.0,
+          terrainReveal.waterLevelZ + max(terrainReveal.bandMeters * 1.25, 4.0),
           terrainReveal_heightZ
         );
-        float reveal = clamp(aboveWater * nearWaterline * terrainReveal.strength, 0.0, 0.78);
-        vec3 exposedTint = vec3(1.0, 0.78, 0.30);
+        float reveal = clamp(aboveWater * nearWaterline * terrainReveal.strength, 0.0, 0.88);
+        vec3 exposedTint = vec3(1.0, 0.76, 0.24);
         color.rgb = mix(color.rgb, exposedTint, reveal);
 
         float belowWater = 1.0 - smoothstep(terrainReveal.waterLevelZ - 1.2, terrainReveal.waterLevelZ + 0.2, terrainReveal_heightZ);
         float nearSubmerged = smoothstep(
-          terrainReveal.waterLevelZ - max(terrainReveal.bandMeters * 0.65, 3.0),
+          terrainReveal.waterLevelZ - max(terrainReveal.bandMeters * 0.9, 4.0),
           terrainReveal.waterLevelZ - 1.0,
           terrainReveal_heightZ
         );
-        float submerged = clamp(belowWater * nearSubmerged * terrainReveal.submergedStrength, 0.0, 0.48);
-        vec3 submergedTint = vec3(0.08, 0.58, 0.72);
+        float submerged = clamp(belowWater * nearSubmerged * terrainReveal.submergedStrength, 0.0, 0.58);
+        vec3 submergedTint = vec3(0.04, 0.48, 0.68);
         color.rgb = mix(color.rgb, submergedTint, submerged);
 
         float depthBelowWater = max(terrainReveal.waterLevelZ - terrainReveal_heightZ, 0.0);
         float depthFog = smoothstep(20.0, 190.0, depthBelowWater);
-        vec3 deepWaterTint = vec3(0.015, 0.16, 0.27);
-        color.rgb = mix(color.rgb, deepWaterTint, clamp(depthFog * terrainReveal.depthFogStrength, 0.0, 0.34));
+        vec3 deepWaterTint = vec3(0.01, 0.11, 0.22);
+        color.rgb = mix(color.rgb, deepWaterTint, clamp(depthFog * terrainReveal.depthFogStrength, 0.0, 0.42));
       }
     `,
   },

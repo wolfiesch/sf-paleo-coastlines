@@ -98,45 +98,45 @@ interface SceneProfileConfig {
 const SCENE_PROFILE_CONFIG: Record<SceneProfile, SceneProfileConfig> = {
   study: {
     verticalScale: 0.95,
-    waterDepthFogStrength: 0.08,
+    waterDepthFogStrength: 0.09,
     terrainAmbient: 0.5,
     terrainDiffuse: 0.55,
     terrainShininess: 12,
-    terrainReliefStrength: 0.11,
-    revealStrengthScale: 0.78,
-    submergedStrengthScale: 0.82,
+    terrainReliefStrength: 0.14,
+    revealStrengthScale: 0.84,
+    submergedStrengthScale: 0.88,
     contourAlphaScale: 0.78,
     contourWidthScale: 0.9,
     emergenceAlphaScale: 0.7,
     emergenceRadiusScale: 0.82,
   },
   relief: {
-    verticalScale: 1.22,
-    waterDepthFogStrength: 0.14,
-    terrainAmbient: 0.34,
-    terrainDiffuse: 0.86,
-    terrainShininess: 26,
-    terrainReliefStrength: 0.34,
-    revealStrengthScale: 1.04,
-    submergedStrengthScale: 0.95,
-    contourAlphaScale: 1.08,
-    contourWidthScale: 1.08,
+    verticalScale: 1.42,
+    waterDepthFogStrength: 0.2,
+    terrainAmbient: 0.28,
+    terrainDiffuse: 0.96,
+    terrainShininess: 32,
+    terrainReliefStrength: 0.52,
+    revealStrengthScale: 1.12,
+    submergedStrengthScale: 1.05,
+    contourAlphaScale: 1.14,
+    contourWidthScale: 1.14,
     emergenceAlphaScale: 0.92,
     emergenceRadiusScale: 0.95,
   },
   emergence: {
-    verticalScale: 1.12,
-    waterDepthFogStrength: 0.11,
-    terrainAmbient: 0.38,
-    terrainDiffuse: 0.78,
-    terrainShininess: 22,
-    terrainReliefStrength: 0.24,
-    revealStrengthScale: 1.28,
-    submergedStrengthScale: 1.18,
-    contourAlphaScale: 1.22,
-    contourWidthScale: 1.18,
-    emergenceAlphaScale: 1.18,
-    emergenceRadiusScale: 1.18,
+    verticalScale: 1.3,
+    waterDepthFogStrength: 0.18,
+    terrainAmbient: 0.31,
+    terrainDiffuse: 0.9,
+    terrainShininess: 30,
+    terrainReliefStrength: 0.42,
+    revealStrengthScale: 1.68,
+    submergedStrengthScale: 1.46,
+    contourAlphaScale: 1.36,
+    contourWidthScale: 1.34,
+    emergenceAlphaScale: 1.42,
+    emergenceRadiusScale: 1.32,
   },
 };
 
@@ -185,15 +185,15 @@ function depthContourColor(feature: PickedPaleoFeature, activeWaterLevel: number
   const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
   const distance = Math.abs(offsetMeters);
   const fade = Math.max(0, 1 - distance / DEPTH_CONTOUR_BAND_METERS);
-  if (distance <= 2.5) return [255, 255, 255, scaleAlpha(235, profile.contourAlphaScale)];
-  if (offsetMeters > 0) return [255, 218, 96, scaleAlpha(72 + fade * 92, profile.contourAlphaScale)];
-  return [42, 125, 176, scaleAlpha(56 + fade * 86, profile.contourAlphaScale)];
+  if (distance <= 2.5) return [255, 255, 255, scaleAlpha(248, profile.contourAlphaScale)];
+  if (offsetMeters > 0) return [255, 224, 98, scaleAlpha(86 + fade * 112, profile.contourAlphaScale)];
+  return [48, 205, 255, scaleAlpha(66 + fade * 102, profile.contourAlphaScale)];
 }
 
 function depthContourWidth(feature: PickedPaleoFeature, activeWaterLevel: number, profile: SceneProfileConfig): number {
   const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
-  if (distance <= 2.5) return 2.8 * profile.contourWidthScale;
-  return (Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.25 : 0.7) * profile.contourWidthScale;
+  if (distance <= 2.5) return 3.2 * profile.contourWidthScale;
+  return (Math.abs(feature.properties.elevation_m % 10) < 0.1 ? 1.35 : 0.78) * profile.contourWidthScale;
 }
 
 function contourLabelColor(label: ContourLabel, profile: SceneProfileConfig): [number, number, number, number] {
@@ -221,17 +221,17 @@ function contourLabelQuota(kind: ContourLabel["kind"]): number {
 function shorelineGlowColor(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner", profile: SceneProfileConfig): [number, number, number, number] {
   const offsetMeters = feature.properties.elevation_m - activeWaterLevel;
   const distance = Math.abs(offsetMeters);
-  const fade = Math.max(0, 1 - distance / 4.5);
-  const baseAlpha = strength === "outer" ? 62 : 130;
+  const fade = Math.max(0, 1 - distance / 5.5);
+  const baseAlpha = strength === "outer" ? 82 : 168;
   const alpha = scaleAlpha(baseAlpha * fade, profile.contourAlphaScale);
-  if (offsetMeters > 0) return [255, 221, 104, alpha];
+  if (offsetMeters > 0) return [255, 230, 118, alpha];
   return strength === "outer" ? [88, 228, 255, alpha] : [232, 255, 255, alpha];
 }
 
 function shorelineGlowWidth(feature: PickedPaleoFeature, activeWaterLevel: number, strength: "outer" | "inner", profile: SceneProfileConfig): number {
   const distance = Math.abs(feature.properties.elevation_m - activeWaterLevel);
-  const fade = Math.max(0, 1 - distance / 4.5);
-  return (strength === "outer" ? 12 + fade * 6 : 5 + fade * 4) * profile.contourWidthScale;
+  const fade = Math.max(0, 1 - distance / 5.5);
+  return (strength === "outer" ? 15 + fade * 9 : 6 + fade * 5) * profile.contourWidthScale;
 }
 
 function selectedSlice(data: PaleoTimeSlice[], context: PaleoRenderContext): PaleoTimeSlice | null {
@@ -247,6 +247,51 @@ function terrainStackForSlice(slice: PaleoTimeSlice): PaleoTerrainConfig[] {
 
 function primaryTerrainForSlice(slice: PaleoTimeSlice): PaleoTerrainConfig | null {
   return terrainStackForSlice(slice)[0] ?? null;
+}
+
+function bestAvailableTerrainForSlice(slice: PaleoTimeSlice): PaleoTerrainConfig | null {
+  const terrains = terrainStackForSlice(slice);
+  return terrains.find((terrain) => terrain.sourceId.includes("best_available"))
+    ?? terrains.find((terrain) => terrain.sourceId.includes("fusion"))
+    ?? terrains.find((terrain) => terrain.sourceId.includes("coned_sf_2m"))
+    ?? terrains.find((terrain) => !isBroadTerrain(terrain))
+    ?? terrains[0]
+    ?? null;
+}
+
+function uniqueTerrains(terrains: (PaleoTerrainConfig | null | undefined)[]): PaleoTerrainConfig[] {
+  const seen = new Set<string>();
+  return terrains.filter((terrain): terrain is PaleoTerrainConfig => {
+    if (!terrain || seen.has(terrain.sourceId)) return false;
+    seen.add(terrain.sourceId);
+    return true;
+  });
+}
+
+function bestAvailableTerrainStackForSlice(slice: PaleoTimeSlice): PaleoTerrainConfig[] {
+  const terrains = terrainStackForSlice(slice);
+  const terrainById = new Map(terrains.map((terrain) => [terrain.sourceId, terrain]));
+  const broadSupport = terrainById.get("noaa_crm_vol7_3as")
+    ?? terrainById.get("noaa_cudem_1_9as")
+    ?? terrainById.get("usgs_coned_sf_2m")
+    ?? terrains[0];
+  const best = bestAvailableTerrainForSlice(slice);
+  const landDetail = terrainById.get("usgs_2023_sf_lidar_dem");
+
+  return uniqueTerrains([broadSupport, best, landDetail]);
+}
+
+function terrainStackForRender(slice: PaleoTimeSlice, context: PaleoRenderContext): PaleoTerrainConfig[] {
+  const terrains = terrainStackForSlice(slice);
+
+  if (context.terrainSourceMode === "stack") return terrains;
+
+  if (context.terrainSourceMode === "single" && context.selectedTerrainSourceId) {
+    const selected = terrains.find((terrain) => terrain.sourceId === context.selectedTerrainSourceId);
+    if (selected) return [selected];
+  }
+
+  return bestAvailableTerrainStackForSlice(slice);
 }
 
 function nearestProbeLevel(level: number, levels: number[]): number | null {
@@ -337,33 +382,40 @@ function terrainDepthBiasParameters(terrain: PaleoTerrainConfig) {
   };
 }
 
+function terrainLayerOpacity(terrain: PaleoTerrainConfig, context: PaleoRenderContext): number {
+  if (context.terrainSourceMode !== "best") return 1;
+  if (terrain.sourceId.includes("best_available") || terrain.sourceId.includes("fusion")) return 0.64;
+  if (terrain.sourceId.includes("2023_sf_lidar")) return 0.82;
+  return 1;
+}
+
 function terrainRevealBandMeters(terrain: PaleoTerrainConfig): number {
   const tier = terrainQualityTier(terrain);
-  if (tier === "broad") return 28;
-  if (tier === "bay_mosaic") return 38;
-  if (tier === "source_survey") return 48;
-  return 44;
+  if (tier === "broad") return 36;
+  if (tier === "bay_mosaic") return 52;
+  if (tier === "source_survey") return 62;
+  return 58;
 }
 
 function terrainRevealReliefScale(terrain: PaleoTerrainConfig): number {
   const tier = terrainQualityTier(terrain);
-  if (tier === "broad") return 0.65;
-  if (tier === "bay_mosaic") return 0.92;
-  return 1.08;
+  if (tier === "broad") return 0.78;
+  if (tier === "bay_mosaic") return 1.04;
+  return 1.2;
 }
 
 function terrainRevealStrength(terrain: PaleoTerrainConfig): number {
   const tier = terrainQualityTier(terrain);
-  if (tier === "broad") return 0.22;
-  if (tier === "bay_mosaic") return 0.36;
-  return 0.46;
+  if (tier === "broad") return 0.3;
+  if (tier === "bay_mosaic") return 0.48;
+  return 0.58;
 }
 
 function terrainSubmergedStrength(terrain: PaleoTerrainConfig): number {
   const tier = terrainQualityTier(terrain);
-  if (tier === "broad") return 0.14;
-  if (tier === "bay_mosaic") return 0.22;
-  return 0.28;
+  if (tier === "broad") return 0.2;
+  if (tier === "bay_mosaic") return 0.3;
+  return 0.36;
 }
 
 function terrainDepthFogStrength(terrain: PaleoTerrainConfig): number {
@@ -621,6 +673,43 @@ function elevatedSourceQualityGapFeature(
   };
 }
 
+type GapFeatureCollection = { type: "FeatureCollection"; features: SourceQualityGapFeature[] };
+
+// Stable empty collection so the (hidden) gap layer's `data` keeps the same
+// reference when the overlay is off - deck.gl skips re-diffing it.
+const EMPTY_GAP_COLLECTION: GapFeatureCollection = { type: "FeatureCollection", features: [] };
+
+// Single-slot memo for the elevated gap collection. The ~5,280 cell polygons
+// only need rebuilding when the gaps data, terrain, water level, or scene
+// profile change. createPaleoCoastlineLayers runs on every render (pan, zoom,
+// texture/detail toggles); returning the same reference here lets deck.gl reuse
+// the tessellated geometry instead of re-tessellating 5,280 polygons each time.
+let cachedGapSource: SourceQualityGapCollection | null = null;
+let cachedGapSignature = "";
+let cachedGapCollection: GapFeatureCollection = EMPTY_GAP_COLLECTION;
+
+function elevatedSourceQualityGapCollection(
+  gaps: SourceQualityGapCollection,
+  terrain: PaleoTerrainConfig | null,
+  activeWaterLevel: number,
+  profile: SceneProfileConfig,
+  profileId: SceneProfile,
+): GapFeatureCollection {
+  const signature = `${terrain?.sourceId ?? ""}|${activeWaterLevel}|${profileId}`;
+  if (cachedGapSource === gaps && cachedGapSignature === signature) {
+    return cachedGapCollection;
+  }
+  cachedGapCollection = {
+    type: "FeatureCollection",
+    features: gaps.features.map((feature) =>
+      elevatedSourceQualityGapFeature(feature, terrain, activeWaterLevel, profile),
+    ),
+  };
+  cachedGapSource = gaps;
+  cachedGapSignature = signature;
+  return cachedGapCollection;
+}
+
 function addZToCoordinates(coordinates: unknown, zMeters: number): unknown {
   if (!Array.isArray(coordinates)) return coordinates;
   if (
@@ -796,8 +885,11 @@ export function createPaleoCoastlineLayers(
   if (!slice) return [];
 
   const activeWaterLevel = context.paleoWaterLevelMeters ?? slice.seaLevelMeters;
-  const terrain = primaryTerrainForSlice(slice);
+  const visibleTerrainStack = terrainStackForRender(slice, context);
   const profile = sceneConfig(context.sceneProfile);
+  const terrain = context.terrainSourceMode === "best"
+    ? bestAvailableTerrainForSlice(slice) ?? visibleTerrainStack[0] ?? primaryTerrainForSlice(slice)
+    : visibleTerrainStack[0] ?? primaryTerrainForSlice(slice);
   const rawProbeFeatures = probeFeaturesForWaterLevel(data, slice, activeWaterLevel);
   const activeProbeFeatures = rawProbeFeatures.filter((feature) => Math.abs(feature.properties.elevation_m - activeWaterLevel) <= 2.5);
   const emergencePoints = emergencePointsForWaterLevel(rawProbeFeatures, terrain, activeWaterLevel, profile);
@@ -809,9 +901,9 @@ export function createPaleoCoastlineLayers(
   const riverFeatures = context.showRivers && paleoRivers
     ? paleoRivers.features.map((feature) => drapedRiverFeature(feature, terrain, profile))
     : [];
-  const sourceQualityGapFeatures = context.showSourceQualityGaps && sourceQualityGaps
-    ? sourceQualityGaps.features.map((feature) => elevatedSourceQualityGapFeature(feature, terrain, activeWaterLevel, profile))
-    : [];
+  const sourceQualityGapCollection = context.showSourceQualityGaps && sourceQualityGaps
+    ? elevatedSourceQualityGapCollection(sourceQualityGaps, terrain, activeWaterLevel, profile, context.sceneProfile)
+    : EMPTY_GAP_COLLECTION;
   const features = [
     ...slice.coastline.features,
     ...activeProbeFeatures,
@@ -820,7 +912,7 @@ export function createPaleoCoastlineLayers(
   const shorelineGlowFeatures = activeProbeFeatures.map((feature) => elevatedFeature(feature, terrain, 3.2, profile));
   const depthContourFeatures = rawProbeFeatures.map((feature) => elevatedFeature(feature, terrain, undefined, profile));
 
-  const terrainLayers = terrainStackForSlice(slice).map((terrain) => {
+  const terrainLayers = visibleTerrainStack.map((terrain) => {
     const zLiftMeters = terrainVisualLiftMeters(terrain);
     return new TerrainLayer({
       id: `paleo-terrain-${terrain.sourceId}`,
@@ -829,6 +921,7 @@ export function createPaleoCoastlineLayers(
       bounds: terrain.bounds,
       elevationDecoder: elevationDecoderForTerrain(terrain, profile, zLiftMeters),
       meshMaxError: meshMaxErrorForTerrain(terrain, context.terrainDetail),
+      opacity: terrainLayerOpacity(terrain, context),
       wireframe: false,
       material: terrainMaterial(terrain, profile),
       parameters: terrainDepthBiasParameters(terrain),
@@ -901,10 +994,7 @@ export function createPaleoCoastlineLayers(
 
   const sourceQualityGapLayer = new GeoJsonLayer<SourceQualityGapProperties>({
     id: "paleo-source-quality-gaps",
-    data: {
-      type: "FeatureCollection",
-      features: sourceQualityGapFeatures,
-    } as never,
+    data: sourceQualityGapCollection as never,
     pickable: true,
     stroked: true,
     filled: true,
