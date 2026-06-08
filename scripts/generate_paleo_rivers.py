@@ -36,6 +36,7 @@ LOWSTAND_SEA_LEVEL_M = -120.0
 DEFAULT_HYDRO_WIDTH = 1400        # downsample width keeps pure-python hydrology fast
 DEFAULT_CHANNEL_QUANTILE = 0.997  # accumulation percentile that becomes "river"
 DEFAULT_SIMPLIFY_DEG = 0.0008     # ~80 m DP tolerance in degrees
+DEFAULT_FILL_EPSILON = 1e-3       # PF+epsilon tilt that integrates flat basins into one trunk
 NODATA = -9999.0
 
 
@@ -139,6 +140,12 @@ def main() -> int:
     parser.add_argument("--hydro-width", type=int, default=DEFAULT_HYDRO_WIDTH)
     parser.add_argument("--channel-quantile", type=float, default=DEFAULT_CHANNEL_QUANTILE)
     parser.add_argument("--simplify-deg", type=float, default=DEFAULT_SIMPLIFY_DEG)
+    parser.add_argument(
+        "--epsilon",
+        type=float,
+        default=DEFAULT_FILL_EPSILON,
+        help="PF+epsilon flat-routing tilt; 0 reverts to plain priority-flood fill",
+    )
     parser.add_argument("--output", type=Path, default=OUTPUT_GEOJSON)
     args = parser.parse_args()
 
@@ -148,13 +155,17 @@ def main() -> int:
     valid = (elev > LOWSTAND_SEA_LEVEL_M) & (elev != NODATA) & np.isfinite(elev)
     print(f"subaerial cells at lowstand: {int(valid.sum())}")
 
-    filled = fill_depressions(elev, valid)
+    filled = fill_depressions(elev, valid, epsilon=args.epsilon)
     flowdir = d8_flow_directions(filled, valid)
     acc = flow_accumulation(flowdir, valid)
 
     acc_valid = acc[valid]
     threshold = float(np.quantile(acc_valid, args.channel_quantile))
     print(f"channel accumulation threshold (q={args.channel_quantile}): {threshold:.1f}")
+    # Integration check: with PF+epsilon the dominant trunk should drain a large
+    # share of the subaerial surface; plain fill fragments and stays tiny.
+    peak = float(acc_valid.max())
+    print(f"peak accumulation: {peak:.0f} cells ({peak / max(1, int(valid.sum())) * 100:.1f}% of subaerial)")
 
     lines = trace_channels(flowdir, acc, valid, threshold=threshold)
     print(f"traced {len(lines)} channel polylines")
@@ -165,6 +176,7 @@ def main() -> int:
         "lowstand_sea_level_m": LOWSTAND_SEA_LEVEL_M,
         "hydro_width_px": int(elev.shape[1]),
         "channel_quantile": args.channel_quantile,
+        "fill_epsilon": args.epsilon,
         "flow_order_breaks": [round(b, 1) for b in flow_breaks],
         "note": (
             "Paleo-drainage traced on topobathymetry with sea level at the "

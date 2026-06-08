@@ -38,6 +38,40 @@ def test_fill_leaves_monotone_slope_untouched():
     assert np.allclose(filled, dem)
 
 
+def test_fill_epsilon_drains_flat_basin():
+    from paleo_hydrology import d8_flow_directions
+    # A 3x3 flat basin at 5 m inside 9 m walls, with a single ocean outlet at
+    # (2,4) (invalid, elevation 0). Plain priority-flood leaves the basin dead
+    # flat, so interior cells with no diagonal line to the outlet have no
+    # downhill neighbour and strand as sinks. PF+epsilon tilts the filled basin
+    # imperceptibly toward the outlet, giving every cell a downstream neighbour
+    # so the whole basin drains as one integrated system - exactly what lets the
+    # regional paleo-drainage fuse into a single trunk instead of fragmenting.
+    dem = np.array([
+        [9, 9, 9, 9, 9],
+        [9, 5, 5, 5, 9],
+        [9, 5, 5, 5, 0],
+        [9, 5, 5, 5, 9],
+        [9, 9, 9, 9, 9],
+    ], dtype=np.float32)
+    valid = np.ones((5, 5), dtype=bool)
+    valid[2, 4] = False  # ocean outlet
+
+    def interior_sinks(filled):
+        flowdir = d8_flow_directions(filled, valid)
+        return int(np.sum((flowdir == -1) & valid))
+
+    flat = fill_depressions(dem, valid, epsilon=0.0)
+    tilted = fill_depressions(dem, valid, epsilon=1e-3)
+
+    # Plain fill strands the flat basin: several interior cells cannot drain.
+    assert interior_sinks(flat) >= 4, interior_sinks(flat)
+    # PF+epsilon removes every interior sink: the basin drains to the outlet.
+    assert interior_sinks(tilted) == 0, interior_sinks(tilted)
+    # Filling still never lowers terrain.
+    assert np.all(tilted >= dem)
+
+
 def test_d8_points_downhill_west_on_a_ramp():
     from paleo_hydrology import d8_flow_directions
     # Values increase left-to-right: col 0 is low (west), col 2 is high (east).
@@ -129,6 +163,7 @@ def test_simplify_keeps_endpoints_for_two_points():
 def run():
     test_fill_raises_interior_pit_to_pour_point()
     test_fill_leaves_monotone_slope_untouched()
+    test_fill_epsilon_drains_flat_basin()
     print("Task 1 fill_depressions: OK")
     test_d8_points_downhill_west_on_a_ramp()
     test_d8_marks_invalid_as_sentinel()

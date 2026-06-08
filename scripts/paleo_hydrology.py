@@ -22,12 +22,21 @@ NEIGHBOR_DIST = np.array([2 ** 0.5, 1.0, 2 ** 0.5, 1.0, 1.0, 2 ** 0.5, 1.0, 2 **
 Point = tuple[float, float]
 
 
-def fill_depressions(dem: np.ndarray, valid: np.ndarray) -> np.ndarray:
+def fill_depressions(dem: np.ndarray, valid: np.ndarray, epsilon: float = 0.0) -> np.ndarray:
     """Priority-flood depression filling (Barnes 2014).
 
     Invalid cells (ocean below the lowstand, or nodata) act as the outer ocean
     that every valid cell ultimately spills toward. Returns a filled copy where
     no valid cell sits below its lowest spill path. Never lowers terrain.
+
+    With ``epsilon > 0`` this becomes Priority-Flood+epsilon: each cell raised
+    into a depression or flat is lifted to ``spill + epsilon`` rather than just
+    ``spill``, so the filled surface tilts imperceptibly toward its outlet. That
+    gives D8 a gradient to follow across otherwise-flat filled basins, which is
+    what lets the regional drainage integrate into a single trunk instead of
+    fragmenting into local sinks. ``epsilon`` perturbs only this routing surface;
+    callers that need true bed elevations should read them from the original DEM.
+    At ``epsilon = 0`` the result is identical to plain priority-flood.
     """
     rows, cols = dem.shape
     filled = dem.astype(np.float64, copy=True)
@@ -60,7 +69,7 @@ def fill_depressions(dem: np.ndarray, valid: np.ndarray) -> np.ndarray:
         for dr, dc in NEIGHBORS:
             nr, nc = r + dr, c + dc
             if 0 <= nr < rows and 0 <= nc < cols and not closed[nr, nc]:
-                ne = filled[nr, nc] if filled[nr, nc] > elev else elev
+                ne = filled[nr, nc] if filled[nr, nc] > elev else elev + epsilon
                 filled[nr, nc] = ne
                 closed[nr, nc] = True
                 heapq.heappush(heap, (ne, nr, nc))
