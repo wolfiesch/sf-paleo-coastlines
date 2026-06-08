@@ -9,8 +9,8 @@ It answers a practical question: where is the 3D terrain already backed by measu
 | Source family | Share of visible fused surface | Plain-English meaning |
 |---|---:|---|
 | Broad fallback/support | 8.1% | Useful for continuity, but not where the best detail lives. |
-| CoNED foundation | 55.38% | Strong 2 m land-plus-seafloor base; good, but not as visually rich as survey/backscatter patches. |
-| Measured detail | 36.52% | The best current visual/scientific detail: BAG, OCM, NOAA multibeam, USGS Bay DEM, LiDAR, CSMP, and offshore survey patches. |
+| CoNED foundation | 55.27% | Strong 2 m land-plus-seafloor base; good, but not as visually rich as survey/backscatter patches. |
+| Measured detail | 36.63% | The best current visual/scientific detail: BAG, OCM, NOAA multibeam, USGS Bay DEM, LiDAR, CSMP, and offshore survey patches. |
 
 ## Cell Types
 
@@ -18,21 +18,21 @@ It answers a practical question: where is the 3D terrain already backed by measu
 |---|---:|---:|---|
 | Critical broad-data gap | 398 | 822.35 | Chase new bathymetry first. |
 | Broad support gap | 49 | 101.18 | Replace broad support where survey/CoNED exists. |
-| Good CoNED foundation, low measured detail | 2825 | 5831.75 | Look for survey texture or scientific overlays. |
+| Good CoNED foundation, low measured detail | 2818 | 5817.23 | Look for survey texture or scientific overlays. |
 | Mixed foundation | 79 | 163.14 | Inspect case by case. |
-| Measured local detail | 175 | 360.59 | Keep, then datum-check. |
-| High-detail survey/source patch | 1754 | 3619.55 | Use as quality benchmark. |
+| Measured local detail | 179 | 368.98 | Keep, then datum-check. |
+| High-detail survey/source patch | 1757 | 3625.68 | Use as quality benchmark. |
 
 ## Priority Zones
 
 | Zone | Broad fallback | CoNED base | Measured detail | Gap score | What it means | Next action |
 |---|---:|---:|---:|---:|---|---|
-| Southern outer shelf | 20.51% | 43.62% | 35.87% | 36.17 | This captures the lower-left offshore portion of the current scene and helps avoid only optimizing the Golden Gate. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
+| Southern outer shelf | 20.51% | 43.15% | 36.34% | 35.95 | This captures the lower-left offshore portion of the current scene and helps avoid only optimizing the Golden Gate. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
 | Northwest outer shelf | 32.46% | 9.63% | 57.91% | 35.84 | This is the broadest visible fallback area near the far-west/northwest part of the current fused scene. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |
 | North Bay edge | 0.0% | 90.67% | 9.33% | 33.55 | This helps separate true measured Bay detail from broad support on the northern side of the scene. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
 | South Bay edge | 0.0% | 77.37% | 22.63% | 27.66 | This area has large shallow modern-bay surfaces where extra survey data can visibly change the exposed-waterline story. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
 | Farallon-to-Golden-Gate corridor | 0.0% | 70.59% | 29.41% | 25.42 | This is the visual path between the old outer coast and today's Golden Gate. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
-| Farallon Islands and shelf | 0.57% | 66.82% | 32.62% | 24.34 | This is where the 20k shoreline story gets most interesting, because islands and submerged shelf highs emerge as sea level drops. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
+| Farallon Islands and shelf | 0.57% | 66.49% | 32.94% | 24.18 | This is where the 20k shoreline story gets most interesting, because islands and submerged shelf highs emerge as sea level drops. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
 | Central Bay floor | 0.0% | 64.15% | 35.85% | 22.03 | This is where Bay-floor survey detail can make the modern-bay interior look much less smooth. | Mixed source area; inspect the source-quality overlay before prioritizing another download. |
 | Golden Gate and San Francisco Bar | 0.0% | 32.04% | 67.96% | 11.11 | This is the key constriction where old drainage, bathymetry, and the modern bay entrance meet. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |
 

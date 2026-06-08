@@ -249,6 +249,17 @@ def build_nautilus_nos_bag_blocks() -> list[dict[str, Any]]:
                 {"meters": 64, "part": 4, "total": 5, "minimum": -1050.0, "maximum": -275.0},
             ],
         },
+        {
+            "survey": "W00447",
+            "label": "southern outer shelf",
+            "source_name": "Greater Farallones southern outer shelf and slope",
+            "resolutions": [
+                {"meters": 16, "part": 1, "total": 4, "minimum": -170.0, "maximum": -80.0},
+                {"meters": 32, "part": 2, "total": 4, "minimum": -330.0, "maximum": -135.0},
+                {"meters": 64, "part": 3, "total": 4, "minimum": -1050.0, "maximum": -275.0},
+                {"meters": 128, "part": 4, "total": 4, "minimum": -4200.0, "maximum": -900.0},
+            ],
+        },
     ]
     blocks: list[dict[str, Any]] = []
     for survey_spec in survey_specs:
@@ -262,7 +273,7 @@ def build_nautilus_nos_bag_blocks() -> list[dict[str, Any]]:
                 "sourceLabel": f"NOAA NOS {survey}, {meters} m BAG {survey_spec['label']} bathymetry",
                 "sourceName": f"NOAA/NOS {survey} Bathymetric Attributed Grid, {meters} m, MLLW, {survey_spec['source_name']}",
                 "sourceUrl": source_url,
-                "role": "Measured E/V Nautilus multibeam BAG transect used to sharpen the northwest outer-shelf gap.",
+                "role": f"Measured E/V Nautilus multibeam BAG transect used to sharpen the {survey_spec['label']} gap.",
                 "folder": f"noaa-nos-{survey.lower()}",
                 "fileName": f"{survey}_MB_{meters}m_MLLW_{resolution['part']}of{resolution['total']}.bag",
                 "url": f"https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/{survey}/BAG/{survey}_MB_{meters}m_MLLW_{resolution['part']}of{resolution['total']}.bag",
@@ -277,7 +288,7 @@ def build_nautilus_nos_bag_blocks() -> list[dict[str, Any]]:
                 "clipBounds": BEST_AVAILABLE_BOUNDS,
                 "skipContours": True,
                 "sourceNoData": 1_000_000.0,
-                "note": f"NOAA NOS {survey} {meters} m BAG survey patch in MLLW, clipped to the current Bay-to-Farallones study box to add measured E/V Nautilus seafloor texture in the northwest shelf gap.",
+                "note": f"NOAA NOS {survey} {meters} m BAG survey patch in MLLW, clipped to the current Bay-to-Farallones study box to add measured E/V Nautilus seafloor texture in the {survey_spec['label']} gap.",
             })
     return blocks
 
@@ -2572,7 +2583,7 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
     if source_id.startswith("usgs_csmp") or source_id.startswith("usgs_ds684"):
         return {"qualityTier": "nearshore_detail", "renderPriority": 85, "resolutionMeters": 2}
     if source_id.startswith("noaa_ncei"):
-        return {"qualityTier": "offshore_survey", "renderPriority": 88, "resolutionMeters": 50}
+        return {"qualityTier": "offshore_survey", "renderPriority": 75, "resolutionMeters": 50}
     if "farallon" in source_id or "rittenburg" in source_id:
         resolution = 2 if "rittenburg" in source_id else 10 if "farallon_escarpment" in source_id else None
         return {"qualityTier": "offshore_survey", "renderPriority": 90, "resolutionMeters": resolution}
@@ -3346,7 +3357,7 @@ def best_available_fusion_input_records() -> list[tuple[str, Path]]:
         ),
         *[
             (
-                88 if str(block["sourceId"]).startswith("noaa_ncei") else 85 if not ("farallon" in str(block["sourceId"]) or "rittenburg" in str(block["sourceId"])) else 90,
+                75 if str(block["sourceId"]).startswith("noaa_ncei") else 85 if not ("farallon" in str(block["sourceId"]) or "rittenburg" in str(block["sourceId"])) else 90,
                 fusion_resolution_rank(str(block["sourceId"])),
                 str(block["sourceId"]),
                 bathymetry_block_terrain_wgs84(block),
@@ -4015,7 +4026,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     metadata = {
         "generatedAt": generated_at,
         "studyBounds": BBOX,
-        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added smaller high-pixel-density USGS CoNED focus clips when present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, W00614, W00431, W00442, W00433, W00443, W00444, and W00478 Farallon-region / northwest shelf BAG survey patches, added NOAA/NCEI EX0907 50 m gridded multibeam bathymetry for the northwest offshore shelf, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
+        "method": "Downloaded a NOAA CRM Vol. 7 SF/Farallones subset, clipped NOAA CUDEM 1/9 arc-second California topobathymetry tiles, clipped the USGS CoNED San Francisco 2 m topobathymetry WCS layer when the local GeoTIFF is present, added smaller high-pixel-density USGS CoNED focus clips when present, added a NOAA OCM Area A 1 m interferometric Bay-floor mosaic, added NOAA OCM Area A 1 m Central Bay multibeam source-survey GeoTIFFs, NOAA/NOS H12109, H12110, H12111, H12112, and H12113 Golden Gate/Gulf of the Farallones BAG survey patches plus NOAA/NOS H11965, H13334, W00477, W00614, W00431, W00442, W00433, W00443, W00444, W00447, and W00478 Farallon-region / outer-shelf BAG survey patches, added NOAA/NCEI EX0907 50 m gridded multibeam bathymetry for the northwest offshore shelf as a gap-filling measured layer below sharper BAG/CSMP sources, multiple USGS/CSMP nearshore 2 m bathymetry blocks, USGS Farallon Escarpment/Rittenburg Bank offshore multibeam bathymetry, the USGS 2023 San Francisco 1 m LiDAR DEM land inset when local tiles are present, and the USGS DS684 San Francisco Bar 2 m DEM tile, generated fixed elevation contours with GDAL, exported broad plus local browser terrain images, and built a derived best-available Golden Gate-to-Farallones fusion surface from the prepared WGS84 terrain sources. NOAA ETOPO 2022 remains documented as a fallback broad source.",
         "rawDatasets": [
             str(CRM_TIF.relative_to(ROOT)),
             str(CUDEM_TIF.relative_to(ROOT)),
