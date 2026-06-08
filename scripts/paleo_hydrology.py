@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import heapq
+from collections import deque
 
 import numpy as np
 
@@ -129,8 +130,6 @@ def flow_accumulation(flowdir: np.ndarray, valid: np.ndarray) -> np.ndarray:
     indeg = np.zeros((rows, cols), dtype=np.int64)
     has_down = dr >= 0
     np.add.at(indeg, (dr[has_down], dc[has_down]), 1)
-
-    from collections import deque
 
     queue = deque(zip(*np.nonzero((indeg == 0) & valid)))
     while queue:
