@@ -12,6 +12,7 @@ const DEFAULT_OUT_DIR = join(REPO_ROOT, "output", "playwright", "map-captures");
 const DEFAULT_PORT = 5182;
 
 function readArgs(argv) {
+  const args = argv[0] === "--" ? argv.slice(1) : argv;
   const options = {
     config: DEFAULT_CONFIG,
     outDir: DEFAULT_OUT_DIR,
@@ -22,9 +23,9 @@ function readArgs(argv) {
     timeoutMs: 90000,
   };
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    const next = argv[index + 1];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    const next = args[index + 1];
     if (arg === "--config" && next) {
       options.config = resolve(next);
       index += 1;
@@ -64,6 +65,7 @@ Usage:
   pnpm capture:maps
   pnpm capture:maps -- --config scripts/map_capture_views.json --out output/playwright/map-captures
   pnpm capture:maps -- --url http://127.0.0.1:5181
+  pnpm capture:maps --url http://127.0.0.1:5181
 
 Options:
   --config <path>       JSON view list. Default: scripts/map_capture_views.json

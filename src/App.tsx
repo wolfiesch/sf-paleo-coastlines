@@ -102,6 +102,7 @@ const SCENE_PROFILES: SceneProfile[] = ["study", "relief", "emergence"];
 
 interface UrlInitialState {
   captureMode: boolean;
+  showUi: boolean;
   viewState: MapViewState;
   activeSliceId: PaleoTimeSliceId;
   showUncertainty: boolean;
@@ -160,6 +161,7 @@ function readUrlInitialState(): UrlInitialState {
 
   return {
     captureMode: queryBoolean(params, "capture", false),
+    showUi: queryBoolean(params, "ui", true) && !queryBoolean(params, "hideUi", false),
     viewState: initialViewStateFromParams(params),
     activeSliceId: queryEnum(params, "slice", TIME_SLICE_IDS, "20k_years_ago"),
     showUncertainty: queryBoolean(params, "uncertainty", true),
@@ -755,6 +757,7 @@ function App() {
     <main
       className="relative h-screen w-screen overflow-hidden bg-gray-950 text-white"
       data-capture-mode={initialState.captureMode ? "true" : "false"}
+      data-capture-ui={initialState.showUi ? "true" : "false"}
       data-capture-ready={captureReady ? "true" : "false"}
       data-capture-view={`${viewState.longitude},${viewState.latitude},${viewState.zoom},${viewState.pitch},${viewState.bearing}`}
     >
@@ -775,106 +778,110 @@ function App() {
         <Map mapStyle={DARK_MAP_STYLE} reuseMaps />
       </DeckGL>
 
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 border-b border-white/10 bg-gray-950/88 px-4 py-3 backdrop-blur-md">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-base font-semibold tracking-tight text-white">SF Paleo Coastlines</h1>
-            <p className="text-xs text-gray-400">3D topobathymetry, old shorelines, and sea-level scrubbing</p>
-          </div>
-          <div className="rounded-md border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-100">
-            Standalone research view
-          </div>
-        </div>
-      </header>
-
-      <div className="pointer-events-none absolute left-4 top-20 z-30 w-[22rem] max-w-[calc(100vw-2rem)]">
-        <PaleoCoastlineControls
-          slices={sliceCatalog}
-          activeSliceId={activeSliceId}
-          showUncertainty={showUncertainty}
-          waterLevelMeters={waterLevelMeters}
-          isPlaying={isPlaying}
-          terrainDetail={terrainDetail}
-          terrainSurfaceSmoothing={terrainSurfaceSmoothing}
-          terrainTextureMode={terrainTextureMode}
-          terrainSourceMode={terrainSourceMode}
-          selectedTerrainSourceId={effectiveTerrainSourceId}
-          terrainSources={terrainSources}
-          sceneProfile={sceneProfile}
-          showTerrainFootprints={showTerrainFootprints}
-          showBaySourceFootprints={showBaySourceFootprints}
-          showSourceQualityGaps={showSourceQualityGaps}
-          showSourceSeams={showSourceSeams}
-          sourceQualityGapSummary={sourceQualityGapSummary}
-          viewPresets={VIEW_PRESETS}
-          onSliceChange={handleSliceChange}
-          onToggleUncertainty={() => setShowUncertainty((shown) => !shown)}
-          onToggleTerrainFootprints={() => setShowTerrainFootprints((shown) => !shown)}
-          onToggleBaySourceFootprints={() => setShowBaySourceFootprints((shown) => !shown)}
-          onToggleSourceQualityGaps={() => setShowSourceQualityGaps((shown) => !shown)}
-          onToggleSourceSeams={() => setShowSourceSeams((shown) => !shown)}
-          showRivers={showRivers}
-          onToggleRivers={() => setShowRivers((shown) => !shown)}
-          timeMode={timeMode}
-          yearsBeforePresent={yearsBeforePresent}
-          showPlaceLabels={showPlaceLabels}
-          exposedAreaKm2={exposedAreaForMeters(seaLevelStats, waterLevelMeters ?? -120)}
-          onYearsChange={handleYearsChange}
-          onToggleTimeMode={handleToggleTimeMode}
-          isTouring={isTouring}
-          onToggleTour={handleToggleTour}
-          onTogglePlaceLabels={() => setShowPlaceLabels((shown) => !shown)}
-          onWaterLevelChange={(level) => {
-            setIsPlaying(false);
-            setWaterLevelMeters(level);
-          }}
-          onTogglePlayback={() => setIsPlaying((playing) => !playing)}
-          onResetWaterLevel={() => {
-            setIsPlaying(false);
-            if (timeMode) {
-              // In time mode, reset to the default lowstand year and derive its
-              // sea level so the year readout and the meters stay consistent.
-              setYearsBeforePresent(MAX_YEARS_BP);
-              setWaterLevelMeters(Math.round(seaLevelForYearsBP(MAX_YEARS_BP)));
-            } else {
-              setWaterLevelMeters(2);
-            }
-          }}
-          onTerrainDetailChange={setTerrainDetail}
-          onTerrainSurfaceSmoothingChange={setTerrainSurfaceSmoothing}
-          onTerrainTextureModeChange={setTerrainTextureMode}
-          onTerrainSourceModeChange={handleTerrainSourceModeChange}
-          onTerrainSourceChange={handleTerrainSourceChange}
-          onPreviousTerrainSource={() => cycleTerrainSource(-1)}
-          onNextTerrainSource={() => cycleTerrainSource(1)}
-          onSceneProfileChange={setSceneProfile}
-          onViewPreset={(nextViewState) => setViewState(nextViewState)}
-        />
-      </div>
-
-      <aside className="pointer-events-none absolute bottom-4 right-4 z-20 w-[20rem] max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-gray-950/88 p-3 text-xs leading-4 text-gray-400 shadow-2xl backdrop-blur-md">
-        {isLoadingData ? <p>Loading terrain and coastline data...</p> : null}
-        {!isLoadingData && probeLoading ? <p>Loading waterline probe...</p> : null}
-        {!isLoadingData && loadingBaySourceFootprints ? <p>Loading Bay source footprints...</p> : null}
-        {!isLoadingData && loadingRivers ? <p>Loading paleo rivers...</p> : null}
-        {!isLoadingData && loadingSourceQualityGaps ? <p>Loading source quality gaps...</p> : null}
-        {!isLoadingData && loadingSourceSeams ? <p>Loading source seam audit...</p> : null}
-        {error ? <p className="text-red-200">{error}</p> : null}
-        {!isLoadingData && !error && activeSlice ? (
-          <div className="space-y-2">
-            <div className="font-mono text-[11px] uppercase tracking-wide text-cyan-200">
-              {activeSlice.label} / {waterLevelMeters ?? activeSlice.seaLevelMeters} m waterline
+      {initialState.showUi ? (
+        <>
+          <header className="pointer-events-none absolute inset-x-0 top-0 z-20 border-b border-white/10 bg-gray-950/88 px-4 py-3 backdrop-blur-md">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h1 className="text-base font-semibold tracking-tight text-white">SF Paleo Coastlines</h1>
+                <p className="text-xs text-gray-400">3D topobathymetry, old shorelines, and sea-level scrubbing</p>
+              </div>
+              <div className="rounded-md border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-100">
+                Standalone research view
+              </div>
             </div>
-            <p>This standalone app contains only the paleo coastline simulator. Civic layers such as police, 311, permits, and live feeds stay in CityScope.</p>
+          </header>
+
+          <div className="pointer-events-none absolute left-4 top-20 z-30 w-[22rem] max-w-[calc(100vw-2rem)]">
+            <PaleoCoastlineControls
+              slices={sliceCatalog}
+              activeSliceId={activeSliceId}
+              showUncertainty={showUncertainty}
+              waterLevelMeters={waterLevelMeters}
+              isPlaying={isPlaying}
+              terrainDetail={terrainDetail}
+              terrainSurfaceSmoothing={terrainSurfaceSmoothing}
+              terrainTextureMode={terrainTextureMode}
+              terrainSourceMode={terrainSourceMode}
+              selectedTerrainSourceId={effectiveTerrainSourceId}
+              terrainSources={terrainSources}
+              sceneProfile={sceneProfile}
+              showTerrainFootprints={showTerrainFootprints}
+              showBaySourceFootprints={showBaySourceFootprints}
+              showSourceQualityGaps={showSourceQualityGaps}
+              showSourceSeams={showSourceSeams}
+              sourceQualityGapSummary={sourceQualityGapSummary}
+              viewPresets={VIEW_PRESETS}
+              onSliceChange={handleSliceChange}
+              onToggleUncertainty={() => setShowUncertainty((shown) => !shown)}
+              onToggleTerrainFootprints={() => setShowTerrainFootprints((shown) => !shown)}
+              onToggleBaySourceFootprints={() => setShowBaySourceFootprints((shown) => !shown)}
+              onToggleSourceQualityGaps={() => setShowSourceQualityGaps((shown) => !shown)}
+              onToggleSourceSeams={() => setShowSourceSeams((shown) => !shown)}
+              showRivers={showRivers}
+              onToggleRivers={() => setShowRivers((shown) => !shown)}
+              timeMode={timeMode}
+              yearsBeforePresent={yearsBeforePresent}
+              showPlaceLabels={showPlaceLabels}
+              exposedAreaKm2={exposedAreaForMeters(seaLevelStats, waterLevelMeters ?? -120)}
+              onYearsChange={handleYearsChange}
+              onToggleTimeMode={handleToggleTimeMode}
+              isTouring={isTouring}
+              onToggleTour={handleToggleTour}
+              onTogglePlaceLabels={() => setShowPlaceLabels((shown) => !shown)}
+              onWaterLevelChange={(level) => {
+                setIsPlaying(false);
+                setWaterLevelMeters(level);
+              }}
+              onTogglePlayback={() => setIsPlaying((playing) => !playing)}
+              onResetWaterLevel={() => {
+                setIsPlaying(false);
+                if (timeMode) {
+                  // In time mode, reset to the default lowstand year and derive its
+                  // sea level so the year readout and the meters stay consistent.
+                  setYearsBeforePresent(MAX_YEARS_BP);
+                  setWaterLevelMeters(Math.round(seaLevelForYearsBP(MAX_YEARS_BP)));
+                } else {
+                  setWaterLevelMeters(2);
+                }
+              }}
+              onTerrainDetailChange={setTerrainDetail}
+              onTerrainSurfaceSmoothingChange={setTerrainSurfaceSmoothing}
+              onTerrainTextureModeChange={setTerrainTextureMode}
+              onTerrainSourceModeChange={handleTerrainSourceModeChange}
+              onTerrainSourceChange={handleTerrainSourceChange}
+              onPreviousTerrainSource={() => cycleTerrainSource(-1)}
+              onNextTerrainSource={() => cycleTerrainSource(1)}
+              onSceneProfileChange={setSceneProfile}
+              onViewPreset={(nextViewState) => setViewState(nextViewState)}
+            />
           </div>
-        ) : null}
-      </aside>
-      {tourCaption ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-30 flex justify-center px-4">
-          <div className="max-w-2xl rounded-lg border border-cyan-400/25 bg-gray-950/85 px-5 py-3 text-center text-sm leading-5 text-cyan-50 shadow-2xl backdrop-blur-md">
-            {tourCaption}
-          </div>
-        </div>
+
+          <aside className="pointer-events-none absolute bottom-4 right-4 z-20 w-[20rem] max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-gray-950/88 p-3 text-xs leading-4 text-gray-400 shadow-2xl backdrop-blur-md">
+            {isLoadingData ? <p>Loading terrain and coastline data...</p> : null}
+            {!isLoadingData && probeLoading ? <p>Loading waterline probe...</p> : null}
+            {!isLoadingData && loadingBaySourceFootprints ? <p>Loading Bay source footprints...</p> : null}
+            {!isLoadingData && loadingRivers ? <p>Loading paleo rivers...</p> : null}
+            {!isLoadingData && loadingSourceQualityGaps ? <p>Loading source quality gaps...</p> : null}
+            {!isLoadingData && loadingSourceSeams ? <p>Loading source seam audit...</p> : null}
+            {error ? <p className="text-red-200">{error}</p> : null}
+            {!isLoadingData && !error && activeSlice ? (
+              <div className="space-y-2">
+                <div className="font-mono text-[11px] uppercase tracking-wide text-cyan-200">
+                  {activeSlice.label} / {waterLevelMeters ?? activeSlice.seaLevelMeters} m waterline
+                </div>
+                <p>This standalone app contains only the paleo coastline simulator. Civic layers such as police, 311, permits, and live feeds stay in CityScope.</p>
+              </div>
+            ) : null}
+          </aside>
+          {tourCaption ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-24 z-30 flex justify-center px-4">
+              <div className="max-w-2xl rounded-lg border border-cyan-400/25 bg-gray-950/85 px-5 py-3 text-center text-sm leading-5 text-cyan-50 shadow-2xl backdrop-blur-md">
+                {tourCaption}
+              </div>
+            </div>
+          ) : null}
+        </>
       ) : null}
     </main>
   );

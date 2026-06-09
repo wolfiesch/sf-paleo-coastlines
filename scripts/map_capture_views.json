@@ -8,7 +8,7 @@
     "detail": "ultra",
     "texture": "survey",
     "scene": "emergence",
-    "waitAfterReadyMs": 1800,
+    "waitAfterReadyMs": 6000,
     "overlays": {
       "rivers": true,
       "labels": true,
@@ -54,6 +54,26 @@
       }
     },
     {
+      "id": "shelf-terrain-relief",
+      "view": "shelf",
+      "texture": "relief",
+      "scene": "relief",
+      "water": 0,
+      "waitAfterReadyMs": 8000,
+      "overlays": {
+        "rivers": false,
+        "labels": false,
+        "uncertainty": false,
+        "coverage": false,
+        "baySources": false,
+        "gaps": false,
+        "seams": false
+      },
+      "query": {
+        "ui": 0
+      }
+    },
+    {
       "id": "northwest-gap-quality",
       "view": "northwest-gap",
       "overlays": {
@@ -64,6 +84,26 @@
         "baySources": false,
         "gaps": false,
         "seams": false
+      }
+    },
+    {
+      "id": "northwest-gap-terrain-survey",
+      "view": "northwest-gap",
+      "texture": "survey",
+      "scene": "emergence",
+      "water": -120,
+      "waitAfterReadyMs": 8000,
+      "overlays": {
+        "rivers": false,
+        "labels": false,
+        "uncertainty": false,
+        "coverage": false,
+        "baySources": false,
+        "gaps": false,
+        "seams": false
+      },
+      "query": {
+        "ui": 0
       }
     },
     {
