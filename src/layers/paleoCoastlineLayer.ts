@@ -113,6 +113,17 @@ const ANNOTATION_PARAMETERS = {
 } as const;
 
 export const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
+  best_available_gate_shelf_fusion: {
+    elevationData: "/data/paleo-coastlines/terrain-tiles/best_available_gate_shelf_fusion/elevation/{z}/{x}/{y}.png",
+    textures: {
+      shadedRelief: "/data/paleo-coastlines/terrain-tiles/best_available_gate_shelf_fusion/relief/{z}/{x}/{y}.png",
+      depthColor: "/data/paleo-coastlines/terrain-tiles/best_available_gate_shelf_fusion/color/{z}/{x}/{y}.png",
+      surveyComposite: "/data/paleo-coastlines/terrain-tiles/best_available_gate_shelf_fusion/composite/{z}/{x}/{y}.png",
+    },
+    minZoom: 12,
+    maxZoom: 15,
+    tileSize: 256,
+  },
   usgs_2023_sf_lidar_dem: {
     elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/elevation/{z}/{x}/{y}.png",
     textures: {

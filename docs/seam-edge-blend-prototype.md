@@ -1,14 +1,36 @@
 # Seam Edge Blend Prototype
 
-This note records the first targeted repair experiment after the local seam-height audit.
+This note records the first targeted repair experiment after the local seam-height audit, plus the production follow-up.
 
-The blend does **not** overwrite production terrain yet. It creates candidate elevation PNGs under `output/seam-blend-experiment/` and compares the same severe seam targets before and after.
+The early prototype did **not** overwrite production terrain. The production generator now applies the same idea directly to the best-available terrain layer.
 
 ## Plain-English Result
 
-The best first candidate is `severe-r12-sigma7`.
+The best first prototype candidate was `severe-r12-sigma7`.
 
 It smooths a thin strip around source-category edges at the 16 severe local seam targets. That means it does not blur the whole map; it only softens the final height image around source joins that the audit already marked as severe.
+
+The production pass now uses a wider controlled list: 37 audited seam points. It also uses a slightly wider smoothing strip than the first prototype, because the first production run proved that several land-to-Bay source joins still had fake ledges.
+
+## Production Result
+
+After the second production pass:
+
+| Audit level | Before second pass | After second pass |
+|---|---:|---:|
+| Severe | 11 | 0 |
+| Suspicious | 20 | 17 |
+| Calm | 98 | 112 |
+
+Plain English: the obvious fake ledges are gone from the audit. The remaining questionable joins are smaller and mostly sit in the "inspect this" bucket, not the "this is clearly bad" bucket.
+
+The worst remaining local seam after the second pass is:
+
+| Categories | Lon/lat | 95% step |
+|---|---|---:|
+| CUDEM support / USGS offshore | `-123.303675, 37.782137` | 16.447 m |
+
+That is probably the point where simple seam smoothing starts to hit diminishing returns. Further improvement will likely need source-specific vertical-offset handling, not just a wider blur.
 
 ## Visual Check
 
@@ -38,7 +60,7 @@ The candidate did not visibly wash out the terrain in that close-up. The measure
 | `severe-r8-sigma5` | 16 | 4 | 9 | 3 | -17.289 m | Better, but still leaves the same main offshore ledges severe. |
 | `severe-r12-sigma7` | 16 | 1 | 7 | 8 | -18.979 m | Best current tradeoff; strongest improvement without blending unrelated areas. |
 
-## Remaining Worst Target
+## Prototype Remaining Worst Target
 
 The one target still marked severe after `severe-r12-sigma7` is:
 

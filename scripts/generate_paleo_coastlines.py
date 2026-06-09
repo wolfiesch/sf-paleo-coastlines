@@ -18,10 +18,11 @@ import tempfile
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 from PIL import Image
+from scipy.ndimage import distance_transform_edt, gaussian_filter
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +68,234 @@ BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available
 BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_composite.png"
 BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_source_quality.png"
 BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_source_quality.json"
+BEST_AVAILABLE_MIN_FUSION_INPUTS = 40
+BEST_AVAILABLE_SEAM_BLEND_EDGE_WINDOW_SOURCE_PIXELS = 54
+BEST_AVAILABLE_SEAM_BLEND_RADIUS_SOURCE_PIXELS = 20.0
+BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS = 11.0
+BEST_AVAILABLE_SEAM_BLEND_TARGETS = [
+    {
+        "categories": ["CUDEM support", "USGS offshore"],
+        "lon": -123.303675,
+        "lat": 37.782137,
+        "reason": "Unblended local seam audit measured a 46.8 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "USGS offshore"],
+        "lon": -123.389145,
+        "lat": 37.822821,
+        "reason": "Unblended local seam audit measured a 39.915 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "USGS offshore"],
+        "lon": -123.352735,
+        "lat": 37.802308,
+        "reason": "Unblended local seam audit measured a 38.508 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS offshore"],
+        "lon": -123.207436,
+        "lat": 37.73906,
+        "reason": "Unblended local seam audit measured a 27.356 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "NOAA BAG survey"],
+        "lon": -123.396838,
+        "lat": 37.895983,
+        "reason": "Unblended local seam audit measured a 24.872 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "USGS CoNED broad"],
+        "lon": -123.296325,
+        "lat": 37.994615,
+        "reason": "Unblended local seam audit measured a 24.665 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "NOAA BAG survey"],
+        "lon": -123.356496,
+        "lat": 37.865897,
+        "reason": "Unblended local seam audit measured a 24.585 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "NOAA multibeam"],
+        "lon": -123.438547,
+        "lat": 38.117179,
+        "reason": "Unblended local seam audit measured a 23.904 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "USGS CoNED focus"],
+        "lon": -123.296325,
+        "lat": 37.945897,
+        "reason": "Unblended local seam audit measured a 23.731 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "USGS offshore"],
+        "lon": -123.390684,
+        "lat": 37.868632,
+        "reason": "Unblended local seam audit measured a 23.498 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "NOAA BAG survey"],
+        "lon": -123.390855,
+        "lat": 38.090171,
+        "reason": "Unblended local seam audit measured a 23.459 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "NOAA BAG survey"],
+        "lon": -123.346923,
+        "lat": 38.087094,
+        "reason": "Unblended local seam audit measured a 22.544 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "USGS CoNED focus"],
+        "lon": -123.295983,
+        "lat": 37.917692,
+        "reason": "Unblended local seam audit measured a 21.581 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "USGS CoNED focus"],
+        "lon": -123.295983,
+        "lat": 37.859402,
+        "reason": "Unblended local seam audit measured a 21.297 m 95% height step.",
+    },
+    {
+        "categories": ["CRM fallback", "CUDEM support"],
+        "lon": -123.500427,
+        "lat": 38.081111,
+        "reason": "Unblended local seam audit measured a 16.834 m 95% height step.",
+    },
+    {
+        "categories": ["CUDEM support", "USGS CoNED focus"],
+        "lon": -123.295641,
+        "lat": 37.769658,
+        "reason": "Unblended local seam audit measured a 16.712 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS land LiDAR"],
+        "lon": -122.461624,
+        "lat": 37.704872,
+        "reason": "Post-blend local seam audit still measured a 25.703 m 95% height step.",
+    },
+    {
+        "categories": ["USGS land LiDAR", "USGS nearshore"],
+        "lon": -122.475128,
+        "lat": 37.808462,
+        "reason": "Post-blend local seam audit still measured a 25.24 m 95% height step.",
+    },
+    {
+        "categories": ["USGS land LiDAR", "USGS nearshore"],
+        "lon": -122.467265,
+        "lat": 37.721111,
+        "reason": "Post-blend local seam audit still measured a 23.752 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS land LiDAR"],
+        "lon": -122.414615,
+        "lat": 37.704872,
+        "reason": "Post-blend local seam audit still measured a 23.197 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS land LiDAR"],
+        "lon": -122.392051,
+        "lat": 37.699744,
+        "reason": "Post-blend local seam audit still measured a 23.162 m 95% height step.",
+    },
+    {
+        "categories": ["USGS land LiDAR", "USGS nearshore"],
+        "lon": -122.472051,
+        "lat": 37.772222,
+        "reason": "Post-blend local seam audit still measured a 23.06 m 95% height step.",
+    },
+    {
+        "categories": ["USGS Bay DEM", "USGS land LiDAR"],
+        "lon": -122.370513,
+        "lat": 37.72094,
+        "reason": "Post-blend local seam audit still measured a 22.727 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS land LiDAR"],
+        "lon": -122.378034,
+        "lat": 37.716496,
+        "reason": "Post-blend local seam audit still measured a 22.396 m 95% height step.",
+    },
+    {
+        "categories": ["USGS Bay DEM", "USGS land LiDAR"],
+        "lon": -122.340427,
+        "lat": 37.820427,
+        "reason": "Post-blend local seam audit still measured a 21.296 m 95% height step.",
+    },
+    {
+        "categories": ["NOAA OCM survey", "USGS land LiDAR"],
+        "lon": -122.474786,
+        "lat": 37.810342,
+        "reason": "Post-blend local seam audit still measured an 18.015 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS offshore"],
+        "lon": -123.157521,
+        "lat": 37.69188,
+        "reason": "Post-blend local seam audit still measured a 30.827 m 95% height step.",
+    },
+    {
+        "categories": ["NOAA multibeam", "USGS offshore"],
+        "lon": -123.423162,
+        "lat": 37.847778,
+        "reason": "Post-blend local seam audit still measured a 26.813 m 95% height step.",
+    },
+    {
+        "categories": ["NOAA BAG survey", "NOAA multibeam"],
+        "lon": -123.521624,
+        "lat": 38.03735,
+        "reason": "Post-blend local seam audit still measured a 23.784 m 95% height step.",
+    },
+    {
+        "categories": ["NOAA multibeam", "USGS offshore"],
+        "lon": -123.26453,
+        "lat": 37.755128,
+        "reason": "Post-blend local seam audit still measured a 21.38 m 95% height step.",
+    },
+    {
+        "categories": ["USGS Bay DEM", "USGS land LiDAR"],
+        "lon": -122.371197,
+        "lat": 37.814957,
+        "reason": "Post-blend local seam audit still measured a 20.167 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS offshore"],
+        "lon": -123.119231,
+        "lat": 37.655641,
+        "reason": "Post-blend local seam audit still measured a 19.721 m 95% height step.",
+    },
+    {
+        "categories": ["NOAA multibeam", "USGS offshore"],
+        "lon": -123.409829,
+        "lat": 37.833761,
+        "reason": "Post-blend local seam audit still measured a 19.303 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS offshore"],
+        "lon": -123.178718,
+        "lat": 37.713077,
+        "reason": "Post-blend local seam audit still measured a 19.059 m 95% height step.",
+    },
+    {
+        "categories": ["CRM fallback", "NOAA BAG survey"],
+        "lon": -123.503162,
+        "lat": 38.097009,
+        "reason": "Post-blend local seam audit still measured an 18.156 m 95% height step.",
+    },
+    {
+        "categories": ["CRM fallback", "NOAA BAG survey"],
+        "lon": -123.506923,
+        "lat": 38.094957,
+        "reason": "Post-blend local seam audit still measured a 16.558 m 95% height step.",
+    },
+    {
+        "categories": ["USGS land LiDAR", "USGS nearshore"],
+        "lon": -122.423846,
+        "lat": 37.81188,
+        "reason": "Post-blend local seam audit still measured a 15.749 m 95% height step.",
+    },
+]
 NOS_BAG_DEFAULT_DIR = RAW_DIR / "noaa-nos-bag"
 DS684_DIR = RAW_DIR / "usgs-ds684"
 DS684_ZIP = DS684_DIR / "DEM_4_GeoTIFF.zip"
@@ -2438,6 +2667,7 @@ def write_terrain_pngs_from_wgs84(
     maximum: float,
     edge_fade_pixels: int = 0,
     low_detail_alpha_floor: int = 255,
+    height_filter: Callable[[np.ndarray, np.ndarray], np.ndarray] | None = None,
 ) -> None:
     source = Image.open(source_path)
     heights = np.asarray(source, dtype=np.float32)
@@ -2446,6 +2676,8 @@ def write_terrain_pngs_from_wgs84(
 
     image_height, width = heights.shape
     valid = np.isfinite(heights) & (heights > -9000) & (heights < 1_000_000)
+    if height_filter is not None:
+        heights = height_filter(heights, valid).astype(np.float32)
     safe_heights = np.where(valid, heights, 0.0).astype(np.float32)
 
     normalized = np.clip((safe_heights - minimum) / (maximum - minimum), 0.0, 1.0)
@@ -3531,11 +3763,8 @@ def source_quality_color(category: str) -> tuple[int, int, int]:
     return colors.get(category, colors["other"])
 
 
-def write_best_available_source_quality_texture(records: list[tuple[str, Path]]) -> dict[str, Any]:
-    if not records:
-        return {}
-
-    categories = [
+def source_quality_categories() -> list[str]:
+    return [
         "CRM fallback",
         "CUDEM support",
         "USGS CoNED broad",
@@ -3550,6 +3779,126 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
         "USGS Bay DEM",
         "other",
     ]
+
+
+def source_quality_category_codes_from_texture(path: Path) -> tuple[np.ndarray, dict[str, int]]:
+    category_codes = {category: index + 1 for index, category in enumerate(source_quality_categories())}
+    rgba = np.asarray(Image.open(path).convert("RGBA"))
+    codes = np.zeros(rgba.shape[:2], dtype=np.uint8)
+    for category, code in category_codes.items():
+        color = source_quality_color(category)
+        mask = (
+            (rgba[:, :, 0] == color[0])
+            & (rgba[:, :, 1] == color[1])
+            & (rgba[:, :, 2] == color[2])
+            & (rgba[:, :, 3] > 0)
+        )
+        codes[mask] = code
+    return codes, category_codes
+
+
+def lon_lat_to_source_pixel(lon: float, lat: float, source_shape: tuple[int, int]) -> tuple[int, int]:
+    height, width = source_shape
+    west = float(BEST_AVAILABLE_BOUNDS["west"])
+    east = float(BEST_AVAILABLE_BOUNDS["east"])
+    south = float(BEST_AVAILABLE_BOUNDS["south"])
+    north = float(BEST_AVAILABLE_BOUNDS["north"])
+    x = round(((lon - west) / (east - west)) * (width - 1))
+    y = round(((north - lat) / (north - south)) * (height - 1))
+    return int(np.clip(x, 0, width - 1)), int(np.clip(y, 0, height - 1))
+
+
+def source_weight_to_elevation_weight(source_weight: np.ndarray, elevation_shape: tuple[int, int]) -> np.ndarray:
+    image = Image.fromarray(np.rint(source_weight * 255).astype(np.uint8), "L")
+    resized = image.resize((elevation_shape[1], elevation_shape[0]), Image.Resampling.BILINEAR)
+    return np.asarray(resized, dtype=np.float32) / 255.0
+
+
+def best_available_seam_edge_mask(source_codes: np.ndarray, category_codes: dict[str, int]) -> tuple[np.ndarray, int]:
+    mask = np.zeros(source_codes.shape, dtype=bool)
+    height, width = source_codes.shape
+    selected_count = 0
+    radius = BEST_AVAILABLE_SEAM_BLEND_EDGE_WINDOW_SOURCE_PIXELS
+
+    for target in BEST_AVAILABLE_SEAM_BLEND_TARGETS:
+        category_a, category_b = target["categories"]
+        code_a = category_codes[category_a]
+        code_b = category_codes[category_b]
+        center_x, center_y = lon_lat_to_source_pixel(float(target["lon"]), float(target["lat"]), source_codes.shape)
+        x0 = max(0, center_x - radius)
+        x1 = min(width - 1, center_x + radius)
+        y0 = max(0, center_y - radius)
+        y1 = min(height - 1, center_y + radius)
+        window = source_codes[y0:y1 + 1, x0:x1 + 1]
+
+        right = (window[:, :-1] != window[:, 1:]) & (
+            ((window[:, :-1] == code_a) & (window[:, 1:] == code_b))
+            | ((window[:, :-1] == code_b) & (window[:, 1:] == code_a))
+        )
+        down = (window[:-1, :] != window[1:, :]) & (
+            ((window[:-1, :] == code_a) & (window[1:, :] == code_b))
+            | ((window[:-1, :] == code_b) & (window[1:, :] == code_a))
+        )
+
+        local_mask = np.zeros(window.shape, dtype=bool)
+        local_mask[:, :-1] |= right
+        local_mask[:, 1:] |= right
+        local_mask[:-1, :] |= down
+        local_mask[1:, :] |= down
+        if local_mask.any():
+            selected_count += 1
+            mask[y0:y1 + 1, x0:x1 + 1] |= local_mask
+
+    return mask, selected_count
+
+
+def apply_best_available_seam_edge_blend(heights: np.ndarray, valid: np.ndarray) -> np.ndarray:
+    if not BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.exists():
+        print("Skipping best-available seam blend: source-quality texture is not available yet.")
+        return heights
+
+    source_codes, category_codes = source_quality_category_codes_from_texture(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG)
+    source_edge_mask, selected_count = best_available_seam_edge_mask(source_codes, category_codes)
+    if not source_edge_mask.any():
+        print("Skipping best-available seam blend: no configured source edges were found.")
+        return heights
+
+    distance = distance_transform_edt(~source_edge_mask)
+    source_weight = np.clip(
+        1.0 - (distance / BEST_AVAILABLE_SEAM_BLEND_RADIUS_SOURCE_PIXELS),
+        0.0,
+        1.0,
+    )
+    elevation_weight = source_weight_to_elevation_weight(source_weight, heights.shape)
+
+    valid_float = valid.astype(np.float32)
+    filled = np.where(valid, heights, 0.0).astype(np.float32)
+    weighted_sum = gaussian_filter(
+        filled * valid_float,
+        sigma=BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS,
+    )
+    weight_sum = gaussian_filter(
+        valid_float,
+        sigma=BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS,
+    )
+    smoothed = np.divide(weighted_sum, weight_sum, out=heights.copy(), where=weight_sum > 0.0001)
+    blended = heights.copy()
+    blended[valid] = (
+        (heights[valid] * (1.0 - elevation_weight[valid]))
+        + (smoothed[valid] * elevation_weight[valid])
+    )
+    print(
+        "Applied best-available seam edge blend: "
+        f"{selected_count}/{len(BEST_AVAILABLE_SEAM_BLEND_TARGETS)} configured targets found."
+    )
+    return blended
+
+
+def write_best_available_source_quality_texture(records: list[tuple[str, Path]]) -> dict[str, Any]:
+    if not records:
+        return {}
+
+    categories = source_quality_categories()
     category_codes = {category: index + 1 for index, category in enumerate(categories)}
     code_to_category = {code: category for category, code in category_codes.items()}
 
@@ -3677,6 +4026,13 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
     inputs = [path for _, path in records]
     if len(inputs) < 2:
         raise SystemExit("Best-available terrain fusion needs at least two prepared WGS84 terrain sources.")
+    if len(inputs) < BEST_AVAILABLE_MIN_FUSION_INPUTS:
+        raise SystemExit(
+            "Best-available terrain fusion found only "
+            f"{len(inputs)} prepared WGS84 terrain sources; expected at least "
+            f"{BEST_AVAILABLE_MIN_FUSION_INPUTS}. Run the full paleo-coastlines generator first "
+            "so the browser terrain is not overwritten by a thin fallback stack."
+        )
 
     run([
         "gdalbuildvrt",
@@ -3715,6 +4071,7 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         str(BEST_AVAILABLE_TERRAIN_VRT),
         str(BEST_AVAILABLE_TERRAIN_WGS84),
     ])
+    source_confidence_summary = write_best_available_source_quality_texture(records)
     write_terrain_pngs_from_wgs84(
         BEST_AVAILABLE_TERRAIN_WGS84,
         BEST_AVAILABLE_TERRAIN_ELEVATION_PNG,
@@ -3723,8 +4080,8 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG,
         BEST_AVAILABLE_TERRAIN_MIN_M,
         BEST_AVAILABLE_TERRAIN_MAX_M,
+        height_filter=apply_best_available_seam_edge_blend,
     )
-    source_confidence_summary = write_best_available_source_quality_texture(records)
     metadata = terrain_metadata(
         "best_available_gate_shelf_fusion",
         source_label("best_available_gate_shelf_fusion"),
