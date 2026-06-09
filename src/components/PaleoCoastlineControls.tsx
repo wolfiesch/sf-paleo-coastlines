@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Clapperboard, Clock, Database, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clapperboard, Clock, Database, GitCompareArrows, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
 import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, SourceQualityGapSummary, TerrainDetailLevel, TerrainSourceMode, TerrainSurfaceSmoothing, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
@@ -19,6 +19,7 @@ interface PaleoCoastlineControlsProps {
   showTerrainFootprints: boolean;
   showBaySourceFootprints: boolean;
   showSourceQualityGaps: boolean;
+  showSourceSeams: boolean;
   sourceQualityGapSummary: SourceQualityGapSummary | null;
   showRivers: boolean;
   waterLevelMeters: number | null;
@@ -40,6 +41,7 @@ interface PaleoCoastlineControlsProps {
   onToggleTerrainFootprints: () => void;
   onToggleBaySourceFootprints: () => void;
   onToggleSourceQualityGaps: () => void;
+  onToggleSourceSeams: () => void;
   onToggleRivers: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
@@ -126,6 +128,12 @@ const GAP_LEGEND: LegendItem[] = [
   { label: "CoNED base", swatch: "bg-amber-300", title: "Backed by 2 m CoNED; solid but not survey-rich" },
   { label: "Survey detail", swatch: "bg-cyan-300", title: "Backed by measured local survey data" },
   { label: "Strong area", swatch: "bg-emerald-300", title: "Top-tier measured detail (quality benchmark)" },
+];
+
+const SEAM_LEGEND: LegendItem[] = [
+  { label: "High priority", swatch: "bg-fuchsia-300", title: "Largest source joins to inspect first" },
+  { label: "Medium", swatch: "bg-orange-300", title: "Important source joins with smaller edge clusters" },
+  { label: "Lower", swatch: "bg-sky-300", title: "Useful secondary joins after the main seam targets are checked" },
 ];
 
 const FALLBACK_SLICES: PaleoTimeSlice[] = [
@@ -223,6 +231,7 @@ export function PaleoCoastlineControls({
   showTerrainFootprints,
   showBaySourceFootprints,
   showSourceQualityGaps,
+  showSourceSeams,
   sourceQualityGapSummary,
   showRivers,
   waterLevelMeters,
@@ -244,6 +253,7 @@ export function PaleoCoastlineControls({
   onToggleTerrainFootprints,
   onToggleBaySourceFootprints,
   onToggleSourceQualityGaps,
+  onToggleSourceSeams,
   onToggleRivers,
   onWaterLevelChange,
   onTogglePlayback,
@@ -468,10 +478,19 @@ export function PaleoCoastlineControls({
             accent="amber"
             title="Show source-quality gap cells derived from the fused terrain provenance"
           />
+          <TogglePill
+            active={showSourceSeams}
+            onClick={onToggleSourceSeams}
+            icon={<GitCompareArrows size={13} />}
+            label="Seams"
+            accent="amber"
+            title="Show audit targets where two terrain source types meet"
+          />
         </div>
 
         {showTerrainFootprints ? <Legend items={COVERAGE_LEGEND} /> : null}
         {showBaySourceFootprints ? <Legend items={BAY_SOURCE_LEGEND} /> : null}
+        {showSourceSeams ? <Legend items={SEAM_LEGEND} columns={3} /> : null}
         {showSourceQualityGaps ? (
           <div className="space-y-2">
             <Legend items={GAP_LEGEND} />

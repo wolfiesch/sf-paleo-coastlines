@@ -13,6 +13,7 @@ import type {
   PaleoTerrainConfig,
   PaleoTimeSlice,
   SceneProfile,
+  SourceSeamAudit,
   SourceQualityGapCollection,
   SourceQualityGapFeature,
   SourceQualityGapProperties,
@@ -34,6 +35,18 @@ interface PickedBaySourceFeature {
 
 interface PickedSourceQualityGapFeature {
   properties: SourceQualityGapProperties;
+}
+
+interface SourceSeamRenderTarget {
+  position: [number, number, number];
+  categories: string[];
+  edgePixelCount: number;
+  edgePixelsInCluster: number;
+  importance: number;
+  priorityScore: number;
+  recommendedView: string;
+  transitionIndex: number;
+  targetIndex: number;
 }
 
 interface EmergencePoint {
@@ -86,6 +99,7 @@ const Z_BANDS = {
   contourLabel: 52,
   sourceQualityGap: 58,
   sourceFootprint: 62,
+  sourceSeam: 76,
   sourceLabel: 84,
 } as const;
 
@@ -722,6 +736,46 @@ function sourceQualityGapLineWidth(feature: PickedSourceQualityGapFeature): numb
   return 0.75;
 }
 
+function sourceSeamTargetsForAudit(
+  audit: SourceSeamAudit | null | undefined,
+  terrain: PaleoTerrainConfig | null,
+  activeWaterLevel: number,
+  profile: SceneProfileConfig,
+): SourceSeamRenderTarget[] {
+  if (!audit) return EMPTY_SEAM_TARGET_ARRAY;
+
+  const zMeters = terrain ? terrainZ(terrain, activeWaterLevel, profile, Z_BANDS.sourceSeam) : 0;
+  return audit.topTransitions.flatMap((transition, transitionIndex) =>
+    transition.targets.map((target, targetIndex) => ({
+      position: [target.lon, target.lat, zMeters] as [number, number, number],
+      categories: transition.categories,
+      edgePixelCount: transition.edgePixelCount,
+      edgePixelsInCluster: target.edgePixelsInCluster,
+      importance: transition.importance,
+      priorityScore: transition.priorityScore,
+      recommendedView: transition.recommendedView,
+      transitionIndex,
+      targetIndex,
+    })),
+  );
+}
+
+function sourceSeamTargetFillColor(target: SourceSeamRenderTarget): [number, number, number, number] {
+  if (target.priorityScore >= 5000) return [240, 171, 252, 224];
+  if (target.priorityScore >= 1800) return [251, 146, 60, 210];
+  return [125, 211, 252, 198];
+}
+
+function sourceSeamTargetLineColor(target: SourceSeamRenderTarget): [number, number, number, number] {
+  if (target.priorityScore >= 5000) return [255, 255, 255, 235];
+  if (target.priorityScore >= 1800) return [255, 237, 213, 220];
+  return [224, 242, 254, 205];
+}
+
+function sourceSeamTargetRadius(target: SourceSeamRenderTarget): number {
+  return Math.max(4.5, Math.min(11, 4.5 + Math.sqrt(target.edgePixelsInCluster) / 10));
+}
+
 function meshMaxErrorForTerrain(
   terrain: PaleoTerrainConfig,
   detail: TerrainDetailLevel,
@@ -817,12 +871,14 @@ function elevatedBaySourceFeature(
 // layer's getPolygon accessor (gated by updateTriggers) rather than by
 // deep-cloning the whole FeatureCollection up front.
 const EMPTY_GAP_ARRAY: SourceQualityGapFeature[] = [];
+const EMPTY_SEAM_TARGET_ARRAY: SourceSeamRenderTarget[] = [];
 
 // Once the overlay has been shown, keep its tessellated geometry resident and
 // toggle layer `visible` instead of swapping `data` in and out. Re-toggles then
 // cost nothing (deck.gl retains the GPU geometry); only the first reveal pays a
 // tessellation. Load is not penalized - data stays empty until the first open.
 let gapsEverShown = false;
+let seamsEverShown = false;
 
 function addZToCoordinates(coordinates: unknown, zMeters: number): unknown {
   if (!Array.isArray(coordinates)) return coordinates;
@@ -997,6 +1053,7 @@ export function createPaleoCoastlineLayers(
   baySourceFootprints?: BaySourceFootprintCollection | null,
   paleoRivers?: PaleoRiverCollection | null,
   sourceQualityGaps?: SourceQualityGapCollection | null,
+  sourceSeamAudit?: SourceSeamAudit | null,
 ) {
   const slice = selectedSlice(data, context);
   if (!slice) return [];
@@ -1026,9 +1083,13 @@ export function createPaleoCoastlineLayers(
     ? paleoRivers.features.map((feature) => drapedRiverFeature(feature, terrain, profile))
     : [];
   if (context.showSourceQualityGaps) gapsEverShown = true;
+  if (context.showSourceSeams) seamsEverShown = true;
   const gapData = gapsEverShown && sourceQualityGaps ? sourceQualityGaps.features : EMPTY_GAP_ARRAY;
   const gapZMeters = terrain ? terrainZ(terrain, activeWaterLevel, profile, Z_BANDS.sourceQualityGap) : 0;
   const gapZSignature = `${terrain?.sourceId ?? ""}|${activeWaterLevel}|${context.sceneProfile}`;
+  const seamTargets = seamsEverShown
+    ? sourceSeamTargetsForAudit(sourceSeamAudit, terrain, activeWaterLevel, profile)
+    : EMPTY_SEAM_TARGET_ARRAY;
   const features = [
     ...slice.coastline.features,
     ...activeProbeFeatures,
@@ -1164,6 +1225,25 @@ export function createPaleoCoastlineLayers(
     updateTriggers: { getPolygon: gapZSignature },
     autoHighlight: true,
     highlightColor: [255, 255, 255, 86],
+    parameters: ANNOTATION_PARAMETERS,
+  });
+
+  const sourceSeamTargetLayer = new ScatterplotLayer<SourceSeamRenderTarget>({
+    id: "paleo-source-seam-targets",
+    data: seamTargets,
+    visible: context.showSourceSeams,
+    pickable: true,
+    stroked: true,
+    filled: true,
+    radiusUnits: "pixels",
+    getPosition: (item) => item.position,
+    getRadius: sourceSeamTargetRadius,
+    getFillColor: sourceSeamTargetFillColor,
+    getLineColor: sourceSeamTargetLineColor,
+    getLineWidth: 1.25,
+    lineWidthUnits: "pixels",
+    autoHighlight: true,
+    highlightColor: [255, 255, 255, 112],
     parameters: ANNOTATION_PARAMETERS,
   });
 
@@ -1333,6 +1413,7 @@ export function createPaleoCoastlineLayers(
     terrainFootprintLabelLayer,
     baySourceFootprintLayer,
     sourceQualityGapLayer,
+    sourceSeamTargetLayer,
     depthContourLayer,
     contourLabelLayer,
     shorelineGlowOuterLayer,
@@ -1357,6 +1438,21 @@ export function getPaleoTooltip(object: unknown) {
         padding: "8px 10px",
         borderRadius: "6px",
         border: "1px solid rgba(103, 232, 249, 0.35)",
+      },
+    };
+  }
+
+  if ("categories" in object && "recommendedView" in object && "priorityScore" in object) {
+    const target = object as SourceSeamRenderTarget;
+    return {
+      text: `Source seam target\n${target.categories.join(" / ")}\nScore ${Math.round(target.priorityScore).toLocaleString()}, cluster ${target.edgePixelsInCluster.toLocaleString()} edge pixels\nRecommended view: ${target.recommendedView}`,
+      style: {
+        backgroundColor: "rgba(4, 20, 28, 0.94)",
+        color: "#fce7f3",
+        fontSize: "13px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        border: "1px solid rgba(240, 171, 252, 0.45)",
       },
     };
   }

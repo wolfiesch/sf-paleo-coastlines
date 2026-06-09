@@ -21,6 +21,7 @@ import type {
   PaleoWaterlineProbeIndex,
   SceneProfile,
   SeaLevelStats,
+  SourceSeamAudit,
   SourceQualityGapCollection,
   SourceQualityGapSummary,
   TerrainDetailLevel,
@@ -90,6 +91,7 @@ const RIVERS_URL = "/data/paleo-coastlines/paleo_rivers.geojson";
 const SEALEVEL_STATS_URL = "/data/paleo-coastlines/sealevel_stats.json";
 const SOURCE_QUALITY_GAPS_URL = "/data/paleo-coastlines/source_quality_gaps.geojson";
 const SOURCE_QUALITY_GAPS_SUMMARY_URL = "/data/paleo-coastlines/source_quality_gaps_summary.json";
+const SOURCE_SEAM_AUDIT_URL = "/data/paleo-coastlines/source_seam_audit_targets.json";
 
 function exposedAreaForMeters(stats: SeaLevelStats | null, meters: number): number | null {
   if (!stats || !stats.levels.length) return null;
@@ -168,6 +170,9 @@ function App() {
   const [sourceQualityGaps, setSourceQualityGaps] = useState<SourceQualityGapCollection | null>(null);
   const [sourceQualityGapSummary, setSourceQualityGapSummary] = useState<SourceQualityGapSummary | null>(null);
   const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
+  const [showSourceSeams, setShowSourceSeams] = useState(false);
+  const [sourceSeamAudit, setSourceSeamAudit] = useState<SourceSeamAudit | null>(null);
+  const [loadingSourceSeams, setLoadingSourceSeams] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("ultra");
   const [terrainSurfaceSmoothing, setTerrainSurfaceSmoothing] = useState<TerrainSurfaceSmoothing>("smooth");
   const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("survey");
@@ -468,6 +473,41 @@ function App() {
     };
   }, [showSourceQualityGaps, sourceQualityGaps, sourceQualityGapSummary]);
 
+  useEffect(() => {
+    if (!showSourceSeams || sourceSeamAudit) return;
+
+    let cancelled = false;
+
+    async function loadSourceSeams() {
+      setLoadingSourceSeams(true);
+      try {
+        const response = await fetch(SOURCE_SEAM_AUDIT_URL);
+        if (!response.ok) {
+          throw new Error(`Failed to load source seam audit: ${response.status}`);
+        }
+        const payload = await response.json() as SourceSeamAudit;
+        if (!cancelled) {
+          setSourceSeamAudit(payload);
+          setError(null);
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : "Failed to load source seam audit.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingSourceSeams(false);
+        }
+      }
+    }
+
+    void loadSourceSeams();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showSourceSeams, sourceSeamAudit]);
+
   const activeSlice = useMemo(
     () => {
       const slice = loadedSlices[activeSliceId]
@@ -514,6 +554,7 @@ function App() {
     showBaySourceFootprints,
     showRivers,
     showSourceQualityGaps,
+    showSourceSeams,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
     terrainSurfaceSmoothing,
@@ -523,7 +564,7 @@ function App() {
     sceneProfile,
     showPlaceLabels,
     currentYearsBP: yearsBeforePresent,
-  }, baySourceFootprints, paleoRivers, sourceQualityGaps), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showTerrainFootprints, showUncertainty, sourceQualityGaps, terrainDetail, terrainSourceMode, terrainSurfaceSmoothing, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
+  }, baySourceFootprints, paleoRivers, sourceQualityGaps, sourceSeamAudit), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showSourceSeams, showTerrainFootprints, showUncertainty, sourceQualityGaps, sourceSeamAudit, terrainDetail, terrainSourceMode, terrainSurfaceSmoothing, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -659,6 +700,7 @@ function App() {
           showTerrainFootprints={showTerrainFootprints}
           showBaySourceFootprints={showBaySourceFootprints}
           showSourceQualityGaps={showSourceQualityGaps}
+          showSourceSeams={showSourceSeams}
           sourceQualityGapSummary={sourceQualityGapSummary}
           viewPresets={VIEW_PRESETS}
           onSliceChange={handleSliceChange}
@@ -666,6 +708,7 @@ function App() {
           onToggleTerrainFootprints={() => setShowTerrainFootprints((shown) => !shown)}
           onToggleBaySourceFootprints={() => setShowBaySourceFootprints((shown) => !shown)}
           onToggleSourceQualityGaps={() => setShowSourceQualityGaps((shown) => !shown)}
+          onToggleSourceSeams={() => setShowSourceSeams((shown) => !shown)}
           showRivers={showRivers}
           onToggleRivers={() => setShowRivers((shown) => !shown)}
           timeMode={timeMode}
@@ -711,6 +754,7 @@ function App() {
         {!isLoadingData && loadingBaySourceFootprints ? <p>Loading Bay source footprints...</p> : null}
         {!isLoadingData && loadingRivers ? <p>Loading paleo rivers...</p> : null}
         {!isLoadingData && loadingSourceQualityGaps ? <p>Loading source quality gaps...</p> : null}
+        {!isLoadingData && loadingSourceSeams ? <p>Loading source seam audit...</p> : null}
         {error ? <p className="text-red-200">{error}</p> : null}
         {!isLoadingData && !error && activeSlice ? (
           <div className="space-y-2">

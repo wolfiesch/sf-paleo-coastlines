@@ -191,6 +191,33 @@ export interface SourceQualityGapSummary {
   priorityZones: SourceQualityPriorityZone[];
 }
 
+export interface SourceSeamAuditTarget {
+  edgePixelsInCluster: number;
+  lat: number;
+  lon: number;
+  pixel: [number, number];
+}
+
+export interface SourceSeamTransition {
+  categories: string[];
+  edgePixelCount: number;
+  importance: number;
+  priorityScore: number;
+  recommendedView: string;
+  targets: SourceSeamAuditTarget[];
+}
+
+export interface SourceSeamAudit {
+  bounds: [number, number, number, number];
+  categoryPixelCounts: Record<string, number>;
+  generatedAt: string;
+  pixelSize: [number, number];
+  plainEnglishPurpose: string;
+  texture: string;
+  topTransitions: SourceSeamTransition[];
+  transitionCount: number;
+}
+
 export interface PaleoTimeSlice {
   id: PaleoTimeSliceId;
   label: string;
@@ -247,6 +274,7 @@ export interface PaleoRenderContext {
   showBaySourceFootprints: boolean;
   showRivers: boolean;
   showSourceQualityGaps: boolean;
+  showSourceSeams: boolean;
   paleoWaterLevelMeters: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainSurfaceSmoothing: TerrainSurfaceSmoothing;
