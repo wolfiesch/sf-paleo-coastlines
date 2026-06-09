@@ -362,18 +362,9 @@ function uniqueTerrains(terrains: (PaleoTerrainConfig | null | undefined)[]): Pa
 
 function bestAvailableTerrainStackForSlice(slice: PaleoTimeSlice): PaleoTerrainConfig[] {
   const terrains = terrainStackForSlice(slice);
-  const terrainById = new Map(terrains.map((terrain) => [terrain.sourceId, terrain]));
-  const broadSupport = terrainById.get("noaa_crm_vol7_3as")
-    ?? terrainById.get("noaa_cudem_1_9as")
-    ?? terrainById.get("usgs_coned_sf_2m")
-    ?? terrains[0];
   const best = bestAvailableTerrainForSlice(slice);
-  const gateShelfDetail = terrainById.get("usgs_coned_sf_2m_gate_shelf");
-  const farallonShelfDetail = terrainById.get("usgs_coned_sf_2m_farallon_shelf");
-  const southBayDetail = terrainById.get("usgs_coned_sf_2m_south_bay_edge");
-  const landDetail = terrainById.get("usgs_2023_sf_lidar_dem");
 
-  return uniqueTerrains([broadSupport, best, gateShelfDetail, farallonShelfDetail, southBayDetail, landDetail]);
+  return uniqueTerrains([best ?? terrains[0]]);
 }
 
 function terrainStackForRender(slice: PaleoTimeSlice, context: PaleoRenderContext): PaleoTerrainConfig[] {
