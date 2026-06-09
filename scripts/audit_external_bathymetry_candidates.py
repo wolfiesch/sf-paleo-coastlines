@@ -100,6 +100,7 @@ def local_raster_coverage(path: Path, bounds: list[float], center: tuple[float, 
     valid = np.isfinite(arr)
     if nodata is not None:
         valid &= arr != nodata
+    valid_pixel_percent = round((int(valid.sum()) / int(valid.size)) * 100, 2) if valid.size else 0.0
 
     cx, cy = world_to_pixel(center[0], center[1])
     center_value = None
@@ -110,11 +111,59 @@ def local_raster_coverage(path: Path, bounds: list[float], center: tuple[float, 
             if np.isfinite(numeric) and (nodata is None or numeric != nodata):
                 center_value = round(numeric, 3)
 
+    padded_bounds = expanded_bounds(bounds, 0.025)
+    pw, ps, pe, pn = padded_bounds
+    ppx0, ppy0 = world_to_pixel(pw, pn)
+    ppx1, ppy1 = world_to_pixel(pe, ps)
+    px0, px1 = sorted((ppx0, ppx1))
+    py0, py1 = sorted((ppy0, ppy1))
+    px0 = max(0, min(ds.RasterXSize - 1, px0))
+    px1 = max(0, min(ds.RasterXSize, px1 + 1))
+    py0 = max(0, min(ds.RasterYSize - 1, py0))
+    py1 = max(0, min(ds.RasterYSize, py1 + 1))
+    padded_valid_percent = 0.0
+    if px1 > px0 and py1 > py0:
+        padded_arr = band.ReadAsArray(px0, py0, px1 - px0, py1 - py0)
+        padded_valid = np.isfinite(padded_arr)
+        if nodata is not None:
+            padded_valid &= padded_arr != nodata
+        padded_valid_percent = round((int(padded_valid.sum()) / int(padded_valid.size)) * 100, 2) if padded_valid.size else 0.0
+
+    full_arr = band.ReadAsArray()
+    full_valid = np.isfinite(full_arr)
+    if nodata is not None:
+        full_valid &= full_arr != nodata
+    nearest_valid_pixel = None
+    valid_bbox = None
+    if bool(full_valid.any()):
+        ys, xs = np.where(full_valid)
+        lons = gt[0] + (xs + 0.5) * gt[1] + (ys + 0.5) * gt[2]
+        lats = gt[3] + (xs + 0.5) * gt[4] + (ys + 0.5) * gt[5]
+        distances = np.hypot(lons - center[0], lats - center[1])
+        nearest_index = int(np.argmin(distances))
+        nearest_y = int(ys[nearest_index])
+        nearest_x = int(xs[nearest_index])
+        nearest_valid_pixel = {
+            "lon": round(float(lons[nearest_index]), 7),
+            "lat": round(float(lats[nearest_index]), 7),
+            "value": round(float(full_arr[nearest_y, nearest_x]), 3),
+            "distanceDegrees": round(float(distances[nearest_index]), 5),
+        }
+        valid_bbox = [
+            round(float(np.min(lons)), 7),
+            round(float(np.min(lats)), 7),
+            round(float(np.max(lons)), 7),
+            round(float(np.max(lats)), 7),
+        ]
+
     return {
         "path": str(path.relative_to(ROOT)),
         "overlapsCell": True,
-        "validPixelPercentInCell": round((int(valid.sum()) / int(valid.size)) * 100, 2) if valid.size else 0.0,
+        "validPixelPercentInCell": valid_pixel_percent,
+        "validPixelPercentNearCell": padded_valid_percent,
         "centerValue": center_value,
+        "nearestValidPixel": nearest_valid_pixel,
+        "validBounds": valid_bbox,
     }
 
 
@@ -241,7 +290,7 @@ def write_markdown(audit: dict[str, Any]) -> None:
         "",
         "## Best Next Lead",
         "",
-        "Start with the northwest outer shelf cells that return local BAG and newer multibeam candidates. These are the best bet for replacing broad CUDEM support with more specific survey data.",
+        "Start with the northwest outer shelf cells that return real local-pixel coverage or newer multibeam candidates. A BAG hit whose local raster has 0% valid pixels inside the cell is only a nearby lead, not proof that the cell can be fixed from that file.",
         "",
         "## Candidate Cells",
         "",
@@ -251,13 +300,34 @@ def write_markdown(audit: dict[str, Any]) -> None:
     for cell in audit["auditedCells"]:
         bag_names = ", ".join(item["name"] for item in cell["bagCandidates"][:3] if item.get("name")) or "none found"
         mb_names = ", ".join(item["name"] for item in cell["multibeamCandidates"][:3] if item.get("name")) or "none found"
-        first = bag_names if bag_names != "none found" else mb_names
+        has_direct_bag_coverage = any(
+            coverage.get("validPixelPercentInCell", 0.0) > 0
+            for candidate in cell["bagCandidates"]
+            for coverage in candidate.get("localRasterCoverage", [])
+        )
+        has_local_bag_near_miss = any(
+            coverage.get("validPixelPercentNearCell", 0.0) > 0
+            and coverage.get("validPixelPercentInCell", 0.0) == 0
+            for candidate in cell["bagCandidates"]
+            for coverage in candidate.get("localRasterCoverage", [])
+        )
+        if bag_names != "none found" and (has_direct_bag_coverage or mb_names == "none found"):
+            first = bag_names
+        elif has_local_bag_near_miss and mb_names != "none found":
+            first = f"{mb_names} after confirming the BAG near miss"
+        else:
+            first = mb_names
         coverage_notes = []
+        seen_coverage_notes = set()
         for candidate in cell["bagCandidates"] + cell["multibeamCandidates"]:
             for coverage in candidate.get("localRasterCoverage", [])[:1]:
-                coverage_notes.append(
-                    f"{candidate.get('name')}: {coverage['validPixelPercentInCell']}% valid local pixels"
+                note = (
+                    f"{candidate.get('name')}: {coverage['validPixelPercentInCell']}% valid in cell, "
+                    f"{coverage.get('validPixelPercentNearCell', 0.0)}% within 0.025 deg"
                 )
+                if note not in seen_coverage_notes:
+                    seen_coverage_notes.add(note)
+                    coverage_notes.append(note)
         coverage_text = "; ".join(coverage_notes[:2]) or "no matching local raster coverage measured"
         lines.append(
             f"| {cell['cellId']} `{cell['center']}` | {cell['dominantCategory']} "

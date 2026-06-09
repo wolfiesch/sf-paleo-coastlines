@@ -6,7 +6,7 @@ Plain-English purpose: look up official NOAA bathymetry records that overlap the
 
 ## Best Next Lead
 
-Start with the northwest outer shelf cells that return local BAG and newer multibeam candidates. These are the best bet for replacing broad CUDEM support with more specific survey data.
+Start with the northwest outer shelf cells that return real local-pixel coverage or newer multibeam candidates. A BAG hit whose local raster has 0% valid pixels inside the cell is only a nearby lead, not proof that the cell can be fixed from that file.
 
 ## Candidate Cells
 
@@ -14,21 +14,21 @@ Start with the northwest outer shelf cells that return local BAG and newer multi
 |---|---|---:|---:|---|---|
 | qg-03-06 `[-123.4551513, 38.0990831]` | CUDEM support (100.0% broad) | 0 | 6 | no matching local raster coverage measured | NA107, NA085, LPRS02RR |
 |  |  |  |  |  | BAG: none found; multibeam: NA107, NA085, LPRS02RR |
-| qg-05-12 `[-123.3676514, 38.0700366]` | CUDEM support (100.0% broad) | 1 | 2 | W00478_MB_VR_MLLW_interp4m: 0.0% valid local pixels | W00478_MB_VR_MLLW_interp4m |
+| qg-05-12 `[-123.3676514, 38.0700366]` | CUDEM support (100.0% broad) | 1 | 2 | W00478_MB_VR_MLLW_interp4m: 0.0% valid in cell, 10.88% within 0.025 deg | EW9505, B00012 after confirming the BAG near miss |
 |  |  |  |  |  | BAG: W00478_MB_VR_MLLW_interp4m; multibeam: EW9505, B00012 |
-| qg-09-06 `[-123.4551513, 38.0117727]` | CUDEM support (100.0% broad) | 0 | 8 | EX0907: 0.0% valid local pixels; EX0907: 0.0% valid local pixels | NA080, NA080, EX0903 |
+| qg-09-06 `[-123.4551513, 38.0117727]` | CUDEM support (100.0% broad) | 0 | 8 | EX0907: 0.0% valid in cell, 22.69% within 0.025 deg | NA080, NA080, EX0903 |
 |  |  |  |  |  | BAG: none found; multibeam: NA080, NA080, EX0903 |
 | qg-11-12 `[-123.3676514, 37.9827261]` | CUDEM support (100.0% broad) | 0 | 5 | no matching local raster coverage measured | MV1216, EX0903, REM-01MV |
 |  |  |  |  |  | BAG: none found; multibeam: MV1216, EX0903, REM-01MV |
 | qg-17-12 `[-123.3676514, 37.8954157]` | CUDEM support (100.0% broad) | 0 | 3 | no matching local raster coverage measured | NA107, NA078, B00017 |
 |  |  |  |  |  | BAG: none found; multibeam: NA107, NA078, B00017 |
-| qg-23-10 `[-123.396875, 37.8081052]` | CUDEM support (100.0% broad) | 0 | 8 | EX0907: 0.0% valid local pixels | NA116, NA077, MV1405 |
+| qg-23-10 `[-123.396875, 37.8081052]` | CUDEM support (100.0% broad) | 0 | 8 | EX0907: 0.0% valid in cell, 26.13% within 0.025 deg | NA116, NA077, MV1405 |
 |  |  |  |  |  | BAG: none found; multibeam: NA116, NA077, MV1405 |
 | qg-41-00 `[-123.5426513, 37.5463448]` | CRM fallback (100.0% broad) | 0 | 8 | no matching local raster coverage measured | RR1803, SR1814, SKQ201716T |
 |  |  |  |  |  | BAG: none found; multibeam: RR1803, SR1814, SKQ201716T |
 | qg-41-06 `[-123.4551513, 37.5463448]` | CRM fallback (100.0% broad) | 0 | 8 | no matching local raster coverage measured | SKQ201911T, RR1803, SKQ201802T |
 |  |  |  |  |  | BAG: none found; multibeam: SKQ201911T, RR1803, SKQ201802T |
-| qg-41-12 `[-123.3676514, 37.5463448]` | CRM fallback (100.0% broad) | 0 | 8 | EX0907: 0.0% valid local pixels; EX0907: 0.0% valid local pixels | MGL2211, AT42-10, SR1917 |
+| qg-41-12 `[-123.3676514, 37.5463448]` | CRM fallback (100.0% broad) | 0 | 8 | EX0907: 0.0% valid in cell, 34.83% within 0.025 deg | MGL2211, AT42-10, SR1917 |
 |  |  |  |  |  | BAG: none found; multibeam: MGL2211, AT42-10, SR1917 |
 | qg-47-00 `[-123.5426513, 37.4592052]` | CRM fallback (100.0% broad) | 0 | 8 | no matching local raster coverage measured | EX2307, HLY21TG, SR1917 |
 |  |  |  |  |  | BAG: none found; multibeam: EX2307, HLY21TG, SR1917 |
