@@ -26,7 +26,8 @@
     "paleo-coastlines:multibeam-feasibility": "python3 scripts/audit_multibeam_processing_feasibility.py",
     "paleo-coastlines:multibeam-feasibility:qg-05-12": "python3 scripts/audit_multibeam_processing_feasibility.py --cell qg-05-12 --limit 2",
     "paleo-coastlines:raw-multibeam-index": "python3 scripts/index_raw_multibeam_files.py",
-    "paleo-coastlines:raw-multibeam-index:b00012-na085": "python3 scripts/index_raw_multibeam_files.py --survey NA085 --survey B00012"
+    "paleo-coastlines:raw-multibeam-index:b00012-na085": "python3 scripts/index_raw_multibeam_files.py --survey NA085 --survey B00012",
+    "paleo-coastlines:b00012-bounds": "python3 scripts/process_b00012_bounds_batch.py"
   },
   "dependencies": {
     "@deck.gl/geo-layers": "^9.2.11",

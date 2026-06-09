@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-06-09T21:46:48+00:00",
+  "surveyId": "b00012-85130-0830",
+  "url": "http://data.ngdc.noaa.gov/platforms/ocean/ships/davidson/B00012/multibeam/data/version1/MB/85130-0830.sbo.mb15",
+  "workDir": "/home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-probe/b00012-85130-0830",
+  "dockerImage": "mbari/mbsystem:latest",
+  "format": 15,
+  "gridSize": 512,
+  "algorithm": "invdistnn:power=2.0:radius=0.002:max_points=12:min_points=1:nodata=-9999",
+  "rawFileBytes": 628224,
+  "downloadFileBytes": 628224,
+  "gridPath": null,
+  "stats": {
+    "rawPointCount": 116532,
+    "validPointCount": 116532,
+    "unthinnedValidPointCount": 116532,
+    "thinEvery": 1,
+    "minLon": -123.4427172614,
+    "maxLon": -123.322694782,
+    "minLat": 38.0659827746,
+    "maxLat": 38.2122382627,
+    "minZ": -456.0,
+    "maxZ": -142.0
+  },
+  "gdalInfo": null
+}
