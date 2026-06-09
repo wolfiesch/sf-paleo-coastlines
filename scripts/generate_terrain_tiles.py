@@ -9,9 +9,11 @@ values for elevation tiles.
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import math
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -125,6 +127,16 @@ def bilinear_tile(image: np.ndarray, src_x: np.ndarray, src_y: np.ndarray) -> np
   return np.clip(tile, 0, 255).astype(np.uint8)
 
 
+def tile_jobs(bounds: list[float], min_zoom: int, max_zoom: int) -> list[tuple[int, int, int]]:
+  jobs = []
+  for zoom in range(min_zoom, max_zoom + 1):
+    x_range, y_range = tile_range(bounds, zoom)
+    for x in x_range:
+      for y in y_range:
+        jobs.append((zoom, x, y))
+  return jobs
+
+
 def write_tiles(
   image_path: Path,
   bounds: list[float],
@@ -133,29 +145,32 @@ def write_tiles(
   max_zoom: int,
   resampling: str,
   skip_existing: bool,
+  workers: int,
 ) -> int:
   image = np.asarray(Image.open(image_path))
-  written = 0
+  jobs = tile_jobs(bounds, min_zoom, max_zoom)
 
-  for zoom in range(min_zoom, max_zoom + 1):
-    x_range, y_range = tile_range(bounds, zoom)
-    for x in x_range:
-      for y in y_range:
-        tile_path = output_dir / str(zoom) / str(x) / f"{y}.png"
-        if skip_existing and tile_path.exists():
-          continue
+  def write_one(job: tuple[int, int, int]) -> int:
+    zoom, x, y = job
+    tile_path = output_dir / str(zoom) / str(x) / f"{y}.png"
+    if skip_existing and tile_path.exists():
+      return 0
 
-        src_x, src_y = tile_sample_grid(bounds, zoom, x, y)
-        if resampling == "nearest":
-          tile = nearest_tile(image, src_x, src_y)
-        else:
-          tile = bilinear_tile(image, src_x, src_y)
+    src_x, src_y = tile_sample_grid(bounds, zoom, x, y)
+    if resampling == "nearest":
+      tile = nearest_tile(image, src_x, src_y)
+    else:
+      tile = bilinear_tile(image, src_x, src_y)
 
-        tile_path.parent.mkdir(parents=True, exist_ok=True)
-        Image.fromarray(tile).save(tile_path, optimize=True)
-        written += 1
+    tile_path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(tile).save(tile_path, optimize=True)
+    return 1
 
-  return written
+  if workers <= 1 or len(jobs) <= 1:
+    return sum(write_one(job) for job in jobs)
+
+  with ThreadPoolExecutor(max_workers=workers) as pool:
+    return sum(pool.map(write_one, jobs))
 
 
 def count_tiles(output_dir: Path, min_zoom: int, max_zoom: int) -> int:
@@ -167,7 +182,15 @@ def count_tiles(output_dir: Path, min_zoom: int, max_zoom: int) -> int:
   return total
 
 
-def generate_tileset(terrain: dict, output_root: Path, min_zoom: int, max_zoom: int, clean: bool, skip_existing: bool) -> dict:
+def generate_tileset(
+  terrain: dict,
+  output_root: Path,
+  min_zoom: int,
+  max_zoom: int,
+  clean: bool,
+  skip_existing: bool,
+  workers: int,
+) -> dict:
   source_id = terrain["sourceId"]
   source_output = output_root / source_id
   if clean and source_output.exists():
@@ -186,7 +209,7 @@ def generate_tileset(terrain: dict, output_root: Path, min_zoom: int, max_zoom: 
   metadata_min_zoom = min(min_zoom, int(existing_metadata.get("minZoom", min_zoom)))
   metadata_max_zoom = max(max_zoom, int(existing_metadata.get("maxZoom", max_zoom)))
 
-  write_tiles(elevation_path, terrain["bounds"], elevation_output, min_zoom, max_zoom, "nearest", skip_existing)
+  write_tiles(elevation_path, terrain["bounds"], elevation_output, min_zoom, max_zoom, "nearest", skip_existing, workers)
   elevation_count = count_tiles(elevation_output, metadata_min_zoom, metadata_max_zoom)
   tiled_textures = {}
   texture_counts = {}
@@ -196,7 +219,7 @@ def generate_tileset(terrain: dict, output_root: Path, min_zoom: int, max_zoom: 
       continue
     texture_output = source_output / folder_name
     texture_path = terrain_asset_path(texture_url)
-    write_tiles(texture_path, terrain["bounds"], texture_output, min_zoom, max_zoom, "bilinear", skip_existing)
+    write_tiles(texture_path, terrain["bounds"], texture_output, min_zoom, max_zoom, "bilinear", skip_existing, workers)
     tiled_textures[texture_name] = f"/data/paleo-coastlines/terrain-tiles/{source_id}/{folder_name}/{{z}}/{{x}}/{{y}}.png"
     texture_counts[texture_name] = count_tiles(texture_output, metadata_min_zoom, metadata_max_zoom)
 
@@ -226,6 +249,7 @@ def parse_args() -> argparse.Namespace:
   parser.add_argument("--max-zoom", type=int, default=None)
   parser.add_argument("--clean", action="store_true", help="Delete the selected source's tile folder before writing.")
   parser.add_argument("--skip-existing", action="store_true", help="Leave existing tile PNGs in place and write only missing tiles.")
+  parser.add_argument("--workers", type=int, default=min(8, os.cpu_count() or 1), help="Parallel tile writers. Use 1 for the old serial behavior.")
   return parser.parse_args()
 
 
@@ -240,7 +264,7 @@ def main() -> None:
     min_zoom = args.min_zoom if args.min_zoom is not None else default.min_zoom
     max_zoom = args.max_zoom if args.max_zoom is not None else default.max_zoom
     terrain = load_terrain(args.manifest, source_id)
-    generated.append(generate_tileset(terrain, args.output_root, min_zoom, max_zoom, args.clean, args.skip_existing and not args.clean))
+    generated.append(generate_tileset(terrain, args.output_root, min_zoom, max_zoom, args.clean, args.skip_existing and not args.clean, args.workers))
 
   args.output_root.mkdir(parents=True, exist_ok=True)
   all_tilesets = [
