@@ -192,6 +192,11 @@ def main() -> None:
         default=1,
         help="For preview grids, keep every Nth valid point. Use 1 to keep every point.",
     )
+    parser.add_argument(
+        "--skip-grid",
+        action="store_true",
+        help="Only extract and summarize point bounds. This is faster for file-level indexing.",
+    )
     args = parser.parse_args()
 
     work_dir = args.work_dir / args.survey_id.lower()
@@ -214,7 +219,9 @@ def main() -> None:
         raise ValueError("--thin-every must be 1 or greater.")
     stats = filter_points(raw_xyz, valid_csv, args.min_valid_lon, args.min_valid_lat, args.thin_every)
     write_vrt(vrt, valid_csv.name)
-    grid_info = grid_points(vrt, tif, stats, args.grid_size, args.algorithm)
+    grid_info = None
+    if not args.skip_grid:
+        grid_info = grid_points(vrt, tif, stats, args.grid_size, args.algorithm)
 
     report = {
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -227,7 +234,7 @@ def main() -> None:
         "algorithm": args.algorithm,
         "rawFileBytes": raw_path.stat().st_size,
         "compressedFileBytes": gz_path.stat().st_size,
-        "gridPath": str(tif),
+        "gridPath": str(tif) if not args.skip_grid else None,
         "stats": stats,
         "gdalInfo": grid_info,
     }
