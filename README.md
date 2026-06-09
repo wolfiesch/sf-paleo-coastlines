@@ -8,8 +8,15 @@ This project was split out from `cityscope-sf` because it is a separate research
 
 ## Run
 
+The browser-ready map data is stored in this repository with Git LFS. In plain
+English: reviewers should not need to download source data again from NOAA or
+USGS, but their Git client does need Git LFS support so the checked-out data
+files are real images/JSON instead of tiny pointer files.
+
 ```sh
+git lfs install
 pnpm install
+git lfs pull
 pnpm dev
 ```
 

@@ -37,3 +37,4 @@ scripts/__pycache__/
 # Test output
 output/
 artifacts/
+tmp/
