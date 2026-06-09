@@ -10,6 +10,26 @@ The best first candidate is `severe-r12-sigma7`.
 
 It smooths a thin strip around source-category edges at the 16 severe local seam targets. That means it does not blur the whole map; it only softens the final height image around source joins that the audit already marked as severe.
 
+## Visual Check
+
+Use two screenshot types when reviewing this work:
+
+| Screenshot type | Overlays | What it answers |
+|---|---|---|
+| Audit view | Seams, gaps, coverage, labels as needed | Where are the suspicious source joins? |
+| Quality view | Grid, seams, gaps, labels, and coverage off | Does the terrain itself look natural? |
+
+The grid overlay is useful for finding bad joins, but it makes the underlying map harder to judge. For the terrain-quality review, use the clean quality screenshots.
+
+The first clean before/after check used:
+
+| View | Screenshot |
+|---|---|
+| Production close-up | `output/playwright/seam-blend-compare/before-close-edge-production.png` |
+| Candidate close-up | `output/playwright/seam-blend-compare/after-close-edge-candidate.png` |
+
+The candidate did not visibly wash out the terrain in that close-up. The measured seam improvement is much stronger than the visible change, which is the right direction: targeted repair without obvious broad blurring.
+
 ## Candidate Comparison
 
 | Candidate | Before severe | After severe | After suspicious | After calm | Mean 95% step change | Read |

@@ -93,6 +93,94 @@ const SOURCE_QUALITY_GAPS_URL = "/data/paleo-coastlines/source_quality_gaps.geoj
 const SOURCE_QUALITY_GAPS_SUMMARY_URL = "/data/paleo-coastlines/source_quality_gaps_summary.json";
 const SOURCE_SEAM_AUDIT_URL = "/data/paleo-coastlines/source_seam_audit_targets.json";
 
+const TIME_SLICE_IDS: PaleoTimeSliceId[] = ["present", "5k_years_ago", "10k_years_ago", "20k_years_ago"];
+const TERRAIN_DETAIL_LEVELS: TerrainDetailLevel[] = ["fast", "detailed", "survey", "ultra"];
+const TERRAIN_SURFACE_SMOOTHING_MODES: TerrainSurfaceSmoothing[] = ["smooth", "sharp"];
+const TERRAIN_TEXTURE_MODES: TerrainTextureMode[] = ["bottom", "hybrid", "survey", "source", "sonar", "relief", "color"];
+const TERRAIN_SOURCE_MODES: TerrainSourceMode[] = ["best", "single", "stack"];
+const SCENE_PROFILES: SceneProfile[] = ["study", "relief", "emergence"];
+
+interface UrlInitialState {
+  captureMode: boolean;
+  viewState: MapViewState;
+  activeSliceId: PaleoTimeSliceId;
+  showUncertainty: boolean;
+  showTerrainFootprints: boolean;
+  showBaySourceFootprints: boolean;
+  showRivers: boolean;
+  showPlaceLabels: boolean;
+  showSourceQualityGaps: boolean;
+  showSourceSeams: boolean;
+  timeMode: boolean;
+  yearsBeforePresent: number;
+  waterLevelMeters: number | null;
+  terrainDetail: TerrainDetailLevel;
+  terrainSurfaceSmoothing: TerrainSurfaceSmoothing;
+  terrainTextureMode: TerrainTextureMode;
+  terrainSourceMode: TerrainSourceMode;
+  selectedTerrainSourceId: string | null;
+  sceneProfile: SceneProfile;
+}
+
+function queryBoolean(params: URLSearchParams, name: string, fallback: boolean): boolean {
+  const value = params.get(name);
+  if (value == null) return fallback;
+  return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+}
+
+function queryNumber(params: URLSearchParams, name: string): number | null {
+  const value = params.get(name);
+  if (value == null || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function queryEnum<T extends string>(params: URLSearchParams, name: string, allowed: readonly T[], fallback: T): T {
+  const value = params.get(name);
+  return allowed.includes(value as T) ? value as T : fallback;
+}
+
+function initialViewStateFromParams(params: URLSearchParams): MapViewState {
+  const preset = VIEW_PRESETS.find((item) => item.id === params.get("view"));
+  const base = preset?.viewState ?? START_VIEW;
+  return {
+    ...base,
+    longitude: queryNumber(params, "longitude") ?? queryNumber(params, "lon") ?? base.longitude,
+    latitude: queryNumber(params, "latitude") ?? queryNumber(params, "lat") ?? base.latitude,
+    zoom: queryNumber(params, "zoom") ?? base.zoom,
+    pitch: queryNumber(params, "pitch") ?? base.pitch,
+    bearing: queryNumber(params, "bearing") ?? base.bearing,
+  };
+}
+
+function readUrlInitialState(): UrlInitialState {
+  const params = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+  const yearsBeforePresent = queryNumber(params, "years") ?? MAX_YEARS_BP;
+  const waterLevelMeters = queryNumber(params, "water") ?? queryNumber(params, "waterLevel");
+
+  return {
+    captureMode: queryBoolean(params, "capture", false),
+    viewState: initialViewStateFromParams(params),
+    activeSliceId: queryEnum(params, "slice", TIME_SLICE_IDS, "20k_years_ago"),
+    showUncertainty: queryBoolean(params, "uncertainty", true),
+    showTerrainFootprints: queryBoolean(params, "coverage", false),
+    showBaySourceFootprints: queryBoolean(params, "baySources", false),
+    showRivers: queryBoolean(params, "rivers", true),
+    showPlaceLabels: queryBoolean(params, "labels", true),
+    showSourceQualityGaps: queryBoolean(params, "gaps", false),
+    showSourceSeams: queryBoolean(params, "seams", false),
+    timeMode: waterLevelMeters == null,
+    yearsBeforePresent,
+    waterLevelMeters: waterLevelMeters ?? Math.round(seaLevelForYearsBP(yearsBeforePresent)),
+    terrainDetail: queryEnum(params, "detail", TERRAIN_DETAIL_LEVELS, "ultra"),
+    terrainSurfaceSmoothing: queryEnum(params, "smoothing", TERRAIN_SURFACE_SMOOTHING_MODES, "smooth"),
+    terrainTextureMode: queryEnum(params, "texture", TERRAIN_TEXTURE_MODES, "survey"),
+    terrainSourceMode: queryEnum(params, "sourceMode", TERRAIN_SOURCE_MODES, "best"),
+    selectedTerrainSourceId: params.get("sourceId"),
+    sceneProfile: queryEnum(params, "scene", SCENE_PROFILES, "emergence"),
+  };
+}
+
 function exposedAreaForMeters(stats: SeaLevelStats | null, meters: number): number | null {
   if (!stats || !stats.levels.length) return null;
   const sorted = [...stats.levels].sort((a, b) => a.meters - b.meters);
@@ -142,7 +230,8 @@ function defaultTerrainSourceId(sources: PaleoTerrainConfig[]): string | null {
 }
 
 function App() {
-  const [viewState, setViewState] = useState<MapViewState>(START_VIEW);
+  const initialState = useMemo(() => readUrlInitialState(), []);
+  const [viewState, setViewState] = useState<MapViewState>(initialState.viewState);
   const [sliceCatalog, setSliceCatalog] = useState<PaleoTimeSliceManifestItem[]>([]);
   const [loadedSlices, setLoadedSlices] = useState<Partial<Record<PaleoTimeSliceId, PaleoTimeSlice>>>({});
   const [waterlineProbeIndex, setWaterlineProbeIndex] = useState<PaleoWaterlineProbeIndex | null>(null);
@@ -151,34 +240,34 @@ function App() {
   const [loadingSliceId, setLoadingSliceId] = useState<PaleoTimeSliceId | null>(null);
   const [loadingProbeLevel, setLoadingProbeLevel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeSliceId, setActiveSliceId] = useState<PaleoTimeSliceId>("20k_years_ago");
-  const [showUncertainty, setShowUncertainty] = useState(true);
-  const [waterLevelMeters, setWaterLevelMeters] = useState<number | null>(-120);
+  const [activeSliceId, setActiveSliceId] = useState<PaleoTimeSliceId>(initialState.activeSliceId);
+  const [showUncertainty, setShowUncertainty] = useState(initialState.showUncertainty);
+  const [waterLevelMeters, setWaterLevelMeters] = useState<number | null>(initialState.waterLevelMeters);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showTerrainFootprints, setShowTerrainFootprints] = useState(false);
-  const [showBaySourceFootprints, setShowBaySourceFootprints] = useState(false);
+  const [showTerrainFootprints, setShowTerrainFootprints] = useState(initialState.showTerrainFootprints);
+  const [showBaySourceFootprints, setShowBaySourceFootprints] = useState(initialState.showBaySourceFootprints);
   const [baySourceFootprints, setBaySourceFootprints] = useState<BaySourceFootprintCollection | null>(null);
   const [loadingBaySourceFootprints, setLoadingBaySourceFootprints] = useState(false);
-  const [showRivers, setShowRivers] = useState(true);
+  const [showRivers, setShowRivers] = useState(initialState.showRivers);
   const [paleoRivers, setPaleoRivers] = useState<PaleoRiverCollection | null>(null);
   const [loadingRivers, setLoadingRivers] = useState(false);
-  const [timeMode, setTimeMode] = useState(true);
-  const [yearsBeforePresent, setYearsBeforePresent] = useState(MAX_YEARS_BP);
-  const [showPlaceLabels, setShowPlaceLabels] = useState(true);
+  const [timeMode, setTimeMode] = useState(initialState.timeMode);
+  const [yearsBeforePresent, setYearsBeforePresent] = useState(initialState.yearsBeforePresent);
+  const [showPlaceLabels, setShowPlaceLabels] = useState(initialState.showPlaceLabels);
   const [seaLevelStats, setSeaLevelStats] = useState<SeaLevelStats | null>(null);
-  const [showSourceQualityGaps, setShowSourceQualityGaps] = useState(false);
+  const [showSourceQualityGaps, setShowSourceQualityGaps] = useState(initialState.showSourceQualityGaps);
   const [sourceQualityGaps, setSourceQualityGaps] = useState<SourceQualityGapCollection | null>(null);
   const [sourceQualityGapSummary, setSourceQualityGapSummary] = useState<SourceQualityGapSummary | null>(null);
   const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
-  const [showSourceSeams, setShowSourceSeams] = useState(false);
+  const [showSourceSeams, setShowSourceSeams] = useState(initialState.showSourceSeams);
   const [sourceSeamAudit, setSourceSeamAudit] = useState<SourceSeamAudit | null>(null);
   const [loadingSourceSeams, setLoadingSourceSeams] = useState(false);
-  const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>("ultra");
-  const [terrainSurfaceSmoothing, setTerrainSurfaceSmoothing] = useState<TerrainSurfaceSmoothing>("smooth");
-  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>("survey");
-  const [terrainSourceMode, setTerrainSourceMode] = useState<TerrainSourceMode>("best");
-  const [selectedTerrainSourceId, setSelectedTerrainSourceId] = useState<string | null>(null);
-  const [sceneProfile, setSceneProfile] = useState<SceneProfile>("emergence");
+  const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>(initialState.terrainDetail);
+  const [terrainSurfaceSmoothing, setTerrainSurfaceSmoothing] = useState<TerrainSurfaceSmoothing>(initialState.terrainSurfaceSmoothing);
+  const [terrainTextureMode, setTerrainTextureMode] = useState<TerrainTextureMode>(initialState.terrainTextureMode);
+  const [terrainSourceMode, setTerrainSourceMode] = useState<TerrainSourceMode>(initialState.terrainSourceMode);
+  const [selectedTerrainSourceId, setSelectedTerrainSourceId] = useState<string | null>(initialState.selectedTerrainSourceId);
+  const [sceneProfile, setSceneProfile] = useState<SceneProfile>(initialState.sceneProfile);
   const [isTouring, setIsTouring] = useState(false);
   const [tourCaption, setTourCaption] = useState<string | null>(null);
   // Monotonic generation token. Each runTour() claims a new id; a stop, a new
@@ -540,6 +629,16 @@ function App() {
   const terrainSources = useMemo(() => terrainSourcesForSlice(activeSlice), [activeSlice]);
   const isLoadingData = loading || loadingSliceId === activeSliceId;
   const probeLoading = loadingProbeLevel === (activeProbeLevel == null ? null : probeLevelKey(activeProbeLevel));
+  const captureReady = Boolean(
+    activeSlice
+    && !error
+    && !isLoadingData
+    && !probeLoading
+    && (!showRivers || paleoRivers)
+    && (!showBaySourceFootprints || baySourceFootprints)
+    && (!showSourceQualityGaps || (sourceQualityGaps && sourceQualityGapSummary))
+    && (!showSourceSeams || sourceSeamAudit),
+  );
 
   const effectiveTerrainSourceId = useMemo(() => (
     terrainSources.some((source) => source.sourceId === selectedTerrainSourceId)
@@ -653,11 +752,16 @@ function App() {
   }, [isTouring, runTour, stopTour]);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-gray-950 text-white">
+    <main
+      className="relative h-screen w-screen overflow-hidden bg-gray-950 text-white"
+      data-capture-mode={initialState.captureMode ? "true" : "false"}
+      data-capture-ready={captureReady ? "true" : "false"}
+      data-capture-view={`${viewState.longitude},${viewState.latitude},${viewState.zoom},${viewState.pitch},${viewState.bearing}`}
+    >
       <DeckGL
         layers={layers}
         viewState={viewState}
-        controller
+        controller={!initialState.captureMode}
         onViewStateChange={({ viewState: nextViewState, interactionState }) => {
           if (interactionState?.isDragging && isTouring) {
             tourRunId.current += 1; // cancel the in-flight tour loop

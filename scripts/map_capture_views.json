@@ -1,0 +1,77 @@
+{
+  "defaults": {
+    "viewport": {
+      "width": 1440,
+      "height": 1200
+    },
+    "water": -120,
+    "detail": "ultra",
+    "texture": "survey",
+    "scene": "emergence",
+    "waitAfterReadyMs": 1800,
+    "overlays": {
+      "rivers": true,
+      "labels": true,
+      "uncertainty": true
+    }
+  },
+  "views": [
+    {
+      "id": "shelf-seams",
+      "view": "shelf",
+      "overlays": {
+        "seams": true,
+        "coverage": true
+      }
+    },
+    {
+      "id": "gate-bay-sources",
+      "view": "gate",
+      "overlays": {
+        "baySources": true,
+        "seams": true
+      }
+    },
+    {
+      "id": "northwest-gap-gaps",
+      "view": "northwest-gap",
+      "overlays": {
+        "gaps": true,
+        "seams": true
+      }
+    },
+    {
+      "id": "shelf-quality",
+      "view": "shelf",
+      "overlays": {
+        "rivers": false,
+        "labels": false,
+        "uncertainty": false,
+        "coverage": false,
+        "baySources": false,
+        "gaps": false,
+        "seams": false
+      }
+    },
+    {
+      "id": "northwest-gap-quality",
+      "view": "northwest-gap",
+      "overlays": {
+        "rivers": false,
+        "labels": false,
+        "uncertainty": false,
+        "coverage": false,
+        "baySources": false,
+        "gaps": false,
+        "seams": false
+      }
+    },
+    {
+      "id": "farallones-ultra",
+      "view": "farallones",
+      "overlays": {
+        "coverage": true
+      }
+    }
+  ]
+}

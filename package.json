@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
+    "capture:maps": "node scripts/capture_map_views.mjs",
     "paleo-coastlines:generate": "python3 scripts/generate_paleo_coastlines.py",
     "paleo-coastlines:terrain-tiles": "python3 scripts/generate_terrain_tiles.py",
     "paleo-coastlines:inventory": "python3 scripts/build_survey_inventory.py --with-gdalinfo",
