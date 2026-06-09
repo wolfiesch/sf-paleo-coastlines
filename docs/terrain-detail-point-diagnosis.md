@@ -14,6 +14,14 @@ Plain-English purpose: tie visible sharpness or blurriness to the terrain source
 | Ocean Beach / west San Francisco | USGS nearshore | Measured detail | Backed by measured survey data; if it still looks blurry, check browser downsampling or terrain smoothing. | Compare source mode, sharp smoothing, and higher tile/detail settings before chasing new data. |
 | Central Bay floor east of San Francisco | USGS Bay DEM | Measured detail | Good Bay-floor data, though flat mudflats and channels can still look visually smooth. | Check whether the surface is truly flat, then compare sharp vs smooth rendering. |
 | Farther east Bay smooth area | USGS CoNED broad | CoNED foundation | Usually solid but can look soft because it is a broad 2 m base, not a rich survey texture. | Try a smaller focused CoNED clip or look for overlapping survey texture. |
+| Priority gap qg-03-06 | CUDEM support | Broad fallback/support | Most likely to look smooth or generic because this is broad support data. | Search for a better local bathymetry or terrain source before visual polish. |
+| Priority gap qg-05-12 | CUDEM support | Broad fallback/support | Most likely to look smooth or generic because this is broad support data. | Search for a better local bathymetry or terrain source before visual polish. |
+| Priority gap qg-09-06 | CUDEM support | Broad fallback/support | Most likely to look smooth or generic because this is broad support data. | Search for a better local bathymetry or terrain source before visual polish. |
+| Priority gap qg-11-12 | CUDEM support | Broad fallback/support | Most likely to look smooth or generic because this is broad support data. | Search for a better local bathymetry or terrain source before visual polish. |
+| Priority gap qg-17-12 | CUDEM support | Broad fallback/support | Most likely to look smooth or generic because this is broad support data. | Search for a better local bathymetry or terrain source before visual polish. |
+| Priority gap qg-23-10 | CUDEM support | Broad fallback/support | Most likely to look smooth or generic because this is broad support data. | Search for a better local bathymetry or terrain source before visual polish. |
+| Priority gap qg-41-00 | CRM fallback | Broad fallback/support | Most likely to look smooth or generic because this is broad support data. | Search for a better local bathymetry or terrain source before visual polish. |
+| Priority gap qg-41-06 | CRM fallback | Broad fallback/support | Most likely to look smooth or generic because this is broad support data. | Search for a better local bathymetry or terrain source before visual polish. |
 
 ## How To Read This
 

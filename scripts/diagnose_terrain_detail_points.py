@@ -104,9 +104,27 @@ class PointDiagnosis:
     note: str
 
 
+def default_points() -> list[dict[str, Any]]:
+    points = list(DEFAULT_POINTS)
+    summary = json.loads(SUMMARY_JSON.read_text())
+    for cell in summary.get("representativePriorityCells", [])[:8]:
+        center = cell["center"]
+        points.append({
+            "id": cell["cellId"],
+            "label": f"Priority gap {cell['cellId']}",
+            "lon": center[0],
+            "lat": center[1],
+            "note": (
+                f"{cell['tierLabel']}; dominant source is {cell['dominantCategory']} "
+                f"at {cell['dominantPercent']}%. {cell['nextAction']}"
+            ),
+        })
+    return points
+
+
 def load_points(path: Path | None) -> list[dict[str, Any]]:
     if path is None:
-        return DEFAULT_POINTS
+        return default_points()
     payload = json.loads(path.read_text())
     if not isinstance(payload, list):
         raise SystemExit("Point file must be a JSON array of {id,label,lon,lat,note} objects.")
