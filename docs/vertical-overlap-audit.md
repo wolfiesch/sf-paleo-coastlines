@@ -9,7 +9,7 @@ A large repeated difference can mean the sources use different height references
 ## Summary
 
 - Sources sampled: 30
-- Overlapping source pairs measured: 139
+- Overlapping source pairs measured: 136
 - Sample grid width: 1024 pixels
 - Minimum overlap used: 250 pixels
 - High-confidence possible offsets: 20
@@ -20,15 +20,15 @@ A large repeated difference can mean the sources use different height references
 | Later source | Earlier source | Median difference | 95% absolute difference | Overlap | Plain-English read |
 |---|---|---:|---:|---:|---|
 | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | 8.223 m | 106.237 m | 1347.98 sq km | Possible vertical offset: the later source is typically higher by about 8.2 m. |
-| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | USGS CoNED 2 m focus clip, Farallon shelf | 6.9 m | 49.499 m | 188.39 sq km | Possible vertical offset: the later source is typically higher by about 6.9 m. |
+| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | USGS CoNED 2 m focus clip, Farallon shelf | 6.942 m | 49.455 m | 189.22 sq km | Possible vertical offset: the later source is typically higher by about 6.9 m. |
 | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 38.292 m | 48.498 m | 337.5 sq km | Possible vertical offset: the later source is typically higher by about 38.3 m. |
-| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | USGS CoNED San Francisco 2 m topobathymetry | 6.897 m | 48.346 m | 191.17 sq km | Possible vertical offset: the later source is typically higher by about 6.9 m. |
+| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | USGS CoNED San Francisco 2 m topobathymetry | 6.932 m | 48.26 m | 192.21 sq km | Possible vertical offset: the later source is typically higher by about 6.9 m. |
 | NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 36.103 m | 47.532 m | 14.74 sq km | Possible vertical offset: the later source is typically higher by about 36.1 m. |
 | USGS OFR 2014-1234, 10 m Upper Farallon Escarpment bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.706 m | 44.401 m | 126.36 sq km | Possible vertical offset: the later source is typically higher by about 34.7 m. |
 | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -33.54 m | 42.759 m | 9677.07 sq km | Possible vertical offset: the later source is typically lower by about 33.5 m. |
 | NOAA NOS W00443, 64 m BAG northwest shelf bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 35.674 m | 39.613 m | 49.14 sq km | Possible vertical offset: the later source is typically higher by about 35.7 m. |
-| USGS 2023 San Francisco 1 m LiDAR DEM | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -32.175 m | 38.496 m | 174.93 sq km | Possible vertical offset: the later source is typically lower by about 32.2 m. |
-| USGS CoNED 2 m focus clip, Farallon shelf | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.259 m | 37.505 m | 1697.27 sq km | Possible vertical offset: the later source is typically higher by about 34.3 m. |
+| USGS CoNED 2 m focus clip, Farallon shelf | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.26 m | 37.511 m | 1700.54 sq km | Possible vertical offset: the later source is typically higher by about 34.3 m. |
+| USGS 2023 San Francisco 1 m LiDAR DEM | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 33.029 m | 37.507 m | 174.88 sq km | Possible vertical offset: the later source is typically higher by about 33.0 m. |
 | NOAA NOS H11965, VR BAG Farallon Islands bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.491 m | 35.631 m | 45.74 sq km | Possible vertical offset: the later source is typically higher by about 34.5 m. |
 | NOAA NOS W00614, VR BAG sanctuary bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.371 m | 35.581 m | 109.24 sq km | Possible vertical offset: the later source is typically higher by about 34.4 m. |
 
@@ -39,15 +39,15 @@ A large repeated difference can mean the sources use different height references
 | USGS OFR 2014-1234, 10 m Upper Farallon Escarpment bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -3.071 m | 130.683 m | 199.3 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 | NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | 3.975 m | 89.755 m | 369.57 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 | NOAA NOS W00443, 64 m BAG northwest shelf bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | 4.381 m | 81.845 m | 297.98 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| NOAA NOS W00477, VR BAG Greater Farallones bathymetry 4 | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -3.34 m | 65.261 m | 61.84 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| USGS CoNED 2 m focus clip, Farallon shelf | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -0.192 m | 55.797 m | 3914.48 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
+| USGS CoNED 2 m focus clip, Farallon shelf | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -0.191 m | 56.071 m | 3923.36 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 | NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | -0.038 m | 53.575 m | 27.29 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 | NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | 1.412 m | 49.822 m | 152.87 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| USGS CoNED San Francisco 2 m topobathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -0.077 m | 26.6 m | 11340.61 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | USGS CoNED 2 m focus clip, Farallon shelf | 2.99 m | 22.866 m | 161.79 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | USGS CoNED San Francisco 2 m topobathymetry | 2.976 m | 22.856 m | 161.93 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
+| USGS CoNED San Francisco 2 m topobathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -0.077 m | 26.719 m | 11352.8 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
+| NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | USGS CoNED San Francisco 2 m topobathymetry | 2.993 m | 23.218 m | 165.45 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
+| NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | USGS CoNED 2 m focus clip, Farallon shelf | 3.024 m | 23.145 m | 165.31 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 | NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA NOS W00443, 64 m BAG northwest shelf bathymetry | 1.673 m | 21.837 m | 20.34 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| NOAA NOS W00477, VR BAG Greater Farallones bathymetry 4 | NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | -1.51 m | 21.633 m | 10.15 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
+| USGS OFR 2014-1234, 10 m Upper Farallon Escarpment bathymetry | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | -4.237 m | 17.911 m | 10.06 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
+| NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | 0.8 m | 16.608 m | 15.15 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 
 ## Largest Differences
 
@@ -57,19 +57,19 @@ A large repeated difference can mean the sources use different height references
 | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | 8.223 m | 106.237 m | 1347.98 sq km | Possible vertical offset: the later source is typically higher by about 8.2 m. |
 | NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | 3.975 m | 89.755 m | 369.57 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 | NOAA NOS W00443, 64 m BAG northwest shelf bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | 4.381 m | 81.845 m | 297.98 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| NOAA NOS W00477, VR BAG Greater Farallones bathymetry 4 | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -3.34 m | 65.261 m | 61.84 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| USGS CoNED 2 m focus clip, Farallon shelf | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -0.192 m | 55.797 m | 3914.48 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
+| USGS CoNED 2 m focus clip, Farallon shelf | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -0.191 m | 56.071 m | 3923.36 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 | NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | -0.038 m | 53.575 m | 27.29 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
 | NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | 1.412 m | 49.822 m | 152.87 sq km | Mixed difference pattern; inspect the seam before applying any correction. |
-| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | USGS CoNED 2 m focus clip, Farallon shelf | 6.9 m | 49.499 m | 188.39 sq km | Possible vertical offset: the later source is typically higher by about 6.9 m. |
+| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | USGS CoNED 2 m focus clip, Farallon shelf | 6.942 m | 49.455 m | 189.22 sq km | Possible vertical offset: the later source is typically higher by about 6.9 m. |
 | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 38.292 m | 48.498 m | 337.5 sq km | Possible vertical offset: the later source is typically higher by about 38.3 m. |
-| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | USGS CoNED San Francisco 2 m topobathymetry | 6.897 m | 48.346 m | 191.17 sq km | Possible vertical offset: the later source is typically higher by about 6.9 m. |
+| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | USGS CoNED San Francisco 2 m topobathymetry | 6.932 m | 48.26 m | 192.21 sq km | Possible vertical offset: the later source is typically higher by about 6.9 m. |
 | NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 36.103 m | 47.532 m | 14.74 sq km | Possible vertical offset: the later source is typically higher by about 36.1 m. |
 | USGS OFR 2014-1234, 10 m Upper Farallon Escarpment bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.706 m | 44.401 m | 126.36 sq km | Possible vertical offset: the later source is typically higher by about 34.7 m. |
 | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -33.54 m | 42.759 m | 9677.07 sq km | Possible vertical offset: the later source is typically lower by about 33.5 m. |
 | NOAA NOS W00443, 64 m BAG northwest shelf bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 35.674 m | 39.613 m | 49.14 sq km | Possible vertical offset: the later source is typically higher by about 35.7 m. |
-| USGS 2023 San Francisco 1 m LiDAR DEM | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | -32.175 m | 38.496 m | 174.93 sq km | Possible vertical offset: the later source is typically lower by about 32.2 m. |
-| USGS CoNED 2 m focus clip, Farallon shelf | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.259 m | 37.505 m | 1697.27 sq km | Possible vertical offset: the later source is typically higher by about 34.3 m. |
+| USGS CoNED 2 m focus clip, Farallon shelf | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.26 m | 37.511 m | 1700.54 sq km | Possible vertical offset: the later source is typically higher by about 34.3 m. |
+| USGS 2023 San Francisco 1 m LiDAR DEM | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 33.029 m | 37.507 m | 174.88 sq km | Possible vertical offset: the later source is typically higher by about 33.0 m. |
 | NOAA NOS H11965, VR BAG Farallon Islands bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.491 m | 35.631 m | 45.74 sq km | Possible vertical offset: the later source is typically higher by about 34.5 m. |
 | NOAA NOS W00614, VR BAG sanctuary bathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 34.371 m | 35.581 m | 109.24 sq km | Possible vertical offset: the later source is typically higher by about 34.4 m. |
-| USGS CoNED San Francisco 2 m topobathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 33.357 m | 35.565 m | 8654.23 sq km | Possible vertical offset: the later source is typically higher by about 33.4 m. |
+| USGS CoNED San Francisco 2 m topobathymetry | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 33.358 m | 35.575 m | 8660.23 sq km | Possible vertical offset: the later source is typically higher by about 33.4 m. |
+| NOAA NOS W00477, VR BAG Greater Farallones bathymetry 3 | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | 35.076 m | 35.558 m | 122.05 sq km | Possible vertical offset: the later source is typically higher by about 35.1 m. |

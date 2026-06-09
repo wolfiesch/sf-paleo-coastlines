@@ -8,44 +8,34 @@ It reads the best-available source-quality image and finds places where the winn
 
 - Source-quality image: `public/data/paleo-coastlines/terrain/best_available_gate_shelf_source_quality.png`
 - Pixel size: `[4096, 2341]`
-- Source-category transitions found: 33
+- Source-category transitions found: 36
 
 ## Top Seam Targets
 
 | Categories | Edge pixels | Priority | First target lon/lat | Suggested view |
 |---|---:|---:|---|---|
-| NOAA OCM survey / USGS CoNED broad | 64075 | 32037.5 | `-122.421453, 38.034786` | Gate or Bay-facing view with Bay sources and Coverage enabled |
 | NOAA BAG survey / USGS CoNED focus | 20598 | 10299.0 | `-122.861111, 37.809829` | Shelf with Coverage enabled |
 | CRM fallback / NOAA multibeam | 3870 | 3870.0 | `-123.478376, 37.555983` | Shelf or NW Gap with Gaps and Coverage enabled |
 | USGS Bay DEM / USGS CoNED focus | 7222 | 3611.0 | `-122.370171, 37.905214` | Gate or Bay-facing view with Bay sources and Coverage enabled |
-| NOAA BAG survey / USGS CoNED broad | 7132 | 3566.0 | `-123.077521, 38.042821` | Shelf with Coverage enabled |
+| NOAA BAG survey / USGS CoNED broad | 7133 | 3566.5 | `-123.077521, 38.042821` | Shelf with Coverage enabled |
 | NOAA multibeam / USGS CoNED focus | 6148 | 3074.0 | `-123.256838, 37.691538` | Shelf with Coverage enabled |
 | USGS CoNED broad / USGS CoNED focus | 5209 | 2604.5 | `-122.321111, 37.952393` | Shelf with Coverage enabled |
 | CUDEM support / NOAA multibeam | 2678 | 2544.1 | `-123.435983, 37.799573` | Shelf or NW Gap with Gaps and Coverage enabled |
-| USGS CoNED focus / USGS nearshore | 5056 | 2528.0 | `-122.501111, 37.494957` | Shelf with Coverage enabled |
+| USGS CoNED focus / USGS nearshore | 5053 | 2526.5 | `-122.501111, 37.494957` | Shelf with Coverage enabled |
 | CUDEM support / NOAA BAG survey | 2301 | 2185.95 | `-123.356496, 37.865897` | Shelf or NW Gap with Gaps and Coverage enabled |
 | NOAA BAG survey / NOAA multibeam | 3840 | 1920.0 | `-123.521624, 38.03735` | Shelf with Coverage enabled |
-| NOAA BAG survey / USGS nearshore | 3709 | 1854.5 | `-122.690342, 37.818718` | Shelf with Coverage enabled |
+| USGS Bay DEM overview / USGS CoNED broad | 3792 | 1896.0 | `-122.36641, 37.994957` | Shelf with Coverage enabled |
+| NOAA BAG survey / USGS nearshore | 3712 | 1856.0 | `-122.690171, 37.818718` | Shelf with Coverage enabled |
 | USGS CoNED focus / USGS offshore | 3082 | 1541.0 | `-123.207436, 37.73906` | Shelf with Coverage enabled |
-| USGS CoNED broad / USGS nearshore | 2461 | 1230.5 | `-122.986068, 37.997179` | Shelf with Coverage enabled |
+| USGS CoNED broad / USGS nearshore | 2464 | 1232.0 | `-122.986068, 37.997179` | Shelf with Coverage enabled |
 | CUDEM support / USGS offshore | 1237 | 1113.3 | `-123.303675, 37.782137` | Shelf or NW Gap with Gaps and Coverage enabled |
 | NOAA BAG survey / USGS offshore | 1684 | 842.0 | `-123.316154, 37.853932` | Shelf with Coverage enabled |
-| USGS Bay DEM / USGS CoNED broad | 1587 | 793.5 | `-122.278376, 37.791368` | Gate or Bay-facing view with Bay sources and Coverage enabled |
-| USGS Bay DEM / USGS land LiDAR | 1569 | 784.5 | `-122.371197, 37.814957` | Gate with Coverage enabled |
-| USGS land LiDAR / USGS nearshore | 709 | 496.3 | `-122.475128, 37.808462` | Gate with Coverage enabled |
-| USGS CoNED focus / USGS land LiDAR | 562 | 281.0 | `-122.414615, 37.704872` | Gate with Coverage enabled |
+| USGS Bay DEM / USGS land LiDAR | 1576 | 788.0 | `-122.371197, 37.814957` | Gate with Coverage enabled |
+| USGS Bay DEM / USGS CoNED broad | 1426 | 713.0 | `-122.278376, 37.791368` | Gate or Bay-facing view with Bay sources and Coverage enabled |
+| USGS land LiDAR / USGS nearshore | 711 | 497.7 | `-122.475128, 37.808462` | Gate with Coverage enabled |
+| USGS CoNED focus / USGS land LiDAR | 557 | 278.5 | `-122.414615, 37.704872` | Gate with Coverage enabled |
 
 ## Target Details
-
-### NOAA OCM survey / USGS CoNED broad
-
-- Edge pixels: 64075
-- Suggested view: Gate or Bay-facing view with Bay sources and Coverage enabled
-- Targets:
-  - `-122.421453, 38.034786` (8841 nearby edge pixels)
-  - `-122.45359, 38.036838` (8748 nearby edge pixels)
-  - `-122.334615, 38.074786` (6264 nearby edge pixels)
-  - `-122.366752, 38.079915` (6010 nearby edge pixels)
 
 ### NOAA BAG survey / USGS CoNED focus
 
@@ -73,13 +63,13 @@ It reads the best-available source-quality image and finds places where the winn
 - Suggested view: Gate or Bay-facing view with Bay sources and Coverage enabled
 - Targets:
   - `-122.370171, 37.905214` (660 nearby edge pixels)
-  - `-122.461453, 37.867265` (453 nearby edge pixels)
+  - `-122.461453, 37.867265` (455 nearby edge pixels)
   - `-122.326752, 37.810171` (431 nearby edge pixels)
   - `-122.20094, 37.517521` (415 nearby edge pixels)
 
 ### NOAA BAG survey / USGS CoNED broad
 
-- Edge pixels: 7132
+- Edge pixels: 7133
 - Suggested view: Shelf with Coverage enabled
 - Targets:
   - `-123.077521, 38.042821` (662 nearby edge pixels)
@@ -119,13 +109,13 @@ It reads the best-available source-quality image and finds places where the winn
 
 ### USGS CoNED focus / USGS nearshore
 
-- Edge pixels: 5056
+- Edge pixels: 5053
 - Suggested view: Shelf with Coverage enabled
 - Targets:
   - `-122.501111, 37.494957` (386 nearby edge pixels)
   - `-122.520256, 37.596154` (288 nearby edge pixels)
   - `-122.551368, 37.462479` (259 nearby edge pixels)
-  - `-122.733932, 37.903504` (257 nearby edge pixels)
+  - `-122.73359, 37.903162` (253 nearby edge pixels)
 
 ### CUDEM support / NOAA BAG survey
 
@@ -147,12 +137,22 @@ It reads the best-available source-quality image and finds places where the winn
   - `-123.493932, 37.955812` (360 nearby edge pixels)
   - `-123.521282, 38.00265` (357 nearby edge pixels)
 
-### NOAA BAG survey / USGS nearshore
+### USGS Bay DEM overview / USGS CoNED broad
 
-- Edge pixels: 3709
+- Edge pixels: 3792
 - Suggested view: Shelf with Coverage enabled
 - Targets:
-  - `-122.690342, 37.818718` (326 nearby edge pixels)
-  - `-123.029316, 38.13188` (289 nearby edge pixels)
+  - `-122.36641, 37.994957` (322 nearby edge pixels)
+  - `-122.375641, 38.119231` (301 nearby edge pixels)
+  - `-122.162308, 38.044359` (295 nearby edge pixels)
+  - `-122.188462, 38.053248` (256 nearby edge pixels)
+
+### NOAA BAG survey / USGS nearshore
+
+- Edge pixels: 3712
+- Suggested view: Shelf with Coverage enabled
+- Targets:
+  - `-122.690171, 37.818718` (327 nearby edge pixels)
+  - `-123.029316, 38.13188` (293 nearby edge pixels)
   - `-122.68094, 37.772393` (206 nearby edge pixels)
   - `-122.770513, 37.866581` (194 nearby edge pixels)
