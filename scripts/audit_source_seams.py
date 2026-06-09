@@ -21,6 +21,7 @@ import generate_paleo_coastlines as paleo  # noqa: E402
 
 
 SOURCE_TEXTURE = ROOT / "public/data/paleo-coastlines/terrain/best_available_gate_shelf_source_quality.png"
+VERTICAL_OVERLAP_JSON = ROOT / "public/data/paleo-coastlines/vertical_overlap_audit.json"
 OUT_JSON = ROOT / "public/data/paleo-coastlines/source_seam_audit_targets.json"
 OUT_MD = ROOT / "docs/source-seam-audit-targets.md"
 
@@ -150,15 +151,95 @@ def recommended_view(pair: tuple[str, str]) -> str:
     return "Shelf with Coverage enabled"
 
 
+def vertical_warning_level(pair: dict[str, Any]) -> str:
+    median = abs(float(pair.get("medianMeters", 0)))
+    p95_abs = float(pair.get("p95AbsMeters", 0))
+    if median >= 5:
+        return "offset_warning"
+    if p95_abs >= 25:
+        return "mixed_warning"
+    if p95_abs > 0:
+        return "low"
+    return "unknown"
+
+
+def vertical_warning_rank(level: str) -> int:
+    return {
+        "offset_warning": 3,
+        "mixed_warning": 2,
+        "low": 1,
+        "unknown": 0,
+    }.get(level, 0)
+
+
+def vertical_warning_label(level: str) -> str:
+    if level == "offset_warning":
+        return "possible height offset"
+    if level == "mixed_warning":
+        return "mixed height differences"
+    if level == "low":
+        return "measured but not a major warning"
+    return "not measured in overlap audit"
+
+
+def vertical_overlap_by_category(path: Path = VERTICAL_OVERLAP_JSON) -> dict[tuple[str, str], dict[str, Any]]:
+    if not path.exists():
+        return {}
+
+    audit = json.loads(path.read_text())
+    seen_pairs: set[tuple[str, str]] = set()
+    category_pairs: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for group_name in ("allPairs", "topPairsByP95AbsMeters", "highConfidenceOffsets", "mixedSeams"):
+        for pair in audit.get(group_name, []):
+            source_key = tuple(sorted((str(pair.get("higherSourceId", "")), str(pair.get("lowerSourceId", "")))))
+            if source_key in seen_pairs:
+                continue
+            seen_pairs.add(source_key)
+            category_pairs[pair_key(str(pair["higherCategory"]), str(pair["lowerCategory"]))].append(pair)
+
+    summaries: dict[tuple[str, str], dict[str, Any]] = {}
+    for categories, pairs in category_pairs.items():
+        strongest = max(
+            pairs,
+            key=lambda pair: (
+                vertical_warning_rank(vertical_warning_level(pair)),
+                float(pair.get("p95AbsMeters", 0)),
+                abs(float(pair.get("medianMeters", 0))),
+                float(pair.get("approxOverlapSqKm", 0)),
+            ),
+        )
+        level = vertical_warning_level(strongest)
+        summaries[categories] = {
+            "level": level,
+            "label": vertical_warning_label(level),
+            "pairCount": len(pairs),
+            "maxP95AbsMeters": round(max(float(pair.get("p95AbsMeters", 0)) for pair in pairs), 3),
+            "maxMedianAbsMeters": round(max(abs(float(pair.get("medianMeters", 0))) for pair in pairs), 3),
+            "strongestPair": {
+                "higherSourceId": strongest.get("higherSourceId"),
+                "lowerSourceId": strongest.get("lowerSourceId"),
+                "higherSourceLabel": strongest.get("higherSourceLabel"),
+                "lowerSourceLabel": strongest.get("lowerSourceLabel"),
+                "medianMeters": strongest.get("medianMeters"),
+                "p95AbsMeters": strongest.get("p95AbsMeters"),
+                "approxOverlapSqKm": strongest.get("approxOverlapSqKm"),
+                "plainEnglishRead": strongest.get("plainEnglishRead"),
+            },
+        }
+    return summaries
+
+
 def build_report() -> dict[str, Any]:
     codes = category_codes_from_texture(SOURCE_TEXTURE)
     height, width = codes.shape
     edges = collect_edges(codes)
     category_counts = Counter(CODE_TO_CATEGORY[int(code)] for code in codes.reshape(-1) if int(code) in CODE_TO_CATEGORY)
+    vertical_summaries = vertical_overlap_by_category()
 
     transition_reports: list[dict[str, Any]] = []
     for pair, points in edges.items():
         importance = pair_importance(pair[0], pair[1])
+        vertical_summary = vertical_summaries.get(pair)
         transition_reports.append({
             "categories": list(pair),
             "edgePixelCount": len(points),
@@ -166,6 +247,14 @@ def build_report() -> dict[str, Any]:
             "priorityScore": round(len(points) * (importance / 100), 2),
             "recommendedView": recommended_view(pair),
             "targets": choose_targets(points, width, height),
+            "verticalOverlap": vertical_summary or {
+                "level": "unknown",
+                "label": vertical_warning_label("unknown"),
+                "pairCount": 0,
+                "maxP95AbsMeters": None,
+                "maxMedianAbsMeters": None,
+                "strongestPair": None,
+            },
         })
     transition_reports.sort(key=lambda item: (-item["priorityScore"], -item["edgePixelCount"], item["categories"]))
 
@@ -177,6 +266,7 @@ def build_report() -> dict[str, Any]:
         "categoryPixelCounts": dict(sorted(category_counts.items())),
         "transitionCount": len(transition_reports),
         "topTransitions": transition_reports[:40],
+        "verticalOverlapAudit": str(VERTICAL_OVERLAP_JSON.relative_to(ROOT)) if VERTICAL_OVERLAP_JSON.exists() else None,
         "plainEnglishPurpose": "Find source-category boundaries that are most likely to create visible seams in the fused terrain.",
     }
 
@@ -192,20 +282,22 @@ def write_markdown(report: dict[str, Any]) -> None:
         "## Summary",
         "",
         f"- Source-quality image: `{report['texture']}`",
+        f"- Vertical-overlap audit: `{report['verticalOverlapAudit']}`" if report["verticalOverlapAudit"] else "- Vertical-overlap audit: not available",
         f"- Pixel size: `{report['pixelSize']}`",
         f"- Source-category transitions found: {report['transitionCount']}",
         "",
         "## Top Seam Targets",
         "",
-        "| Categories | Edge pixels | Priority | First target lon/lat | Suggested view |",
-        "|---|---:|---:|---|---|",
+        "| Categories | Edge pixels | Priority | Height warning | First target lon/lat | Suggested view |",
+        "|---|---:|---:|---|---|---|",
     ]
     for transition in report["topTransitions"][:20]:
         first = transition["targets"][0] if transition["targets"] else None
         target = f"`{first['lon']}, {first['lat']}`" if first else ""
+        vertical = transition["verticalOverlap"]
         lines.append(
             f"| {' / '.join(transition['categories'])} | {transition['edgePixelCount']} | "
-            f"{transition['priorityScore']} | {target} | {transition['recommendedView']} |"
+            f"{transition['priorityScore']} | {vertical['label']} | {target} | {transition['recommendedView']} |"
         )
 
     lines.extend([
@@ -218,6 +310,7 @@ def write_markdown(report: dict[str, Any]) -> None:
             f"### {' / '.join(transition['categories'])}",
             "",
             f"- Edge pixels: {transition['edgePixelCount']}",
+            f"- Height warning: {transition['verticalOverlap']['label']}",
             f"- Suggested view: {transition['recommendedView']}",
             "- Targets:",
         ])

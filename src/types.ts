@@ -198,6 +198,28 @@ export interface SourceSeamAuditTarget {
   pixel: [number, number];
 }
 
+export type SourceSeamVerticalOverlapLevel = "offset_warning" | "mixed_warning" | "low" | "unknown";
+
+export interface SourceSeamVerticalOverlapPair {
+  higherSourceId: string | null;
+  lowerSourceId: string | null;
+  higherSourceLabel: string | null;
+  lowerSourceLabel: string | null;
+  medianMeters: number | null;
+  p95AbsMeters: number | null;
+  approxOverlapSqKm: number | null;
+  plainEnglishRead: string | null;
+}
+
+export interface SourceSeamVerticalOverlap {
+  level: SourceSeamVerticalOverlapLevel;
+  label: string;
+  pairCount: number;
+  maxP95AbsMeters: number | null;
+  maxMedianAbsMeters: number | null;
+  strongestPair: SourceSeamVerticalOverlapPair | null;
+}
+
 export interface SourceSeamTransition {
   categories: string[];
   edgePixelCount: number;
@@ -205,6 +227,7 @@ export interface SourceSeamTransition {
   priorityScore: number;
   recommendedView: string;
   targets: SourceSeamAuditTarget[];
+  verticalOverlap: SourceSeamVerticalOverlap;
 }
 
 export interface SourceSeamAudit {
@@ -216,6 +239,7 @@ export interface SourceSeamAudit {
   texture: string;
   topTransitions: SourceSeamTransition[];
   transitionCount: number;
+  verticalOverlapAudit: string | null;
 }
 
 export interface PaleoTimeSlice {

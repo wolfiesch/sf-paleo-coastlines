@@ -131,9 +131,10 @@ const GAP_LEGEND: LegendItem[] = [
 ];
 
 const SEAM_LEGEND: LegendItem[] = [
-  { label: "High priority", swatch: "bg-fuchsia-300", title: "Largest source joins to inspect first" },
-  { label: "Medium", swatch: "bg-orange-300", title: "Important source joins with smaller edge clusters" },
-  { label: "Lower", swatch: "bg-sky-300", title: "Useful secondary joins after the main seam targets are checked" },
+  { label: "Offset risk", swatch: "bg-rose-400", title: "Overlap audit suggests one source may sit noticeably higher or lower" },
+  { label: "Mixed", swatch: "bg-orange-300", title: "Height differences vary across the overlap; inspect before changing anything" },
+  { label: "Checked", swatch: "bg-teal-300", title: "Measured in the overlap audit without a major warning" },
+  { label: "Unmeasured", swatch: "bg-sky-300", title: "Source join exists, but no overlap warning was available for this category pair" },
 ];
 
 const FALLBACK_SLICES: PaleoTimeSlice[] = [
@@ -490,7 +491,7 @@ export function PaleoCoastlineControls({
 
         {showTerrainFootprints ? <Legend items={COVERAGE_LEGEND} /> : null}
         {showBaySourceFootprints ? <Legend items={BAY_SOURCE_LEGEND} /> : null}
-        {showSourceSeams ? <Legend items={SEAM_LEGEND} columns={3} /> : null}
+        {showSourceSeams ? <Legend items={SEAM_LEGEND} columns={2} /> : null}
         {showSourceQualityGaps ? (
           <div className="space-y-2">
             <Legend items={GAP_LEGEND} />
