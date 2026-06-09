@@ -1095,6 +1095,31 @@ USGS_SF_BAY_1M_BLOCKS: list[dict[str, Any]] = [
         "note": "USGS 1 m NAVD88 DEM inset for northern San Francisco Bay. This is intended to sharpen Bay-floor relief and near-modern waterline behavior once the large source file is present locally.",
     },
     {
+        "sourceId": "usgs_sf_bay_1m_north_navd88_overview",
+        "sourceLabel": "USGS SF Bay DEM, north Bay NAVD88 overview fallback",
+        "sourceName": "USGS high-resolution DEM of northern San Francisco Bay, NAVD88 overview fallback",
+        "sourceUrl": "https://www.sciencebase.gov/catalog/item/5e1cb737e4b0ecf25c5f0bf6",
+        "role": "Lower-detail official overview fallback for northern San Francisco Bay while the full North Bay TIFF endpoint is unavailable.",
+        "folder": "usgs-sf-bay-1m-dem/navd88/north",
+        "zipName": None,
+        "datasetName": "NorthSFBay_DEM_Mosaic_NAVD88_1m.tif.ovr",
+        "terrainStem": "usgs_sf_bay_1m_north_navd88_overview",
+        "terrainSize": 4096,
+        "terrainMinimum": -45.0,
+        "terrainMaximum": 8.0,
+        "contourMinimum": -40.0,
+        "contourMaximum": 5.0,
+        "contourSimplify": 5,
+        "minDegreesLength": 0.0015,
+        "overviewFallbackFor": "usgs_sf_bay_1m_north_navd88",
+        "overviewSrs": "EPSG:6339",
+        "overviewUpperLeftX": 544367.5,
+        "overviewUpperLeftY": 4221080.5,
+        "overviewLowerRightX": 599611.5,
+        "overviewLowerRightY": 4201322.5,
+        "note": "USGS North Bay NAVD88 overview fallback built from the official ScienceBase .ovr and .tfw sidecar files. It is a 2 m overview of the missing 1 m BigTIFF, so it improves northern Bay detail without claiming full 1 m coverage.",
+    },
+    {
         "sourceId": "usgs_sf_bay_1m_central_navd88",
         "sourceLabel": "USGS SF Bay 1 m DEM, central Bay NAVD88",
         "sourceName": "USGS high-resolution 1 m DEM of central San Francisco Bay, NAVD88",
@@ -1928,11 +1953,21 @@ def usgs_sf_bay_1m_dataset_candidates(block: dict[str, Any]) -> list[Path]:
     return candidates
 
 
-def usgs_sf_bay_1m_dataset(block: dict[str, Any]) -> Path:
+def usgs_sf_bay_1m_raw_dataset(block: dict[str, Any]) -> Path:
     for candidate in usgs_sf_bay_1m_dataset_candidates(block):
         if candidate.exists():
             return candidate
     return usgs_sf_bay_1m_dataset_candidates(block)[0]
+
+
+def usgs_sf_bay_1m_georeferenced_overview(block: dict[str, Any]) -> Path:
+    return WORK_DIR / f"{block['sourceId']}_source_georef.tif"
+
+
+def usgs_sf_bay_1m_dataset(block: dict[str, Any]) -> Path:
+    if block.get("overviewFallbackFor"):
+        return usgs_sf_bay_1m_georeferenced_overview(block)
+    return usgs_sf_bay_1m_raw_dataset(block)
 
 
 def usgs_sf_bay_1m_contours_raw(block: dict[str, Any]) -> Path:
@@ -1965,6 +2000,34 @@ def usgs_sf_bay_1m_composite_texture_png(block: dict[str, Any]) -> Path:
 
 def prepare_usgs_sf_bay_1m_blocks() -> None:
     for block in USGS_SF_BAY_1M_BLOCKS:
+        if block.get("overviewFallbackFor"):
+            source_id = str(block["overviewFallbackFor"])
+            full_block = next((candidate for candidate in USGS_SF_BAY_1M_BLOCKS if candidate["sourceId"] == source_id), None)
+            if full_block is not None and usgs_sf_bay_1m_raw_dataset(full_block).exists():
+                continue
+            raw_overview = usgs_sf_bay_1m_raw_dataset(block)
+            georeferenced_overview = usgs_sf_bay_1m_georeferenced_overview(block)
+            if raw_overview.exists() and not georeferenced_overview.exists():
+                run([
+                    "gdal_translate",
+                    "-q",
+                    "-of",
+                    "GTiff",
+                    "-co",
+                    "TILED=YES",
+                    "-co",
+                    "COMPRESS=DEFLATE",
+                    "-a_srs",
+                    str(block["overviewSrs"]),
+                    "-a_ullr",
+                    str(block["overviewUpperLeftX"]),
+                    str(block["overviewUpperLeftY"]),
+                    str(block["overviewLowerRightX"]),
+                    str(block["overviewLowerRightY"]),
+                    str(raw_overview),
+                    str(georeferenced_overview),
+                ])
+            continue
         dataset = usgs_sf_bay_1m_dataset(block)
         if dataset.exists():
             continue
@@ -1974,11 +2037,15 @@ def prepare_usgs_sf_bay_1m_blocks() -> None:
 
 
 def active_usgs_sf_bay_1m_blocks() -> list[dict[str, Any]]:
-    return [
-        block
-        for block in USGS_SF_BAY_1M_BLOCKS
-        if usgs_sf_bay_1m_dataset(block).exists()
-    ]
+    active_blocks: list[dict[str, Any]] = []
+    active_source_ids: set[str] = set()
+    for block in USGS_SF_BAY_1M_BLOCKS:
+        if block.get("overviewFallbackFor") and str(block["overviewFallbackFor"]) in active_source_ids:
+            continue
+        if usgs_sf_bay_1m_dataset(block).exists():
+            active_blocks.append(block)
+            active_source_ids.add(str(block["sourceId"]))
+    return active_blocks
 
 
 def contour_levels() -> list[float]:
@@ -2597,6 +2664,8 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
         return {"qualityTier": "bay_mosaic", "renderPriority": 35, "resolutionMeters": 20}
     if source_id.startswith("noaa_ocm_area_a_interferometric"):
         return {"qualityTier": "bay_mosaic", "renderPriority": 40, "resolutionMeters": 1}
+    if source_id == "usgs_sf_bay_1m_north_navd88_overview":
+        return {"qualityTier": "source_survey", "renderPriority": 68, "resolutionMeters": 2}
     if source_id.startswith("usgs_sf_bay_1m") or source_id.startswith("noaa_ocm_area_a"):
         return {"qualityTier": "source_survey", "renderPriority": 70, "resolutionMeters": 1}
     if source_id.startswith("noaa_nos"):
@@ -3436,6 +3505,8 @@ def source_quality_category(source_id: str) -> str:
         return "USGS nearshore"
     if "farallon" in source_id or "rittenburg" in source_id:
         return "USGS offshore"
+    if source_id == "usgs_sf_bay_1m_north_navd88_overview":
+        return "USGS Bay DEM overview"
     if source_id.startswith("usgs_sf_bay_1m"):
         return "USGS Bay DEM"
     return "other"
@@ -3453,6 +3524,7 @@ def source_quality_color(category: str) -> tuple[int, int, int]:
         "USGS land LiDAR": (236, 241, 222),
         "USGS nearshore": (248, 207, 82),
         "USGS offshore": (188, 126, 255),
+        "USGS Bay DEM overview": (75, 214, 150),
         "USGS Bay DEM": (105, 245, 163),
         "other": (220, 230, 240),
     }
@@ -3474,6 +3546,7 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
         "USGS land LiDAR",
         "USGS nearshore",
         "USGS offshore",
+        "USGS Bay DEM overview",
         "USGS Bay DEM",
         "other",
     ]

@@ -153,6 +153,8 @@ def source_family(source_id: str) -> str:
         return "NOAA/NCEI multibeam"
     if source_id.startswith("usgs_csmp"):
         return "USGS/CSMP DS 781"
+    if source_id == "usgs_sf_bay_1m_north_navd88_overview":
+        return "USGS SF Bay DEM overview fallback"
     if source_id.startswith("usgs_sf_bay_1m"):
         return "USGS SF Bay 1 m DEM"
     if source_id.startswith("usgs_2023_sf_lidar"):
@@ -189,6 +191,8 @@ def datum_note(source_id: str) -> str:
         return "NOAA topobathy product; verify local vertical reference against CoNED/NAVD88 before exact contours."
     if source_id.startswith("usgs_coned_sf_2m"):
         return "USGS CoNED topobathymetry; compare overlap against CUDEM, USGS Bay DEM, DS684, and MLLW BAG patches before exact sea-level alignment."
+    if source_id == "usgs_sf_bay_1m_north_navd88_overview":
+        return "NAVD88 overview fallback from the USGS North Bay DEM package; useful for visible shape, but lower-detail than the missing full 1 m BigTIFF."
     if source_id.startswith("usgs_sf_bay_1m") and source_id.endswith("_mllw"):
         return "MLLW; useful for Bay-floor visual detail, but needs tidal-datum conversion before exact sea-level alignment with NAVD88 sources."
     if source_id.startswith("usgs_sf_bay_1m"):
@@ -202,6 +206,8 @@ def approximate_native_resolution_m(source_id: str, label: str) -> float | None:
     text = f"{source_id} {label}".lower()
     if source_id.startswith("best_available"):
         return 20.0
+    if source_id == "usgs_sf_bay_1m_north_navd88_overview":
+        return 2.0
     if "1 m" in text or "_1m" in text:
         return 1.0
     if "2 m" in text or "_2m" in text:
@@ -425,7 +431,10 @@ def source_record(module: Any, terrain: dict[str, Any], with_gdalinfo: bool) -> 
         limitations.append("source-survey grid, not a seamless Bay DEM; vertical reference must be checked before exact paleo contour use")
     if source_id.startswith("usgs_csmp"):
         limitations.append("nearshore/state-water patch, not seamless offshore coverage")
-    if source_id.startswith("usgs_sf_bay_1m"):
+    if source_id == "usgs_sf_bay_1m_north_navd88_overview":
+        limitations.append("2 m overview fallback; lower-detail than the unavailable full 1 m North Bay BigTIFF")
+        limitations.append("modern interpreted Bay DEM; does not model paleo sediment, marsh, erosion, or river-channel change")
+    elif source_id.startswith("usgs_sf_bay_1m"):
         limitations.append("modern interpreted Bay DEM; does not model paleo sediment, marsh, erosion, or river-channel change")
     if source_id.startswith("usgs_2023_sf_lidar"):
         limitations.append("modern land LiDAR; improves above-water and shoreline relief, not offshore bathymetry")
@@ -481,6 +490,8 @@ def next_action_for_source(source_id: str, score: int) -> str:
         return "Use as high-detail Central Bay terrain now; compare overlap against the stitched USGS 1 m Bay DEM when that download becomes available."
     if source_id.startswith("usgs_csmp"):
         return "Keep bathymetry plus backscatter/character; add geology/habitat polygons from CSMP web services."
+    if source_id == "usgs_sf_bay_1m_north_navd88_overview":
+        return "Use as an honest North Bay visual/detail fallback while requesting repair or republishing of the full USGS North Bay 1 m BigTIFF."
     if source_id.startswith("usgs_sf_bay_1m"):
         return "Use as the preferred Bay-interior terrain and contour source after overlap/datum checks against CUDEM, DS684, and NOAA BAG patches."
     if source_id.startswith("usgs_farallon") or source_id.startswith("usgs_rittenburg"):

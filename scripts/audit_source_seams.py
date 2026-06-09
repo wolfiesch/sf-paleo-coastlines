@@ -35,6 +35,7 @@ COLOR_TO_CATEGORY = {
     paleo.source_quality_color("USGS land LiDAR"): "USGS land LiDAR",
     paleo.source_quality_color("USGS nearshore"): "USGS nearshore",
     paleo.source_quality_color("USGS offshore"): "USGS offshore",
+    paleo.source_quality_color("USGS Bay DEM overview"): "USGS Bay DEM overview",
     paleo.source_quality_color("USGS Bay DEM"): "USGS Bay DEM",
 }
 
@@ -52,6 +53,8 @@ PAIR_IMPORTANCE = {
     ("USGS CoNED focus", "NOAA BAG survey"): 85,
     ("USGS CoNED focus", "NOAA OCM survey"): 80,
     ("USGS CoNED broad", "NOAA OCM survey"): 78,
+    ("USGS CoNED focus", "USGS Bay DEM overview"): 76,
+    ("USGS CoNED broad", "USGS Bay DEM overview"): 76,
     ("USGS CoNED focus", "USGS Bay DEM"): 75,
     ("USGS CoNED broad", "USGS Bay DEM"): 75,
     ("USGS CoNED focus", "NOAA multibeam"): 72,

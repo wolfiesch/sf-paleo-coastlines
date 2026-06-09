@@ -43,6 +43,7 @@ CATEGORY_COLORS: dict[str, tuple[int, int, int]] = {
     "USGS land LiDAR": (236, 241, 222),
     "USGS nearshore": (248, 207, 82),
     "USGS offshore": (188, 126, 255),
+    "USGS Bay DEM overview": (75, 214, 150),
     "USGS Bay DEM": (105, 245, 163),
     "other": (220, 230, 240),
 }
@@ -56,6 +57,7 @@ DETAIL_CATEGORIES = {
     "USGS land LiDAR",
     "USGS nearshore",
     "USGS offshore",
+    "USGS Bay DEM overview",
     "USGS Bay DEM",
 }
 

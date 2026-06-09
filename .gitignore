@@ -38,3 +38,6 @@ scripts/__pycache__/
 output/
 artifacts/
 tmp/
+
+# Internal agent planning notes
+docs/superpowers/
