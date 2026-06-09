@@ -22,7 +22,8 @@
     "paleo-coastlines:stats": "python3 scripts/generate_sealevel_stats.py",
     "paleo-coastlines:detail-diagnosis": "python3 scripts/diagnose_terrain_detail_points.py",
     "paleo-coastlines:display-audit": "python3 scripts/audit_terrain_display_resolution.py",
-    "paleo-coastlines:external-bathymetry": "python3 scripts/audit_external_bathymetry_candidates.py"
+    "paleo-coastlines:external-bathymetry": "python3 scripts/audit_external_bathymetry_candidates.py",
+    "paleo-coastlines:multibeam-feasibility": "python3 scripts/audit_multibeam_processing_feasibility.py"
   },
   "dependencies": {
     "@deck.gl/geo-layers": "^9.2.11",
