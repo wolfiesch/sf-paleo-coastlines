@@ -1919,8 +1919,20 @@ def usgs_sf_bay_1m_zip(block: dict[str, Any]) -> Path | None:
     return usgs_sf_bay_1m_block_dir(block) / str(block["zipName"])
 
 
+def usgs_sf_bay_1m_dataset_candidates(block: dict[str, Any]) -> list[Path]:
+    block_dir = usgs_sf_bay_1m_block_dir(block)
+    dataset_name = str(block["datasetName"])
+    candidates = [block_dir / dataset_name]
+    if dataset_name.endswith(".tif"):
+        candidates.append(block_dir / f"{dataset_name.removesuffix('.tif')}..tif")
+    return candidates
+
+
 def usgs_sf_bay_1m_dataset(block: dict[str, Any]) -> Path:
-    return usgs_sf_bay_1m_block_dir(block) / str(block["datasetName"])
+    for candidate in usgs_sf_bay_1m_dataset_candidates(block):
+        if candidate.exists():
+            return candidate
+    return usgs_sf_bay_1m_dataset_candidates(block)[0]
 
 
 def usgs_sf_bay_1m_contours_raw(block: dict[str, Any]) -> Path:
@@ -3320,7 +3332,7 @@ def fusion_resolution_rank(source_id: str) -> int:
     return 0
 
 
-def best_available_fusion_input_records() -> list[tuple[str, Path]]:
+def best_available_fusion_ranked_records() -> list[tuple[int, int, str, Path]]:
     ordered_sources: list[tuple[int, int, str, Path]] = [
         (10, 0, "noaa_crm_vol7_3as", CRM_TERRAIN_WGS84),
         (20, 0, "noaa_cudem_1_9as", CUDEM_TERRAIN_WGS84),
@@ -3388,7 +3400,15 @@ def best_available_fusion_input_records() -> list[tuple[str, Path]]:
         (95, 20, "usgs_ds684_dem4", DS684_TERRAIN_WGS84),
     ]
     ordered_sources.sort(key=lambda item: (item[0], item[1], item[2]))
-    return [(source_id, path) for _, _, source_id, path in ordered_sources if path.exists()]
+    return ordered_sources
+
+
+def best_available_fusion_input_records() -> list[tuple[str, Path]]:
+    return [
+        (source_id, path)
+        for _, _, source_id, path in best_available_fusion_ranked_records()
+        if path.exists()
+    ]
 
 
 def best_available_fusion_inputs() -> list[Path]:

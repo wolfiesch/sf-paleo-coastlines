@@ -525,8 +525,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    seeds = selected_records(args.datum, args.section)
-    items = [item_record(seed) for seed in seeds]
+    download_seeds = selected_records(args.datum, args.section)
+    report_section = "all" if args.download and args.section != "all" else args.section
+    report_seeds = selected_records(args.datum, report_section)
+    items = [item_record(seed) for seed in report_seeds]
+    download_items = [item_record(seed) for seed in download_seeds]
     payload = {
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "source": {
@@ -536,8 +539,12 @@ def main() -> int:
         },
         "selection": {
             "datum": args.datum,
-            "section": args.section,
+            "section": report_section,
         },
+        "downloadSelection": {
+            "datum": args.datum,
+            "section": args.section,
+        } if args.download else None,
         "items": items,
     }
 
@@ -547,7 +554,7 @@ def main() -> int:
     print(f"Wrote {OUT_MD.relative_to(ROOT)}")
 
     if args.download:
-        for item in items:
+        for item in download_items:
             for file in item["primaryDemFiles"]:
                 if not file.get("url") or not file.get("name"):
                     continue
