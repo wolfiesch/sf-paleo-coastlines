@@ -295,6 +295,42 @@ BEST_AVAILABLE_SEAM_BLEND_TARGETS = [
         "lat": 37.81188,
         "reason": "Post-blend local seam audit still measured a 15.749 m 95% height step.",
     },
+    {
+        "categories": ["USGS Bay DEM overview", "USGS CoNED broad"],
+        "lon": -122.188462,
+        "lat": 38.053248,
+        "reason": "Current local seam audit measured a 14.564 m 95% height step.",
+    },
+    {
+        "categories": ["USGS Bay DEM", "USGS land LiDAR"],
+        "lon": -122.380085,
+        "lat": 37.774274,
+        "reason": "Current local seam audit measured a 14.534 m 95% height step.",
+    },
+    {
+        "categories": ["NOAA BAG survey", "NOAA multibeam"],
+        "lon": -123.521282,
+        "lat": 38.00265,
+        "reason": "Current local seam audit measured a 13.001 m 95% height step.",
+    },
+    {
+        "categories": ["NOAA BAG survey", "NOAA multibeam"],
+        "lon": -123.524701,
+        "lat": 38.080598,
+        "reason": "Current local seam audit measured a 12.032 m 95% height step.",
+    },
+    {
+        "categories": ["USGS Bay DEM", "USGS CoNED focus"],
+        "lon": -122.326752,
+        "lat": 37.810171,
+        "reason": "Current local seam audit measured an 11.883 m 95% height step.",
+    },
+    {
+        "categories": ["USGS CoNED focus", "USGS land LiDAR"],
+        "lon": -122.478205,
+        "lat": 37.829487,
+        "reason": "Current local seam audit measured a 9.495 m 95% height step.",
+    },
 ]
 NOS_BAG_DEFAULT_DIR = RAW_DIR / "noaa-nos-bag"
 DS684_DIR = RAW_DIR / "usgs-ds684"
