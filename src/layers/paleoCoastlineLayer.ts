@@ -14,6 +14,7 @@ import type {
   PaleoTimeSlice,
   SceneProfile,
   SourceSeamAudit,
+  SourceSeamLocalHeight,
   SourceSeamVerticalOverlap,
   SourceQualityGapCollection,
   SourceQualityGapFeature,
@@ -44,6 +45,7 @@ interface SourceSeamRenderTarget {
   edgePixelCount: number;
   edgePixelsInCluster: number;
   importance: number;
+  localHeight?: SourceSeamLocalHeight;
   priorityScore: number;
   recommendedView: string;
   verticalOverlap: SourceSeamVerticalOverlap;
@@ -754,6 +756,7 @@ function sourceSeamTargetsForAudit(
       edgePixelCount: transition.edgePixelCount,
       edgePixelsInCluster: target.edgePixelsInCluster,
       importance: transition.importance,
+      localHeight: target.localHeight,
       priorityScore: transition.priorityScore,
       recommendedView: transition.recommendedView,
       verticalOverlap: transition.verticalOverlap,
@@ -764,6 +767,10 @@ function sourceSeamTargetsForAudit(
 }
 
 function sourceSeamTargetFillColor(target: SourceSeamRenderTarget): [number, number, number, number] {
+  if (target.localHeight?.level === "severe") return [251, 113, 133, 232];
+  if (target.localHeight?.level === "suspicious") return [251, 146, 60, 220];
+  if (target.localHeight?.level === "calm") return [45, 212, 191, 208];
+  if (target.localHeight?.level === "no_edges") return [125, 211, 252, 188];
   if (target.verticalOverlap.level === "offset_warning") return [251, 113, 133, 230];
   if (target.verticalOverlap.level === "mixed_warning") return [251, 146, 60, 218];
   if (target.verticalOverlap.level === "low") return [45, 212, 191, 206];
@@ -774,6 +781,10 @@ function sourceSeamTargetFillColor(target: SourceSeamRenderTarget): [number, num
 }
 
 function sourceSeamTargetLineColor(target: SourceSeamRenderTarget): [number, number, number, number] {
+  if (target.localHeight?.level === "severe") return [255, 255, 255, 240];
+  if (target.localHeight?.level === "suspicious") return [255, 237, 213, 226];
+  if (target.localHeight?.level === "calm") return [204, 251, 241, 216];
+  if (target.localHeight?.level === "no_edges") return [224, 242, 254, 204];
   if (target.verticalOverlap.level === "offset_warning") return [255, 255, 255, 238];
   if (target.verticalOverlap.level === "mixed_warning") return [255, 237, 213, 224];
   if (target.verticalOverlap.level === "low") return [204, 251, 241, 214];
@@ -1456,11 +1467,14 @@ export function getPaleoTooltip(object: unknown) {
   if ("categories" in object && "recommendedView" in object && "priorityScore" in object) {
     const target = object as SourceSeamRenderTarget;
     const pair = target.verticalOverlap.strongestPair;
+    const localLine = target.localHeight?.medianAbsStepMeters != null && target.localHeight.p95AbsStepMeters != null
+      ? `${target.localHeight.label}: median ${target.localHeight.medianAbsStepMeters} m, 95% ${target.localHeight.p95AbsStepMeters} m`
+      : target.localHeight?.label ?? "Local height step not measured";
     const verticalLine = pair
       ? `${target.verticalOverlap.label}: median ${pair.medianMeters} m, 95% abs ${pair.p95AbsMeters} m`
       : target.verticalOverlap.label;
     return {
-      text: `Source seam target\n${target.categories.join(" / ")}\n${verticalLine}\nScore ${Math.round(target.priorityScore).toLocaleString()}, cluster ${target.edgePixelsInCluster.toLocaleString()} edge pixels\nRecommended view: ${target.recommendedView}`,
+      text: `Source seam target\n${target.categories.join(" / ")}\n${localLine}\nOverlap audit: ${verticalLine}\nScore ${Math.round(target.priorityScore).toLocaleString()}, cluster ${target.edgePixelsInCluster.toLocaleString()} edge pixels\nRecommended view: ${target.recommendedView}`,
       style: {
         backgroundColor: "rgba(4, 20, 28, 0.94)",
         color: "#fce7f3",

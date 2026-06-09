@@ -131,10 +131,10 @@ const GAP_LEGEND: LegendItem[] = [
 ];
 
 const SEAM_LEGEND: LegendItem[] = [
-  { label: "Offset risk", swatch: "bg-rose-400", title: "Overlap audit suggests one source may sit noticeably higher or lower" },
-  { label: "Mixed", swatch: "bg-orange-300", title: "Height differences vary across the overlap; inspect before changing anything" },
-  { label: "Checked", swatch: "bg-teal-300", title: "Measured in the overlap audit without a major warning" },
-  { label: "Unmeasured", swatch: "bg-sky-300", title: "Source join exists, but no overlap warning was available for this category pair" },
+  { label: "Severe step", swatch: "bg-rose-400", title: "The final height image jumps sharply at this local source join" },
+  { label: "Suspicious", swatch: "bg-orange-300", title: "The final height image has a noticeable local step at this join" },
+  { label: "Calm", swatch: "bg-teal-300", title: "The local source join is measured and does not show a major height step" },
+  { label: "No edge", swatch: "bg-sky-300", title: "No matching local source-edge pixels were measured around this target" },
 ];
 
 const FALLBACK_SLICES: PaleoTimeSlice[] = [

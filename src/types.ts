@@ -195,7 +195,23 @@ export interface SourceSeamAuditTarget {
   edgePixelsInCluster: number;
   lat: number;
   lon: number;
+  localHeight?: SourceSeamLocalHeight;
   pixel: [number, number];
+}
+
+export type SourceSeamLocalHeightLevel = "severe" | "suspicious" | "calm" | "no_edges";
+
+export interface SourceSeamLocalHeight {
+  level: SourceSeamLocalHeightLevel;
+  label: string;
+  edgePairCount: number;
+  windowRadiusSourcePixels: number;
+  medianSignedStepMeters: number | null;
+  medianAbsStepMeters: number | null;
+  p95AbsStepMeters: number | null;
+  maxAbsStepMeters: number | null;
+  localHeightRangeMeters: number | null;
+  plainEnglishRead: string;
 }
 
 export type SourceSeamVerticalOverlapLevel = "offset_warning" | "mixed_warning" | "low" | "unknown";
@@ -234,6 +250,15 @@ export interface SourceSeamAudit {
   bounds: [number, number, number, number];
   categoryPixelCounts: Record<string, number>;
   generatedAt: string;
+  localHeightAudit?: {
+    generatedAt: string;
+    elevation: string;
+    sourceQuality: string;
+    windowRadiusSourcePixels: number;
+    targetCountByLevel: Partial<Record<SourceSeamLocalHeightLevel, number>>;
+    plainEnglishPurpose: string;
+    topTargetsByLocalHeightStep: unknown[];
+  };
   pixelSize: [number, number];
   plainEnglishPurpose: string;
   texture: string;
