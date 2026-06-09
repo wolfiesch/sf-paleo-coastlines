@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-06-09T17:56:04+00:00",
+  "surveyId": "NA085-0002",
+  "url": "http://data.ngdc.noaa.gov/platforms/ocean/ships/nautilus/NA085/multibeam/data/version1/MB/em302/0002_20170813_004713_Nautilus.all.mb58.gz",
+  "workDir": "/home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-probe/na085-0002",
+  "dockerImage": "mbari/mbsystem:latest",
+  "format": 58,
+  "gridSize": 512,
+  "rawFileBytes": 33136072,
+  "compressedFileBytes": 21406494,
+  "gridPath": "/home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-probe/na085-0002/na085-0002.sample-grid.tif",
+  "stats": {
+    "rawPointCount": 464068,
+    "validPointCount": 463252,
+    "minLon": -123.4392556972,
+    "maxLon": -123.4198160682,
+    "minLat": 38.0708470598,
+    "maxLat": 38.0868020607,
+    "minZ": -438.5263,
+    "maxZ": -88.2644
+  },
+  "gdalInfo": "Driver: GTiff/GeoTIFF\nFiles: /home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-probe/na085-0002/na085-0002.sample-grid.tif\nSize is 512, 512\nCoordinate System is:\nGEOGCRS[\"WGS 84\",\n    ENSEMBLE[\"World Geodetic System 1984 ensemble\",\n        MEMBER[\"World Geodetic System 1984 (Transit)\"],\n        MEMBER[\"World Geodetic System 1984 (G730)\"],\n        MEMBER[\"World Geodetic System 1984 (G873)\"],\n        MEMBER[\"World Geodetic System 1984 (G1150)\"],\n        MEMBER[\"World Geodetic System 1984 (G1674)\"],\n        MEMBER[\"World Geodetic System 1984 (G1762)\"],\n        MEMBER[\"World Geodetic System 1984 (G2139)\"],\n        ELLIPSOID[\"WGS 84\",6378137,298.257223563,\n            LENGTHUNIT[\"metre\",1]],\n        ENSEMBLEACCURACY[2.0]],\n    PRIMEM[\"Greenwich\",0,\n        ANGLEUNIT[\"degree\",0.0174532925199433]],\n    CS[ellipsoidal,2],\n        AXIS[\"geodetic latitude (Lat)\",north,\n            ORDER[1],\n            ANGLEUNIT[\"degree\",0.0174532925199433]],\n        AXIS[\"geodetic longitude (Lon)\",east,\n            ORDER[2],\n            ANGLEUNIT[\"degree\",0.0174532925199433]],\n    USAGE[\n        SCOPE[\"Horizontal component of 3D system.\"],\n        AREA[\"World.\"],\n        BBOX[-90,-180,90,180]],\n    ID[\"EPSG\",4326]]\nData axis to CRS axis mapping: 2,1\nOrigin = (-123.439255697199997,38.086802060700002)\nPixel Size = (0.000037968025391,-0.000031162111133)\nMetadata:\n  AREA_OR_POINT=Area\nImage Structure Metadata:\n  INTERLEAVE=BAND\nCorner Coordinates:\nUpper Left  (-123.4392557,  38.0868021) (123d26'21.32\"W, 38d 5'12.49\"N)\nLower Left  (-123.4392557,  38.0708471) (123d26'21.32\"W, 38d 4'15.05\"N)\nUpper Right (-123.4198161,  38.0868021) (123d25'11.34\"W, 38d 5'12.49\"N)\nLower Right (-123.4198161,  38.0708471) (123d25'11.34\"W, 38d 4'15.05\"N)\nCenter      (-123.4295359,  38.0788246) (123d25'46.33\"W, 38d 4'43.77\"N)\nBand 1 Block=512x4 Type=Float32, ColorInterp=Gray\n  Minimum=-356.421, Maximum=-107.924, Mean=-141.978, StdDev=4.435\n  Metadata:\n    STATISTICS_MAXIMUM=-107.92383575439\n    STATISTICS_MEAN=-141.97766492085\n    STATISTICS_MINIMUM=-356.42080688477\n    STATISTICS_STDDEV=4.4352992439236\n    STATISTICS_VALID_PERCENT=100\n"
+}

@@ -21,6 +21,8 @@ OUT_MD = ROOT / "docs" / "raw-multibeam-file-index.md"
 DEFAULT_REPORT_DIR = ROOT / "data" / "paleo-coastlines" / "raw-sonar-probe"
 
 SURVEY_PAGES = {
+    "B00012": "https://www.ngdc.noaa.gov/ships/davidson/B00012_mb.html",
+    "EW9505": "https://www.ngdc.noaa.gov/ships/maurice_ewing/EW9505_mb.html",
     "NA080": "https://www.ngdc.noaa.gov/ships/nautilus/NA080_mb.html",
     "NA085": "https://www.ngdc.noaa.gov/ships/nautilus/NA085_mb.html",
     "NA107": "https://www.ngdc.noaa.gov/ships/nautilus/NA107_mb.html",
@@ -29,6 +31,8 @@ SURVEY_PAGES = {
 RAW_EXTENSIONS = (
     ".all.mb58.gz",
     ".mb58.gz",
+    ".mb21.gz",
+    ".mb15",
     ".all.gz",
     ".gsf.mb121.gz",
 )

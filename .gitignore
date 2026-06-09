@@ -31,6 +31,9 @@ public/data/*.geojson
 # from these when the files are present, but they are too large for normal app commits.
 data/paleo-coastlines/raw/
 data/paleo-coastlines/work/
+data/paleo-coastlines/raw-sonar-probe/**
+!data/paleo-coastlines/raw-sonar-probe/**/
+!data/paleo-coastlines/raw-sonar-probe/**/*sample-report.json
 scripts/__pycache__/
 *.aux.xml
 

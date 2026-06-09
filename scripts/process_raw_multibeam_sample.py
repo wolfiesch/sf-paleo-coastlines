@@ -48,6 +48,19 @@ def decompress_gzip(source: Path, dest: Path) -> None:
             shutil.copyfileobj(compressed, output)
 
 
+def downloaded_raw_path(download_path: Path) -> Path:
+    if download_path.name.endswith(".gz"):
+        raw_path = download_path.with_name(download_path.name.removesuffix(".gz"))
+        decompress_gzip(download_path, raw_path)
+        return raw_path
+    return download_path
+
+
+def safe_stem(path: Path) -> str:
+    stem = path.name.removesuffix(".gz")
+    return "".join(char if char.isalnum() or char in {"-", "_", "."} else "_" for char in stem)
+
+
 def docker_run(image: str, work_dir: Path, inner_command: str) -> None:
     uid_gid = f"{capture(['id', '-u']).strip()}:{capture(['id', '-g']).strip()}"
     run([
@@ -199,18 +212,18 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    work_dir = args.work_dir / args.survey_id.lower()
+    work_dir = (args.work_dir / args.survey_id.lower()).resolve()
     work_dir.mkdir(parents=True, exist_ok=True)
-    gz_path = work_dir / Path(urllib.request.urlparse(args.url).path).name
-    raw_path = work_dir / gz_path.name.removesuffix(".gz")
-    raw_xyz = work_dir / f"{args.survey_id.lower()}.xyz.raw"
-    valid_csv = work_dir / f"{args.survey_id.lower()}.valid.csv"
-    vrt = work_dir / f"{args.survey_id.lower()}.valid.vrt"
-    tif = work_dir / f"{args.survey_id.lower()}.sample-grid.tif"
-    report_path = work_dir / f"{args.survey_id.lower()}.sample-report.json"
+    download_path = work_dir / Path(urllib.request.urlparse(args.url).path).name
+    sample_id = f"{args.survey_id.lower()}-{safe_stem(download_path)}"
+    raw_xyz = work_dir / f"{sample_id}.xyz.raw"
+    valid_csv = work_dir / f"{sample_id}.valid.csv"
+    vrt = work_dir / f"{sample_id}.valid.vrt"
+    tif = work_dir / f"{sample_id}.sample-grid.tif"
+    report_path = work_dir / f"{sample_id}.sample-report.json"
 
-    download(args.url, gz_path)
-    decompress_gzip(gz_path, raw_path)
+    download(args.url, download_path)
+    raw_path = downloaded_raw_path(download_path)
     docker_run(args.docker_image, work_dir, (
         f"mbinfo -I {raw_path.name} -F{args.format} > {args.survey_id.lower()}.mbinfo.txt && "
         f"mblist -I {raw_path.name} -F{args.format} -OXYZ -MA > {raw_xyz.name}"
@@ -233,7 +246,7 @@ def main() -> None:
         "gridSize": args.grid_size,
         "algorithm": args.algorithm,
         "rawFileBytes": raw_path.stat().st_size,
-        "compressedFileBytes": gz_path.stat().st_size,
+        "downloadFileBytes": download_path.stat().st_size,
         "gridPath": str(tif) if not args.skip_grid else None,
         "stats": stats,
         "gdalInfo": grid_info,

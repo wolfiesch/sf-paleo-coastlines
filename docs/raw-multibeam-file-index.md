@@ -8,15 +8,17 @@ Plain English: this index helps us avoid downloading and gridding huge raw sonar
 
 | Survey | Raw files listed | Files with proven bounds | Files overlapping weak cells | Weak cells touched |
 |---|---:|---:|---:|---|
+| B00012 | 26 | 1 | 1 | qg-03-06, qg-05-12, qg-09-06 |
 | NA085 | 9 | 9 | 3 | qg-03-06 |
 
 ## Indexed Target Files
 
 | Survey | File | Overlapping weak cells | Bounds | Points |
 |---|---|---|---|---:|
-| NA085 | `0001_20170813_002546_Nautilus.all.mb58.gz` | qg-03-06 | `-123.462166, 38.084322, -123.430208, 38.132349` | 1,032,124 |
-| NA085 | `0003_20170813_005510_Nautilus.all.mb58.gz` | qg-03-06 | `-123.456463, 38.081189, -123.416639, 38.133217` | 866,854 |
-| NA085 | `0005_20170813_013434_Nautilus.all.mb58.gz` | qg-03-06 | `-123.447967, 38.072545, -123.410656, 38.132164` | 1,329,166 |
+| NA085 | `0001_20170813_002546_Nautilus.all.mb58.gz` | qg-03-06 | `-123.462185, 38.084308, -123.430154, 38.132351` | 1,032,124 |
+| NA085 | `0003_20170813_005510_Nautilus.all.mb58.gz` | qg-03-06 | `-123.456463, 38.081189, -123.416771, 38.133199` | 866,854 |
+| NA085 | `0005_20170813_013434_Nautilus.all.mb58.gz` | qg-03-06 | `-123.448038, 38.072539, -123.410550, 38.132164` | 1,329,166 |
+| B00012 | `85122-0120.sbo.mb15` | qg-03-06, qg-05-12, qg-09-06 | `-123.649601, 38.017913, -123.320082, 38.402801` | 286,006 |
 
 ## Next Step
 
