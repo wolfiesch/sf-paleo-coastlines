@@ -3033,6 +3033,30 @@ def generate_usgs_terrain_asset() -> dict[str, Any]:
     )
 
 
+def sanitize_terrain_wgs84_fill(terrain_wgs84: Path) -> None:
+    """Rewrite absurd fill heights that escape gdalwarp's -srcnodata mask.
+
+    The CoNED WCS exports carry a rim of near-FLT_MAX garbage along the data
+    edge where the server's own resampling mixed the -3.4e38 fill with real
+    heights. Those pixels do not exactly equal the declared nodata, so they
+    survive the warp as "valid" huge negatives and would win the
+    best-available mosaic over real CRM data underneath.
+    """
+    sanitized = terrain_wgs84.with_name(terrain_wgs84.stem + "_sanitized.tif")
+    run([
+        "gdal_calc.py",
+        "--quiet",
+        "--overwrite",
+        "-A",
+        str(terrain_wgs84),
+        f"--outfile={sanitized}",
+        "--calc=where(A<-1e10,-9999,A)",
+        "--NoDataValue=-9999",
+        "--type=Float32",
+    ])
+    sanitized.replace(terrain_wgs84)
+
+
 def generate_usgs_coned_sf_2m_terrain_asset() -> dict[str, Any]:
     run([
         "gdalwarp",
@@ -3054,6 +3078,7 @@ def generate_usgs_coned_sf_2m_terrain_asset() -> dict[str, Any]:
         str(USGS_CONED_SF_2M_TIF),
         str(USGS_CONED_SF_2M_TERRAIN_WGS84),
     ])
+    sanitize_terrain_wgs84_fill(USGS_CONED_SF_2M_TERRAIN_WGS84)
     write_terrain_pngs_from_wgs84(
         USGS_CONED_SF_2M_TERRAIN_WGS84,
         USGS_CONED_SF_2M_TERRAIN_ELEVATION_PNG,
@@ -3103,6 +3128,7 @@ def generate_usgs_coned_sf_2m_focus_terrain_asset(block: dict[str, Any]) -> dict
         str(usgs_coned_sf_2m_focus_dataset(block)),
         str(terrain_wgs84),
     ])
+    sanitize_terrain_wgs84_fill(terrain_wgs84)
     write_terrain_pngs_from_wgs84(
         terrain_wgs84,
         usgs_coned_sf_2m_focus_elevation_png(block),
