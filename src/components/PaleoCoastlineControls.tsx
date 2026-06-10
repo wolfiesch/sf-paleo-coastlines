@@ -1,4 +1,4 @@
-import { Building2, ChevronLeft, ChevronRight, Clapperboard, Clock, Database, GitCompareArrows, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Clapperboard, Clock, Database, Droplets, GitCompareArrows, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
 import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, SourceQualityGapSummary, TerrainDetailLevel, TerrainSourceMode, TerrainSurfaceSmoothing, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
@@ -21,6 +21,7 @@ interface PaleoCoastlineControlsProps {
   showSourceQualityGaps: boolean;
   showSourceSeams: boolean;
   showModernBasemap: boolean;
+  showWaterSurface: boolean;
   sourceQualityGapSummary: SourceQualityGapSummary | null;
   showRivers: boolean;
   waterLevelMeters: number | null;
@@ -44,6 +45,7 @@ interface PaleoCoastlineControlsProps {
   onToggleSourceQualityGaps: () => void;
   onToggleSourceSeams: () => void;
   onToggleModernBasemap: () => void;
+  onToggleWaterSurface: () => void;
   onToggleRivers: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
@@ -236,6 +238,7 @@ export function PaleoCoastlineControls({
   showSourceQualityGaps,
   showSourceSeams,
   showModernBasemap,
+  showWaterSurface,
   sourceQualityGapSummary,
   showRivers,
   waterLevelMeters,
@@ -259,6 +262,7 @@ export function PaleoCoastlineControls({
   onToggleSourceQualityGaps,
   onToggleSourceSeams,
   onToggleModernBasemap,
+  onToggleWaterSurface,
   onToggleRivers,
   onWaterLevelChange,
   onTogglePlayback,
@@ -438,6 +442,13 @@ export function PaleoCoastlineControls({
       {/* Layers - the toggles a typical viewer reaches for, plus camera presets. */}
       <Section title="Layers" icon={<Layers3 size={12} />}>
         <div className="flex flex-wrap gap-1.5">
+          <TogglePill
+            active={showWaterSurface}
+            onClick={onToggleWaterSurface}
+            icon={<Droplets size={13} />}
+            label="Water"
+            title="Show the translucent water surface at the active sea level"
+          />
           <TogglePill
             active={showRivers}
             onClick={onToggleRivers}

@@ -14,6 +14,7 @@ const baseContext: PaleoRenderContext = {
   showRivers: false,
   showSourceQualityGaps: false,
   showSourceSeams: false,
+  showWaterSurface: true,
   paleoWaterLevelMeters: -120,
   terrainDetail: "ultra",
   terrainSurfaceSmoothing: "smooth",
@@ -39,5 +40,26 @@ describe("paleo coastline terrain layers", () => {
       .filter((id) => id.startsWith("paleo-terrain-") && !id.startsWith("paleo-terrain-footprints-"));
 
     expect(terrainLayerIds).toEqual(["paleo-terrain-best_available_gate_shelf_fusion"]);
+  });
+
+  it("renders the water surface plane immediately after the terrain stack", () => {
+    const layers = createPaleoCoastlineLayers([loadSlice()], baseContext) as { id: string }[];
+    const layerIds = layers.map((layer) => layer.id);
+    const lastTerrainIndex = layerIds.reduce(
+      (last, id, index) => (id.startsWith("paleo-terrain-") && !id.startsWith("paleo-terrain-footprints-") ? index : last),
+      -1,
+    );
+
+    expect(layerIds[lastTerrainIndex + 1]).toBe("paleo-water-surface");
+  });
+
+  it("hides the water surface plane when toggled off", () => {
+    const layers = createPaleoCoastlineLayers(
+      [loadSlice()],
+      { ...baseContext, showWaterSurface: false },
+    ) as { id: string; props: { visible?: boolean } }[];
+    const waterSurface = layers.find((layer) => layer.id === "paleo-water-surface");
+
+    expect(waterSurface?.props.visible).toBe(false);
   });
 });

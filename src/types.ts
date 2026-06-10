@@ -324,6 +324,7 @@ export interface PaleoRenderContext {
   showRivers: boolean;
   showSourceQualityGaps: boolean;
   showSourceSeams: boolean;
+  showWaterSurface: boolean;
   paleoWaterLevelMeters: number | null;
   terrainDetail: TerrainDetailLevel;
   terrainSurfaceSmoothing: TerrainSurfaceSmoothing;

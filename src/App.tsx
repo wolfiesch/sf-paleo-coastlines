@@ -113,6 +113,7 @@ interface UrlInitialState {
   showSourceQualityGaps: boolean;
   showSourceSeams: boolean;
   showModernBasemap: boolean;
+  showWaterSurface: boolean;
   timeMode: boolean;
   yearsBeforePresent: number;
   waterLevelMeters: number | null;
@@ -173,6 +174,7 @@ function readUrlInitialState(): UrlInitialState {
     showSourceQualityGaps: queryBoolean(params, "gaps", false),
     showSourceSeams: queryBoolean(params, "seams", false),
     showModernBasemap: queryBoolean(params, "modern", false),
+    showWaterSurface: queryBoolean(params, "waterSurface", true),
     timeMode: waterLevelMeters == null,
     yearsBeforePresent,
     waterLevelMeters: waterLevelMeters ?? Math.round(seaLevelForYearsBP(yearsBeforePresent)),
@@ -265,6 +267,7 @@ function App() {
   const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
   const [showSourceSeams, setShowSourceSeams] = useState(initialState.showSourceSeams);
   const [showModernBasemap, setShowModernBasemap] = useState(initialState.showModernBasemap);
+  const [showWaterSurface, setShowWaterSurface] = useState(initialState.showWaterSurface);
   const [sourceSeamAudit, setSourceSeamAudit] = useState<SourceSeamAudit | null>(null);
   const [loadingSourceSeams, setLoadingSourceSeams] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>(initialState.terrainDetail);
@@ -659,6 +662,7 @@ function App() {
     showRivers,
     showSourceQualityGaps,
     showSourceSeams,
+    showWaterSurface,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
     terrainSurfaceSmoothing,
@@ -668,7 +672,7 @@ function App() {
     sceneProfile,
     showPlaceLabels,
     currentYearsBP: yearsBeforePresent,
-  }, baySourceFootprints, paleoRivers, sourceQualityGaps, sourceSeamAudit), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showSourceSeams, showTerrainFootprints, showUncertainty, sourceQualityGaps, sourceSeamAudit, terrainDetail, terrainSourceMode, terrainSurfaceSmoothing, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
+  }, baySourceFootprints, paleoRivers, sourceQualityGaps, sourceSeamAudit), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showSourceSeams, showTerrainFootprints, showUncertainty, showWaterSurface, sourceQualityGaps, sourceSeamAudit, terrainDetail, terrainSourceMode, terrainSurfaceSmoothing, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -823,6 +827,8 @@ function App() {
               onToggleSourceSeams={() => setShowSourceSeams((shown) => !shown)}
               showModernBasemap={showModernBasemap}
               onToggleModernBasemap={() => setShowModernBasemap((shown) => !shown)}
+              showWaterSurface={showWaterSurface}
+              onToggleWaterSurface={() => setShowWaterSurface((shown) => !shown)}
               showRivers={showRivers}
               onToggleRivers={() => setShowRivers((shown) => !shown)}
               timeMode={timeMode}

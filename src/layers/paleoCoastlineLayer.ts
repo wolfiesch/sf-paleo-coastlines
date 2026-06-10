@@ -112,6 +112,13 @@ const ANNOTATION_PARAMETERS = {
   depthWriteEnabled: false,
 } as const;
 
+// Display-space meters added above the waterline Z so near-flat shelf terrain
+// sitting at exactly the waterline does not z-fight the water surface plane.
+const WATER_SURFACE_Z_NUDGE_METERS = 1.5;
+// The plane extends past the terrain edges so the surrounding flat-ocean
+// backdrop carries the same water tone instead of ending at a hard seam.
+const WATER_SURFACE_PAD_DEGREES = 1.5;
+
 export const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
   best_available_gate_shelf_fusion: {
     elevationData: "/data/paleo-coastlines/terrain-tiles/best_available_gate_shelf_fusion/elevation/{z}/{x}/{y}.png",
@@ -873,6 +880,37 @@ function terrainZ(terrain: PaleoTerrainConfig, elevationMeters: number, profile:
   return (elevationMeters * terrain.verticalExaggeration * profile.verticalScale) + zOffsetMeters;
 }
 
+// One flat quad spanning every visible terrain footprint (plus padding) at the
+// active waterline Z. Drawn after the terrain with depth testing on, the depth
+// buffer alone clips it: exposed land wrote nearer depths, so the plane only
+// survives where open water should be.
+function waterSurfacePolygon(
+  terrains: PaleoTerrainConfig[],
+  zMeters: number,
+): [number, number, number][] | null {
+  if (!terrains.length) return null;
+  let west = Infinity;
+  let south = Infinity;
+  let east = -Infinity;
+  let north = -Infinity;
+  for (const item of terrains) {
+    west = Math.min(west, item.bounds[0]);
+    south = Math.min(south, item.bounds[1]);
+    east = Math.max(east, item.bounds[2]);
+    north = Math.max(north, item.bounds[3]);
+  }
+  west -= WATER_SURFACE_PAD_DEGREES;
+  south -= WATER_SURFACE_PAD_DEGREES;
+  east += WATER_SURFACE_PAD_DEGREES;
+  north += WATER_SURFACE_PAD_DEGREES;
+  return [
+    [west, south, zMeters],
+    [east, south, zMeters],
+    [east, north, zMeters],
+    [west, north, zMeters],
+  ];
+}
+
 function elevatedBaySourceFeature(
   feature: BaySourceFootprintFeature,
   terrain: PaleoTerrainConfig | null,
@@ -1179,6 +1217,33 @@ export function createPaleoCoastlineLayers(
     });
   });
 
+  // The plane sits at the same display Z the reveal shader uses as its
+  // waterline (elevation x exaggeration x scene scale + the terrain's visual
+  // lift), so the translucent surface and the shader's exposed/submerged
+  // transition agree on where the water is.
+  const waterSurfaceZ = terrain
+    ? terrainZ(terrain, activeWaterLevel, profile, terrainVisualLiftMeters(terrain) + WATER_SURFACE_Z_NUDGE_METERS)
+    : 0;
+  const waterSurfaceData = context.showWaterSurface
+    ? [waterSurfacePolygon(visibleTerrainStack, waterSurfaceZ)].filter(
+        (polygon): polygon is [number, number, number][] => polygon !== null,
+      )
+    : [];
+
+  const waterSurfaceLayer = new PolygonLayer<[number, number, number][]>({
+    id: "paleo-water-surface",
+    data: waterSurfaceData,
+    visible: context.showWaterSurface,
+    pickable: false,
+    filled: true,
+    stroked: false,
+    getPolygon: (polygon) => polygon,
+    getFillColor: [24, 116, 168, scaleAlpha(52, profile.submergedStrengthScale)],
+    // Depth test on (clipped by exposed land), depth write off (never occludes
+    // the annotation layers drawn after it).
+    parameters: { depthWriteEnabled: false },
+  });
+
   const terrainFootprintFillLayer = new PolygonLayer<TerrainFootprint>({
     id: "paleo-terrain-footprints-fill",
     data: terrainFootprints,
@@ -1432,6 +1497,7 @@ export function createPaleoCoastlineLayers(
 
   return [
     ...terrainLayers,
+    waterSurfaceLayer,
     riverLayer,
     terrainFootprintFillLayer,
     terrainFootprintLabelLayer,
