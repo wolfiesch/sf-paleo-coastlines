@@ -62,6 +62,14 @@ Nearby source samples at the same point:
 
 Plain English: B00012 is much shallower than the current CUDEM-backed value, but it is close to the NOAA CRM value. That makes it a stronger candidate than it would be if B00012 were the only source saying this.
 
+## Cross-Checks
+
+| Candidate source | File-level result for `qg-03-06` | Decision |
+|---|---|---|
+| `EW9505` | 26 usable file bounds; 0 overlap `qg-03-06` | Does not confirm B00012 here |
+| `B00016` | 19 usable file bounds; 0 overlap `qg-03-06` | Does not confirm B00012 here |
+| NOAA CRM Vol. 7 | Covers center and samples about `-163.2` | Supports B00012's shallower center value |
+
 ## Public Artifacts
 
 ```text
@@ -74,4 +82,4 @@ public/data/paleo-coastlines/raw-sonar-candidates/b00012-qg-03-06/b00012-qg-03-0
 
 This is a real candidate for improving `qg-03-06`, but do not merge it blindly.
 
-The source is older 1985 sonar, and the center value differs materially from the current terrain. The next step is to compare neighboring B00012/B00016/EW9505 coverage and then decide whether B00012 plus CRM support is enough to promote a masked patch into `best_available_gate_shelf_fusion`.
+The source is older 1985 sonar, and the center value differs materially from the current terrain. EW9505 and B00016 do not provide file-level confirmation for this cell, but NOAA CRM does support the shallower center value. The next step is to decide whether B00012 plus CRM support is enough to promote a masked patch into `best_available_gate_shelf_fusion`.

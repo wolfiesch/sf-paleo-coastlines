@@ -53,6 +53,7 @@ That means the preview keeps every tenth valid sonar point, builds a faster grid
 | The NA107 route scout did not hit current weak cells. | Ten sampled files ran from Southern California to north/west of San Francisco, but none overlapped the current weak-cell boxes. |
 | The NA085 candidate is partial. | A masked candidate grid covers 14.29% of the buffered `qg-03-06` rectangle, but the exact weak-cell center remains no-data. |
 | The B00012 candidate covers `qg-03-06`. | A strict masked candidate covers 99.77% of the buffered rectangle and samples `-166.0` at the exact weak-cell center. |
+| EW9505 and B00016 do not confirm `qg-03-06`. | Bounds-only scouts found 0 files from either survey overlapping the cell. |
 | Full-point safe gridding is slow. | A 512 grid with local neighbor search took too long for batch preview work. |
 | Fast rectangle gridding is risky. | It can fill empty space with fake values, including `0`, which can look like real shallow water. |
 | Thinned linear preview is a good middle path. | It finished quickly and preserved no-data behavior for review. |
@@ -76,15 +77,17 @@ These are on the VPS, not committed to the repo:
 /home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-candidates/na085-qg-03-06-scripted/na085-qg-03-06.masked-512.cog.tif
 /home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-candidates/b00012-qg-03-06-strict/b00012-qg-03-06-strict.candidate-summary.json
 /home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-candidates/b00012-qg-03-06-strict/b00012-qg-03-06-strict.masked-512.cog.tif
+/home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-probe/ew9505-bounds-summary.json
+/home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-probe/b00016-bounds-summary.json
 ```
 
 ## Next Step
 
-Use the B00012 candidate as the leading `qg-03-06` terrain patch candidate, then compare it against nearby source layers before promotion.
+Use the B00012 candidate as the leading `qg-03-06` terrain patch candidate, with NOAA CRM as supporting evidence and EW9505/B00016 ruled out for this exact cell.
 
 Suggested order:
 
 1. Keep both NA085 and B00012 out of `best_available_gate_shelf_fusion` until source-quality review is done.
-2. Compare B00012 against nearby modern layers and current best-available values around `qg-03-06`.
-3. Check B00016 or EW9505 only if they can confirm or improve the B00012 center value.
-4. Promote a raw-sonar patch only with a mask and clear source priority rule.
+2. Decide whether B00012 plus NOAA CRM support is strong enough for a masked promotion.
+3. If promoted, use a source priority rule that preserves the mask and does not overwrite higher-resolution modern surveys.
+4. Regenerate terrain tiles and audit screenshots after any promotion.
