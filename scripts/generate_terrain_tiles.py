@@ -35,11 +35,11 @@ class TerrainTileset:
 
 
 DEFAULT_TILESETS = [
-  TerrainTileset("best_available_gate_shelf_fusion", 12, 15),
-  TerrainTileset("usgs_2023_sf_lidar_dem", 12, 16),
-  TerrainTileset("usgs_coned_sf_2m_gate_shelf", 12, 15),
-  TerrainTileset("usgs_coned_sf_2m_farallon_shelf", 12, 15),
-  TerrainTileset("usgs_coned_sf_2m_south_bay_edge", 12, 14),
+  TerrainTileset("best_available_gate_shelf_fusion", 8, 15),
+  TerrainTileset("usgs_2023_sf_lidar_dem", 8, 16),
+  TerrainTileset("usgs_coned_sf_2m_gate_shelf", 8, 15),
+  TerrainTileset("usgs_coned_sf_2m_farallon_shelf", 8, 15),
+  TerrainTileset("usgs_coned_sf_2m_south_bay_edge", 8, 14),
 ]
 
 
@@ -138,6 +138,32 @@ def tile_jobs(bounds: list[float], min_zoom: int, max_zoom: int) -> list[tuple[i
   return jobs
 
 
+def zoom_pixel_span(bounds: list[float], zoom: int) -> tuple[float, float]:
+  west, south, east, north = bounds
+  px_w = (lon_to_tile_x(east, zoom) - lon_to_tile_x(west, zoom)) * TILE_SIZE
+  px_h = (lat_to_tile_y(south, zoom) - lat_to_tile_y(north, zoom)) * TILE_SIZE
+  return px_w, px_h
+
+
+def box_filtered_elevation(image: np.ndarray, target: tuple[int, int]) -> np.ndarray:
+  """Downsample RGB-encoded elevation by averaging in decoded 24-bit code space.
+
+  Height is linear in the packed code, so averaging codes averages heights.
+  Averaging the R/G/B bytes independently and re-rounding would corrupt
+  heights (a half-step rounding error in R alone is 1/512 of the full range).
+  Codes stay below 2**24, so float32 represents them exactly.
+  """
+  rgb = image[:, :, :3]
+  codes = rgb[:, :, 0].astype(np.float32) * 65536 + rgb[:, :, 1].astype(np.float32) * 256 + rgb[:, :, 2].astype(np.float32)
+  resized = np.asarray(Image.fromarray(codes, mode="F").resize(target, Image.Resampling.BOX))
+  packed = np.clip(np.rint(resized), 0, 16_777_215).astype(np.uint32)
+  filtered = np.zeros((target[1], target[0], 3), dtype=np.uint8)
+  filtered[:, :, 0] = ((packed >> 16) & 255).astype(np.uint8)
+  filtered[:, :, 1] = ((packed >> 8) & 255).astype(np.uint8)
+  filtered[:, :, 2] = (packed & 255).astype(np.uint8)
+  return filtered
+
+
 def write_tiles(
   image_path: Path,
   bounds: list[float],
@@ -148,8 +174,26 @@ def write_tiles(
   skip_existing: bool,
   workers: int,
 ) -> int:
-  image = np.asarray(Image.open(image_path))
+  source_image = Image.open(image_path)
+  image = np.asarray(source_image)
   jobs = tile_jobs(bounds, min_zoom, max_zoom)
+
+  # Low zooms downsample the source by large factors, and point sampling there
+  # aliases: textures turn into moire and elevation picks up building-scale
+  # height noise that the relief shading amplifies into patchwork. Prefilter
+  # per zoom with a box filter; elevation averages in decoded code space.
+  images_by_zoom: dict[int, np.ndarray] = {}
+  for zoom in range(min_zoom, max_zoom + 1):
+    px_w, px_h = zoom_pixel_span(bounds, zoom)
+    scale = min(image.shape[1] / max(px_w, 1.0), image.shape[0] / max(px_h, 1.0))
+    if scale > 2.0:
+      target = (max(int(round(px_w * 2)), 1), max(int(round(px_h * 2)), 1))
+      if resampling == "bilinear":
+        images_by_zoom[zoom] = np.asarray(source_image.resize(target, Image.Resampling.BOX))
+      else:
+        images_by_zoom[zoom] = box_filtered_elevation(image, target)
+      continue
+    images_by_zoom[zoom] = image
 
   def write_one(job: tuple[int, int, int]) -> int:
     zoom, x, y = job
@@ -157,11 +201,12 @@ def write_tiles(
     if skip_existing and tile_path.exists():
       return 0
 
+    zoom_image = images_by_zoom[zoom]
     src_x, src_y = tile_sample_grid(bounds, zoom, x, y)
     if resampling == "nearest":
-      tile = nearest_tile(image, src_x, src_y)
+      tile = nearest_tile(zoom_image, src_x, src_y)
     else:
-      tile = bilinear_tile(image, src_x, src_y)
+      tile = bilinear_tile(zoom_image, src_x, src_y)
 
     tile_path.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(tile).save(tile_path, optimize=True)
