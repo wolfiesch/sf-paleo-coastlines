@@ -65,9 +65,25 @@ in float terrainReveal_heightZ;
           terrainReveal.waterLevelZ + max(terrainReveal.bandMeters * 1.25, 4.0),
           terrainReveal_heightZ
         );
-        float reveal = clamp(aboveWater * nearWaterline * terrainReveal.strength, 0.0, 0.88);
-        vec3 exposedTint = vec3(1.0, 0.76, 0.24);
-        color.rgb = mix(color.rgb, exposedTint, reveal);
+
+        // Hypsometric land ramp keyed to height above the active waterline.
+        // Heights are display meters (real meters x ~4 exaggeration x scene
+        // scale), so 110 here is roughly 20 real meters: wet sand at the
+        // fresh shoreline, lowland olive, upland brown, pale rock on crests.
+        float landHeight = max(terrainReveal_heightZ - terrainReveal.waterLevelZ, 0.0);
+        vec3 landRamp = mix(vec3(0.84, 0.74, 0.50), vec3(0.55, 0.56, 0.33), smoothstep(8.0, 110.0, landHeight));
+        landRamp = mix(landRamp, vec3(0.47, 0.37, 0.24), smoothstep(110.0, 430.0, landHeight));
+        landRamp = mix(landRamp, vec3(0.62, 0.57, 0.47), smoothstep(430.0, 1100.0, landHeight));
+
+        // Preserve the texture's luminance so survey/relief detail keeps
+        // reading through the tint instead of being painted over.
+        float landLuma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+        vec3 exposedColor = landRamp * (0.55 + landLuma * 0.75);
+
+        // Full strength in the freshly exposed band near the waterline,
+        // easing to a gentler hypsometric wash on land well above it.
+        float reveal = clamp(aboveWater * (0.38 + 0.62 * nearWaterline) * terrainReveal.strength, 0.0, 0.88);
+        color.rgb = mix(color.rgb, exposedColor, reveal);
 
         float belowWater = 1.0 - smoothstep(terrainReveal.waterLevelZ - 1.2, terrainReveal.waterLevelZ + 0.2, terrainReveal_heightZ);
         float nearSubmerged = smoothstep(
