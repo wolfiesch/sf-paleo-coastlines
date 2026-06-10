@@ -52,6 +52,7 @@ That means the preview keeps every tenth valid sonar point, builds a faster grid
 | The first NA107 file is not near San Francisco. | Survey-level overlap is not enough; we need file-level indexing before downloading many large files. |
 | The NA107 route scout did not hit current weak cells. | Ten sampled files ran from Southern California to north/west of San Francisco, but none overlapped the current weak-cell boxes. |
 | The NA085 candidate is partial. | A masked candidate grid covers 14.29% of the buffered `qg-03-06` rectangle, but the exact weak-cell center remains no-data. |
+| The B00012 candidate covers `qg-03-06`. | A strict masked candidate covers 99.77% of the buffered rectangle and samples `-166.0` at the exact weak-cell center. |
 | Full-point safe gridding is slow. | A 512 grid with local neighbor search took too long for batch preview work. |
 | Fast rectangle gridding is risky. | It can fill empty space with fake values, including `0`, which can look like real shallow water. |
 | Thinned linear preview is a good middle path. | It finished quickly and preserved no-data behavior for review. |
@@ -73,15 +74,17 @@ These are on the VPS, not committed to the repo:
 /home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-probe/na107-scout-summary.json
 /home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-candidates/na085-qg-03-06-scripted/na085-qg-03-06.candidate-summary.json
 /home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-candidates/na085-qg-03-06-scripted/na085-qg-03-06.masked-512.cog.tif
+/home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-candidates/b00012-qg-03-06-strict/b00012-qg-03-06-strict.candidate-summary.json
+/home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-candidates/b00012-qg-03-06-strict/b00012-qg-03-06-strict.masked-512.cog.tif
 ```
 
 ## Next Step
 
-Use the masked NA085 candidate as partial evidence, then continue source discovery for the west/center part of `qg-03-06`.
+Use the B00012 candidate as the leading `qg-03-06` terrain patch candidate, then compare it against nearby source layers before promotion.
 
 Suggested order:
 
-1. Keep the NA085 candidate out of `best_available_gate_shelf_fusion` until broader coverage exists.
-2. Search for raw files or gridded products that reach west of lon `-123.4529` inside `qg-03-06`.
-3. Index `NA080`, `LPRS02RR`, or older Davidson/Scripps candidates only if they plausibly cross the missing center.
-4. Compare any new candidate against the NA085 mask before merging terrain sources.
+1. Keep both NA085 and B00012 out of `best_available_gate_shelf_fusion` until source-quality review is done.
+2. Compare B00012 against nearby modern layers and current best-available values around `qg-03-06`.
+3. Check B00016 or EW9505 only if they can confirm or improve the B00012 center value.
+4. Promote a raw-sonar patch only with a mask and clear source priority rule.
