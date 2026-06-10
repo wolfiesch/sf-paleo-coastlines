@@ -7,7 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { PaleoCoastlineControls } from "./components/PaleoCoastlineControls";
 import { createPaleoCoastlineLayers, getPaleoTooltip } from "./layers/paleoCoastlineLayer";
-import { DARK_MAP_STYLE } from "./lib/mapStyles";
+import { MODERN_REFERENCE_MAP_STYLE, PALEO_MAP_STYLE } from "./lib/mapStyles";
 import { MAX_YEARS_BP, seaLevelForYearsBP } from "./lib/seaLevelCurve";
 import { TOUR_STEPS } from "./lib/tourScript";
 import type {
@@ -112,6 +112,7 @@ interface UrlInitialState {
   showPlaceLabels: boolean;
   showSourceQualityGaps: boolean;
   showSourceSeams: boolean;
+  showModernBasemap: boolean;
   timeMode: boolean;
   yearsBeforePresent: number;
   waterLevelMeters: number | null;
@@ -171,6 +172,7 @@ function readUrlInitialState(): UrlInitialState {
     showPlaceLabels: queryBoolean(params, "labels", true),
     showSourceQualityGaps: queryBoolean(params, "gaps", false),
     showSourceSeams: queryBoolean(params, "seams", false),
+    showModernBasemap: queryBoolean(params, "modern", false),
     timeMode: waterLevelMeters == null,
     yearsBeforePresent,
     waterLevelMeters: waterLevelMeters ?? Math.round(seaLevelForYearsBP(yearsBeforePresent)),
@@ -262,6 +264,7 @@ function App() {
   const [sourceQualityGapSummary, setSourceQualityGapSummary] = useState<SourceQualityGapSummary | null>(null);
   const [loadingSourceQualityGaps, setLoadingSourceQualityGaps] = useState(false);
   const [showSourceSeams, setShowSourceSeams] = useState(initialState.showSourceSeams);
+  const [showModernBasemap, setShowModernBasemap] = useState(initialState.showModernBasemap);
   const [sourceSeamAudit, setSourceSeamAudit] = useState<SourceSeamAudit | null>(null);
   const [loadingSourceSeams, setLoadingSourceSeams] = useState(false);
   const [terrainDetail, setTerrainDetail] = useState<TerrainDetailLevel>(initialState.terrainDetail);
@@ -775,7 +778,7 @@ function App() {
         }}
         getTooltip={({ object }) => getPaleoTooltip(object)}
       >
-        <Map mapStyle={DARK_MAP_STYLE} reuseMaps />
+        <Map mapStyle={showModernBasemap ? MODERN_REFERENCE_MAP_STYLE : PALEO_MAP_STYLE} reuseMaps />
       </DeckGL>
 
       {initialState.showUi ? (
@@ -818,6 +821,8 @@ function App() {
               onToggleBaySourceFootprints={() => setShowBaySourceFootprints((shown) => !shown)}
               onToggleSourceQualityGaps={() => setShowSourceQualityGaps((shown) => !shown)}
               onToggleSourceSeams={() => setShowSourceSeams((shown) => !shown)}
+              showModernBasemap={showModernBasemap}
+              onToggleModernBasemap={() => setShowModernBasemap((shown) => !shown)}
               showRivers={showRivers}
               onToggleRivers={() => setShowRivers((shown) => !shown)}
               timeMode={timeMode}

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Clapperboard, Clock, Database, GitCompareArrows, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Clapperboard, Clock, Database, GitCompareArrows, Layers3, MapPin, Mountain, Pause, Play, RotateCcw, TriangleAlert, Waves } from "lucide-react";
 import type { MapViewState } from "deck.gl";
 import type { PaleoTerrainConfig, PaleoTimeSlice, PaleoTimeSliceId, SceneProfile, SourceQualityGapSummary, TerrainDetailLevel, TerrainSourceMode, TerrainSurfaceSmoothing, TerrainTextureMode } from "../types";
 import { MAX_YEARS_BP, MIN_YEARS_BP } from "../lib/seaLevelCurve";
@@ -20,6 +20,7 @@ interface PaleoCoastlineControlsProps {
   showBaySourceFootprints: boolean;
   showSourceQualityGaps: boolean;
   showSourceSeams: boolean;
+  showModernBasemap: boolean;
   sourceQualityGapSummary: SourceQualityGapSummary | null;
   showRivers: boolean;
   waterLevelMeters: number | null;
@@ -42,6 +43,7 @@ interface PaleoCoastlineControlsProps {
   onToggleBaySourceFootprints: () => void;
   onToggleSourceQualityGaps: () => void;
   onToggleSourceSeams: () => void;
+  onToggleModernBasemap: () => void;
   onToggleRivers: () => void;
   onWaterLevelChange: (level: number) => void;
   onTogglePlayback: () => void;
@@ -233,6 +235,7 @@ export function PaleoCoastlineControls({
   showBaySourceFootprints,
   showSourceQualityGaps,
   showSourceSeams,
+  showModernBasemap,
   sourceQualityGapSummary,
   showRivers,
   waterLevelMeters,
@@ -255,6 +258,7 @@ export function PaleoCoastlineControls({
   onToggleBaySourceFootprints,
   onToggleSourceQualityGaps,
   onToggleSourceSeams,
+  onToggleModernBasemap,
   onToggleRivers,
   onWaterLevelChange,
   onTogglePlayback,
@@ -449,6 +453,13 @@ export function PaleoCoastlineControls({
             label="Labels"
             accent="amber"
             title="Show paleo-geography place labels"
+          />
+          <TogglePill
+            active={showModernBasemap}
+            onClick={onToggleModernBasemap}
+            icon={<Building2 size={13} />}
+            label="Modern"
+            title="Show today's streets and labels as a modern reference basemap"
           />
           <TogglePill
             active={showUncertainty}
