@@ -243,7 +243,6 @@ def generate_tileset(
     shutil.rmtree(source_output)
 
   elevation_output = source_output / "elevation"
-  elevation_path = terrain_asset_path(terrain["elevationData"])
   texture_sources = {
     "shadedRelief": ("relief", terrain["textures"].get("shadedRelief")),
     "depthColor": ("color", terrain["textures"].get("depthColor")),
@@ -255,7 +254,22 @@ def generate_tileset(
   metadata_min_zoom = min(min_zoom, int(existing_metadata.get("minZoom", min_zoom)))
   metadata_max_zoom = max(max_zoom, int(existing_metadata.get("maxZoom", max_zoom)))
 
-  write_tiles(elevation_path, terrain["bounds"], elevation_output, min_zoom, max_zoom, "nearest", skip_existing, workers)
+  # A terrain entry may carry a second, higher-resolution canvas confined to a
+  # detail box (manifest key detailTileAssets). Zooms below its minZoom come
+  # from the broad canvas over the full bounds; zooms at or above it come from
+  # the detail canvas and only cover the detail box. Both canvases share one
+  # elevation encode range, so the tileset still decodes with one decoder.
+  detail = terrain.get("detailTileAssets")
+  detail_min_zoom = int(detail["minZoom"]) if detail else max_zoom + 1
+
+  def write_split(asset_url: str, detail_url: str | None, output_dir: Path, resampling: str) -> None:
+    broad_max = min(max_zoom, detail_min_zoom - 1)
+    if min_zoom <= broad_max:
+      write_tiles(terrain_asset_path(asset_url), terrain["bounds"], output_dir, min_zoom, broad_max, resampling, skip_existing, workers)
+    if detail and detail_url and max_zoom >= detail_min_zoom:
+      write_tiles(terrain_asset_path(detail_url), detail["bounds"], output_dir, max(min_zoom, detail_min_zoom), max_zoom, resampling, skip_existing, workers)
+
+  write_split(terrain["elevationData"], detail["elevationData"] if detail else None, elevation_output, "nearest")
   elevation_count = count_tiles(elevation_output, metadata_min_zoom, metadata_max_zoom)
   tiled_textures = {}
   texture_counts = {}
@@ -264,8 +278,8 @@ def generate_tileset(
     if not texture_url:
       continue
     texture_output = source_output / folder_name
-    texture_path = terrain_asset_path(texture_url)
-    write_tiles(texture_path, terrain["bounds"], texture_output, min_zoom, max_zoom, "bilinear", skip_existing, workers)
+    detail_texture_url = detail["textures"].get(texture_name) if detail else None
+    write_split(texture_url, detail_texture_url, texture_output, "bilinear")
     tiled_textures[texture_name] = f"/data/paleo-coastlines/terrain-tiles/{source_id}/{folder_name}/{{z}}/{{x}}/{{y}}.png"
     texture_counts[texture_name] = count_tiles(texture_output, metadata_min_zoom, metadata_max_zoom)
 
@@ -274,6 +288,11 @@ def generate_tileset(
     "bounds": terrain["bounds"],
     "minZoom": metadata_min_zoom,
     "maxZoom": metadata_max_zoom,
+    **(
+      {"detailBounds": detail["bounds"], "detailMinZoom": detail["minZoom"]}
+      if detail
+      else {}
+    ),
     "tileSize": TILE_SIZE,
     "elevationData": f"/data/paleo-coastlines/terrain-tiles/{source_id}/elevation/{{z}}/{{x}}/{{y}}.png",
     "textures": tiled_textures,

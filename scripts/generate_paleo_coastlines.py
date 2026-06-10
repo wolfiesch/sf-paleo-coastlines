@@ -60,18 +60,34 @@ USGS_CONED_SF_2M_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_
 USGS_CONED_SF_2M_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_color.png"
 USGS_CONED_SF_2M_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_relief.png"
 USGS_CONED_SF_2M_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_composite.png"
-BEST_AVAILABLE_TERRAIN_VRT = WORK_DIR / "best_available_gate_shelf_terrain.vrt"
-BEST_AVAILABLE_TERRAIN_WGS84 = WORK_DIR / "best_available_gate_shelf_terrain_wgs84.tif"
-BEST_AVAILABLE_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_elevation.png"
-BEST_AVAILABLE_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_color.png"
-BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_relief.png"
-BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_composite.png"
-BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_source_quality.png"
-BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_source_quality.json"
+BEST_AVAILABLE_TERRAIN_VRT = WORK_DIR / "best_available_full_extent_terrain.vrt"
+BEST_AVAILABLE_TERRAIN_WGS84 = WORK_DIR / "best_available_full_extent_terrain_wgs84.tif"
+# The fusion now produces two canvases that share one elevation encode range
+# (one tileset gets one elevation decoder, so every tile at every zoom must be
+# encoded identically):
+# - full-extent canvas (best_available_full_extent_*): manifest entry,
+#   single-PNG fallback, and z8-12 tile source over the whole scene box.
+# - gate-shelf detail canvas (best_available_gate_shelf_*): z13-15 tile source
+#   confined to the detail box; referenced from the manifest entry's
+#   detailTileAssets block, not as its own terrain source.
+BEST_AVAILABLE_TERRAIN_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "best_available_full_extent_elevation.png"
+BEST_AVAILABLE_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_full_extent_color.png"
+BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_full_extent_relief.png"
+BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_full_extent_composite.png"
+BEST_AVAILABLE_DETAIL_TERRAIN_WGS84 = WORK_DIR / "best_available_gate_shelf_terrain_wgs84.tif"
+BEST_AVAILABLE_DETAIL_ELEVATION_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_elevation.png"
+BEST_AVAILABLE_DETAIL_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_color.png"
+BEST_AVAILABLE_DETAIL_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_relief.png"
+BEST_AVAILABLE_DETAIL_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_composite.png"
+BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_full_extent_source_quality.png"
+BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON = TERRAIN_PUBLIC_DIR / "best_available_full_extent_source_quality.json"
 BEST_AVAILABLE_MIN_FUSION_INPUTS = 40
 BEST_AVAILABLE_SEAM_BLEND_EDGE_WINDOW_SOURCE_PIXELS = 54
 BEST_AVAILABLE_SEAM_BLEND_RADIUS_SOURCE_PIXELS = 20.0
+# Tuned at the detail canvas resolution (8192 px over 1.4 deg); the blend
+# rescales it for canvases with a different pixels-per-degree.
 BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS = 11.0
+BEST_AVAILABLE_SEAM_BLEND_SIGMA_REFERENCE_PX_PER_DEG = 8192.0 / 1.4
 BEST_AVAILABLE_SEAM_BLEND_TARGETS = [
     {
         "categories": ["CUDEM support", "USGS offshore"],
@@ -376,15 +392,28 @@ USGS_CONED_SF_2M_TERRAIN_MIN_M = -1000.0
 USGS_CONED_SF_2M_TERRAIN_MAX_M = 500.0
 USGS_CONED_SF_2M_NODATA_M = -3.4028235e38
 BEST_AVAILABLE_TERRAIN_SIZE = 8192
-BEST_AVAILABLE_SOURCE_TEXTURE_SIZE = 4096
-BEST_AVAILABLE_TERRAIN_MIN_M = -1000.0
-BEST_AVAILABLE_TERRAIN_MAX_M = 500.0
+# Keeps the source-quality mask near its previous ~2926 px/deg now that the
+# fusion bounds cover the 2.5-deg scene box, so the seam-blend window/radius
+# constants (defined in source pixels) keep the same physical size.
+BEST_AVAILABLE_SOURCE_TEXTURE_SIZE = 7314
+# Encode range must cover the full scene box: CRM reaches -3812 m on the
+# continental slope and +1285 m at Mount Hamilton. 24-bit codes over 5500 m
+# still resolve ~0.3 mm per step.
+BEST_AVAILABLE_TERRAIN_MIN_M = -4000.0
+BEST_AVAILABLE_TERRAIN_MAX_M = 1500.0
 BEST_AVAILABLE_BOUNDS = {
+    "west": -124.0,
+    "south": 37.0,
+    "east": -121.5,
+    "north": 38.5,
+}
+BEST_AVAILABLE_DETAIL_BOUNDS = {
     "west": -123.55,
     "south": 37.35,
     "east": -122.15,
     "north": 38.15,
 }
+BEST_AVAILABLE_DETAIL_MIN_TILE_ZOOM = 13
 TERRAIN_VERTICAL_EXAGGERATION = 4.0
 TERRAIN_COLOR_STOPS = [
     (-1000.0, (18, 8, 48)),
@@ -3844,9 +3873,34 @@ def lon_lat_to_source_pixel(lon: float, lat: float, source_shape: tuple[int, int
     return int(np.clip(x, 0, width - 1)), int(np.clip(y, 0, height - 1))
 
 
-def source_weight_to_elevation_weight(source_weight: np.ndarray, elevation_shape: tuple[int, int]) -> np.ndarray:
+def source_weight_to_elevation_weight(
+    source_weight: np.ndarray,
+    elevation_shape: tuple[int, int],
+    canvas_bounds: dict[str, float],
+) -> np.ndarray:
+    """Resample the full-box seam weight onto a canvas with its own bounds.
+
+    The source-quality texture is georeferenced to BEST_AVAILABLE_BOUNDS; the
+    detail canvas covers a sub-rectangle of it, so crop (in float pixel
+    coordinates) before resizing.
+    """
     image = Image.fromarray(np.rint(source_weight * 255).astype(np.uint8), "L")
-    resized = image.resize((elevation_shape[1], elevation_shape[0]), Image.Resampling.BILINEAR)
+    height, width = source_weight.shape
+    west = float(BEST_AVAILABLE_BOUNDS["west"])
+    east = float(BEST_AVAILABLE_BOUNDS["east"])
+    south = float(BEST_AVAILABLE_BOUNDS["south"])
+    north = float(BEST_AVAILABLE_BOUNDS["north"])
+    crop = (
+        (float(canvas_bounds["west"]) - west) / (east - west) * width,
+        (north - float(canvas_bounds["north"])) / (north - south) * height,
+        (float(canvas_bounds["east"]) - west) / (east - west) * width,
+        (north - float(canvas_bounds["south"])) / (north - south) * height,
+    )
+    resized = image.resize(
+        (elevation_shape[1], elevation_shape[0]),
+        Image.Resampling.BILINEAR,
+        box=crop,
+    )
     return np.asarray(resized, dtype=np.float32) / 255.0
 
 
@@ -3888,11 +3942,16 @@ def best_available_seam_edge_mask(source_codes: np.ndarray, category_codes: dict
     return mask, selected_count
 
 
-def apply_best_available_seam_edge_blend(heights: np.ndarray, valid: np.ndarray) -> np.ndarray:
+def apply_best_available_seam_edge_blend(
+    heights: np.ndarray,
+    valid: np.ndarray,
+    canvas_bounds: dict[str, float] | None = None,
+) -> np.ndarray:
     if not BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.exists():
         print("Skipping best-available seam blend: source-quality texture is not available yet.")
         return heights
 
+    bounds = canvas_bounds if canvas_bounds is not None else BEST_AVAILABLE_BOUNDS
     source_codes, category_codes = source_quality_category_codes_from_texture(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG)
     source_edge_mask, selected_count = best_available_seam_edge_mask(source_codes, category_codes)
     if not source_edge_mask.any():
@@ -3905,17 +3964,21 @@ def apply_best_available_seam_edge_blend(heights: np.ndarray, valid: np.ndarray)
         0.0,
         1.0,
     )
-    elevation_weight = source_weight_to_elevation_weight(source_weight, heights.shape)
+    elevation_weight = source_weight_to_elevation_weight(source_weight, heights.shape, bounds)
 
+    canvas_px_per_deg = heights.shape[1] / (float(bounds["east"]) - float(bounds["west"]))
+    sigma = BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS * (
+        canvas_px_per_deg / BEST_AVAILABLE_SEAM_BLEND_SIGMA_REFERENCE_PX_PER_DEG
+    )
     valid_float = valid.astype(np.float32)
     filled = np.where(valid, heights, 0.0).astype(np.float32)
     weighted_sum = gaussian_filter(
         filled * valid_float,
-        sigma=BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS,
+        sigma=sigma,
     )
     weight_sum = gaussian_filter(
         valid_float,
-        sigma=BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS,
+        sigma=sigma,
     )
     smoothed = np.divide(weighted_sum, weight_sum, out=heights.copy(), where=weight_sum > 0.0001)
     blended = heights.copy()
@@ -4082,31 +4145,35 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         str(BEST_AVAILABLE_TERRAIN_VRT),
         *[str(path) for path in inputs],
     ])
-    run([
-        "gdalwarp",
-        "-q",
-        "-overwrite",
-        "-t_srs",
-        "EPSG:4326",
-        "-te",
-        str(BEST_AVAILABLE_BOUNDS["west"]),
-        str(BEST_AVAILABLE_BOUNDS["south"]),
-        str(BEST_AVAILABLE_BOUNDS["east"]),
-        str(BEST_AVAILABLE_BOUNDS["north"]),
-        "-ts",
-        str(BEST_AVAILABLE_TERRAIN_SIZE),
-        "0",
-        "-r",
-        "bilinear",
-        "-ot",
-        "Float32",
-        "-srcnodata",
-        "-9999",
-        "-dstnodata",
-        "-9999",
-        str(BEST_AVAILABLE_TERRAIN_VRT),
-        str(BEST_AVAILABLE_TERRAIN_WGS84),
-    ])
+    def warp_canvas(bounds: dict[str, float], target: Path) -> None:
+        run([
+            "gdalwarp",
+            "-q",
+            "-overwrite",
+            "-t_srs",
+            "EPSG:4326",
+            "-te",
+            str(bounds["west"]),
+            str(bounds["south"]),
+            str(bounds["east"]),
+            str(bounds["north"]),
+            "-ts",
+            str(BEST_AVAILABLE_TERRAIN_SIZE),
+            "0",
+            "-r",
+            "bilinear",
+            "-ot",
+            "Float32",
+            "-srcnodata",
+            "-9999",
+            "-dstnodata",
+            "-9999",
+            str(BEST_AVAILABLE_TERRAIN_VRT),
+            str(target),
+        ])
+
+    warp_canvas(BEST_AVAILABLE_BOUNDS, BEST_AVAILABLE_TERRAIN_WGS84)
+    warp_canvas(BEST_AVAILABLE_DETAIL_BOUNDS, BEST_AVAILABLE_DETAIL_TERRAIN_WGS84)
     source_confidence_summary = write_best_available_source_quality_texture(records)
     write_terrain_pngs_from_wgs84(
         BEST_AVAILABLE_TERRAIN_WGS84,
@@ -4116,7 +4183,21 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG,
         BEST_AVAILABLE_TERRAIN_MIN_M,
         BEST_AVAILABLE_TERRAIN_MAX_M,
-        height_filter=apply_best_available_seam_edge_blend,
+        height_filter=lambda heights, valid: apply_best_available_seam_edge_blend(
+            heights, valid, BEST_AVAILABLE_BOUNDS
+        ),
+    )
+    write_terrain_pngs_from_wgs84(
+        BEST_AVAILABLE_DETAIL_TERRAIN_WGS84,
+        BEST_AVAILABLE_DETAIL_ELEVATION_PNG,
+        BEST_AVAILABLE_DETAIL_TEXTURE_PNG,
+        BEST_AVAILABLE_DETAIL_RELIEF_TEXTURE_PNG,
+        BEST_AVAILABLE_DETAIL_COMPOSITE_TEXTURE_PNG,
+        BEST_AVAILABLE_TERRAIN_MIN_M,
+        BEST_AVAILABLE_TERRAIN_MAX_M,
+        height_filter=lambda heights, valid: apply_best_available_seam_edge_blend(
+            heights, valid, BEST_AVAILABLE_DETAIL_BOUNDS
+        ),
     )
     metadata = terrain_metadata(
         "best_available_gate_shelf_fusion",
@@ -4131,9 +4212,32 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         None,
         BEST_AVAILABLE_TERRAIN_MIN_M,
         BEST_AVAILABLE_TERRAIN_MAX_M,
-        "Derived best-available terrain fusion for the Golden Gate, San Francisco Bar, nearshore shelf, and Farallones approach. It stacks CRM/CUDEM continuity first, then available NOAA OCM, NOAA BAG, NOAA/NCEI multibeam, USGS/CSMP, Farallon/Rittenburg, and DS684 survey surfaces where they exist. This is a visual continuity layer, not a new measured survey.",
+        "Derived best-available terrain fusion covering the full scene box from the offshore slope to the East Bay hills. It stacks CRM/CUDEM continuity first, then available NOAA OCM, NOAA BAG, NOAA/NCEI multibeam, USGS/CSMP, Farallon/Rittenburg, and DS684 survey surfaces where they exist. This is a visual continuity layer, not a new measured survey.",
         BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG,
     )
+
+    def public_url(path: Path) -> str:
+        return "/" + str(path.relative_to(ROOT / "public"))
+
+    # High-resolution gate-shelf canvas for z13+ detail tiles. Same encode
+    # range as the full-extent canvas so one elevation decoder serves the
+    # whole tileset; consumed by scripts/generate_terrain_tiles.py, not
+    # rendered directly by the app.
+    metadata["detailTileAssets"] = {
+        "bounds": [
+            BEST_AVAILABLE_DETAIL_BOUNDS["west"],
+            BEST_AVAILABLE_DETAIL_BOUNDS["south"],
+            BEST_AVAILABLE_DETAIL_BOUNDS["east"],
+            BEST_AVAILABLE_DETAIL_BOUNDS["north"],
+        ],
+        "minZoom": BEST_AVAILABLE_DETAIL_MIN_TILE_ZOOM,
+        "elevationData": public_url(BEST_AVAILABLE_DETAIL_ELEVATION_PNG),
+        "textures": {
+            "depthColor": public_url(BEST_AVAILABLE_DETAIL_TEXTURE_PNG),
+            "shadedRelief": public_url(BEST_AVAILABLE_DETAIL_RELIEF_TEXTURE_PNG),
+            "surveyComposite": public_url(BEST_AVAILABLE_DETAIL_COMPOSITE_TEXTURE_PNG),
+        },
+    }
     if source_confidence_summary:
         metadata["sourceConfidence"] = source_confidence_summary
     return metadata
@@ -4152,6 +4256,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         ETOPO_TERRAIN_WGS84,
         BEST_AVAILABLE_TERRAIN_VRT,
         BEST_AVAILABLE_TERRAIN_WGS84,
+        BEST_AVAILABLE_DETAIL_TERRAIN_WGS84,
         noaa_ocm_area_a_interferometric_contour_grid_wgs84(),
         noaa_ocm_area_a_interferometric_terrain_wgs84(),
     ):
@@ -4374,7 +4479,7 @@ def source_label(source_id: str) -> str:
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
     if source_id == "best_available_gate_shelf_fusion":
-        return "Best-available fused Golden Gate-to-Farallones terrain"
+        return "Best-available fused full-extent terrain"
     if source_id == "composite_high_resolution_local":
         return "Composite high-resolution CUDEM, NOAA BAG, local bathymetry, and topobathymetry"
     if source_id == "noaa_cudem_1_9as":
@@ -4606,6 +4711,10 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             str(BEST_AVAILABLE_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_DETAIL_ELEVATION_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_DETAIL_TEXTURE_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_DETAIL_RELIEF_TEXTURE_PNG.relative_to(ROOT)),
+            str(BEST_AVAILABLE_DETAIL_COMPOSITE_TEXTURE_PNG.relative_to(ROOT)),
             str(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.relative_to(ROOT)),
             str(noaa_ocm_area_a_interferometric_elevation_png().relative_to(ROOT)),
             str(noaa_ocm_area_a_interferometric_texture_png().relative_to(ROOT)),

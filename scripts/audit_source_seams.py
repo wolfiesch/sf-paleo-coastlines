@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import generate_paleo_coastlines as paleo  # noqa: E402
 
 
-SOURCE_TEXTURE = ROOT / "public/data/paleo-coastlines/terrain/best_available_gate_shelf_source_quality.png"
+SOURCE_TEXTURE = ROOT / "public/data/paleo-coastlines/terrain/best_available_full_extent_source_quality.png"
 VERTICAL_OVERLAP_JSON = ROOT / "public/data/paleo-coastlines/vertical_overlap_audit.json"
 OUT_JSON = ROOT / "public/data/paleo-coastlines/source_seam_audit_targets.json"
 OUT_MD = ROOT / "docs/source-seam-audit-targets.md"

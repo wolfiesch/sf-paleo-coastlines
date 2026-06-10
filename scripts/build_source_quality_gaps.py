@@ -25,8 +25,8 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 PALEO_DIR = ROOT / "public" / "data" / "paleo-coastlines"
 MANIFEST_PATH = PALEO_DIR / "paleo_manifest.json"
-SOURCE_QUALITY_JSON = PALEO_DIR / "terrain" / "best_available_gate_shelf_source_quality.json"
-SOURCE_QUALITY_PNG = PALEO_DIR / "terrain" / "best_available_gate_shelf_source_quality.png"
+SOURCE_QUALITY_JSON = PALEO_DIR / "terrain" / "best_available_full_extent_source_quality.json"
+SOURCE_QUALITY_PNG = PALEO_DIR / "terrain" / "best_available_full_extent_source_quality.png"
 OUT_GEOJSON = PALEO_DIR / "source_quality_gaps.geojson"
 OUT_SUMMARY = PALEO_DIR / "source_quality_gaps_summary.json"
 OUT_MD = ROOT / "docs" / "source-quality-gaps.md"

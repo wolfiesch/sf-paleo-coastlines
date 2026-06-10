@@ -24,8 +24,8 @@ import audit_source_seams as seams  # noqa: E402
 SEAM_JSON = ROOT / "public/data/paleo-coastlines/source_seam_audit_targets.json"
 OUT_MD = ROOT / "docs/local-seam-height-audit.md"
 MANIFEST_JSON = ROOT / "public/data/paleo-coastlines/paleo_manifest.json"
-SOURCE_TEXTURE = ROOT / "public/data/paleo-coastlines/terrain/best_available_gate_shelf_source_quality.png"
-ELEVATION_PNG = ROOT / "public/data/paleo-coastlines/terrain/best_available_gate_shelf_elevation.png"
+SOURCE_TEXTURE = ROOT / "public/data/paleo-coastlines/terrain/best_available_full_extent_source_quality.png"
+ELEVATION_PNG = ROOT / "public/data/paleo-coastlines/terrain/best_available_full_extent_elevation.png"
 WINDOW_RADIUS_SOURCE_PIXELS = 34
 
 

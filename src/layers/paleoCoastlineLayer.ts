@@ -463,6 +463,9 @@ function terrainVisualLiftMeters(terrain: PaleoTerrainConfig): number {
   const tier = terrainQualityTier(terrain);
   const sourceJitter = stableSourceOffsetMeters(terrain.sourceId);
   if (terrain.sourceId.includes("crm")) return 0;
+  // The fusion is the full-extent base surface; it sits at true heights like
+  // CRM, with the survey overlays lifted above it.
+  if (terrain.sourceId.includes("best_available")) return 0;
   if (terrain.sourceId.includes("cudem")) return 4;
   if (terrain.sourceId.includes("usgs_coned_sf_2m_gate_shelf")) return 11 + sourceJitter;
   if (terrain.sourceId.includes("usgs_coned_sf_2m_farallon_shelf")) return 11 + sourceJitter;

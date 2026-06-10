@@ -21,8 +21,8 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 PALEO_DIR = ROOT / "public" / "data" / "paleo-coastlines"
 SUMMARY_JSON = PALEO_DIR / "source_quality_gaps_summary.json"
-SOURCE_TEXTURE = PALEO_DIR / "terrain" / "best_available_gate_shelf_source_quality.png"
-SOURCE_PROVENANCE = PALEO_DIR / "terrain" / "best_available_gate_shelf_source_quality.json"
+SOURCE_TEXTURE = PALEO_DIR / "terrain" / "best_available_full_extent_source_quality.png"
+SOURCE_PROVENANCE = PALEO_DIR / "terrain" / "best_available_full_extent_source_quality.json"
 OUT_JSON = PALEO_DIR / "terrain_detail_point_diagnosis.json"
 OUT_MD = ROOT / "docs" / "terrain-detail-point-diagnosis.md"
 
