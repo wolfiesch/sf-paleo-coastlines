@@ -24,6 +24,13 @@ import numpy as np
 from PIL import Image
 from scipy.ndimage import distance_transform_edt, gaussian_filter
 
+try:
+    from defusedxml.ElementTree import parse as parse_xml
+except ImportError:
+    # Fallback is acceptable: the only XML parsed here is the fusion VRT this
+    # script just generated locally with gdalbuildvrt, never remote content.
+    from xml.etree.ElementTree import parse as parse_xml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = ROOT / "data" / "paleo-coastlines" / "raw"
@@ -61,6 +68,7 @@ USGS_CONED_SF_2M_TERRAIN_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_co
 USGS_CONED_SF_2M_TERRAIN_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_relief.png"
 USGS_CONED_SF_2M_TERRAIN_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "usgs_coned_sf_2m_composite.png"
 BEST_AVAILABLE_TERRAIN_VRT = WORK_DIR / "best_available_full_extent_terrain.vrt"
+BEST_AVAILABLE_DETAIL_TERRAIN_VRT = WORK_DIR / "best_available_gate_shelf_terrain.vrt"
 BEST_AVAILABLE_TERRAIN_WGS84 = WORK_DIR / "best_available_full_extent_terrain_wgs84.tif"
 # The fusion now produces two canvases that share one elevation encode range
 # (one tileset gets one elevation decoder, so every tile at every zoom must be
@@ -4210,6 +4218,35 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
     }
 
 
+def set_fusion_vrt_source_resampling(vrt_path: Path) -> None:
+    """Choose anti-aliased resampling per fusion source inside the VRT.
+
+    gdalbuildvrt reads every source with NEAREST when its grid differs from
+    the VRT grid. With the VRT pinned to canvas resolution that means fine
+    sources (1-12 m multibeam/CoNED) would be decimated by point-sampling and
+    coarse fallbacks (60-414 m) upsampled into hard blocks. Each ComplexSource
+    carries SrcRect/DstRect, whose width ratio is the resampling factor, so:
+    finer than the grid -> "average" (area decimation; GDAL renormalizes over
+    valid pixels only, verified to never blend the -9999 nodata value), and
+    coarser -> "bilinear" (smooth upsampling).
+    """
+    tree = parse_xml(str(vrt_path))
+    root = tree.getroot()
+    if root is None:
+        raise SystemExit(f"Fusion VRT has no root element: {vrt_path}")
+    for source in root.iter("ComplexSource"):
+        src_rect = source.find("SrcRect")
+        dst_rect = source.find("DstRect")
+        if src_rect is None or dst_rect is None:
+            continue
+        src_size = float(src_rect.get("xSize", "0"))
+        dst_size = float(dst_rect.get("xSize", "0"))
+        if src_size <= 0 or dst_size <= 0:
+            continue
+        source.set("resampling", "average" if src_size > dst_size else "bilinear")
+    tree.write(vrt_path)
+
+
 def generate_best_available_terrain_asset() -> dict[str, Any]:
     records = best_available_fusion_input_records()
     inputs = [path for _, path in records]
@@ -4223,19 +4260,33 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
             "so the browser terrain is not overwritten by a thin fallback stack."
         )
 
-    run([
-        "gdalbuildvrt",
-        "-q",
-        "-overwrite",
-        "-allow_projection_difference",
-        "-srcnodata",
-        "-9999",
-        "-vrtnodata",
-        "-9999",
-        str(BEST_AVAILABLE_TERRAIN_VRT),
-        *[str(path) for path in inputs],
-    ])
-    def warp_canvas(bounds: dict[str, float], target: Path) -> None:
+    def build_fusion_vrt(vrt_path: Path, bounds: dict[str, float]) -> None:
+        # Pin the VRT grid to the canvas resolution. gdalbuildvrt defaults to
+        # the AVERAGE of all source resolutions (~40 m here), which is coarser
+        # than both canvases, so fine multibeam/CoNED detail was decimated
+        # away before the warp ever sampled it.
+        resolution = (bounds["east"] - bounds["west"]) / BEST_AVAILABLE_TERRAIN_SIZE
+        run([
+            "gdalbuildvrt",
+            "-q",
+            "-overwrite",
+            "-allow_projection_difference",
+            "-tr",
+            str(resolution),
+            str(resolution),
+            "-srcnodata",
+            "-9999",
+            "-vrtnodata",
+            "-9999",
+            str(vrt_path),
+            *[str(path) for path in inputs],
+        ])
+        set_fusion_vrt_source_resampling(vrt_path)
+
+    build_fusion_vrt(BEST_AVAILABLE_TERRAIN_VRT, BEST_AVAILABLE_BOUNDS)
+    build_fusion_vrt(BEST_AVAILABLE_DETAIL_TERRAIN_VRT, BEST_AVAILABLE_DETAIL_BOUNDS)
+
+    def warp_canvas(vrt_path: Path, bounds: dict[str, float], target: Path) -> None:
         run([
             "gdalwarp",
             "-q",
@@ -4258,12 +4309,12 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
             "-9999",
             "-dstnodata",
             "-9999",
-            str(BEST_AVAILABLE_TERRAIN_VRT),
+            str(vrt_path),
             str(target),
         ])
 
-    warp_canvas(BEST_AVAILABLE_BOUNDS, BEST_AVAILABLE_TERRAIN_WGS84)
-    warp_canvas(BEST_AVAILABLE_DETAIL_BOUNDS, BEST_AVAILABLE_DETAIL_TERRAIN_WGS84)
+    warp_canvas(BEST_AVAILABLE_TERRAIN_VRT, BEST_AVAILABLE_BOUNDS, BEST_AVAILABLE_TERRAIN_WGS84)
+    warp_canvas(BEST_AVAILABLE_DETAIL_TERRAIN_VRT, BEST_AVAILABLE_DETAIL_BOUNDS, BEST_AVAILABLE_DETAIL_TERRAIN_WGS84)
     source_confidence_summary = write_best_available_source_quality_texture(records)
     write_terrain_pngs_from_wgs84(
         BEST_AVAILABLE_TERRAIN_WGS84,
@@ -4345,6 +4396,7 @@ def generate_terrain_assets() -> list[dict[str, Any]]:
         USGS_CONED_SF_2M_TERRAIN_WGS84,
         ETOPO_TERRAIN_WGS84,
         BEST_AVAILABLE_TERRAIN_VRT,
+        BEST_AVAILABLE_DETAIL_TERRAIN_VRT,
         BEST_AVAILABLE_TERRAIN_WGS84,
         BEST_AVAILABLE_DETAIL_TERRAIN_WGS84,
         noaa_ocm_area_a_interferometric_contour_grid_wgs84(),

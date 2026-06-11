@@ -16,25 +16,25 @@ It reads the best-available source-quality image and finds places where the winn
 | Categories | Edge pixels | Priority | Height warning | First target lon/lat | Suggested view |
 |---|---:|---:|---|---|---|
 | CRM fallback / NOAA multibeam | 21596 | 21596.0 | possible height offset | `-123.776767, 37.639389` | Shelf or NW Gap with Gaps and Coverage enabled |
-| NOAA BAG survey / USGS CoNED focus | 20582 | 10291.0 | measured but not a major warning | `-123.04451, 37.894119` | Shelf with Coverage enabled |
-| CRM fallback / CUDEM support | 9065 | 4532.5 | possible height offset | `-121.749556, 38.21313` | Shelf or NW Gap with Gaps and Coverage enabled |
+| CRM fallback / NOAA BAG survey | 11733 | 11733.0 | mixed height differences | `-122.719746, 37.135058` | Shelf or NW Gap with Gaps and Coverage enabled |
+| NOAA BAG survey / USGS CoNED focus | 20498 | 10249.0 | measured but not a major warning | `-123.04451, 37.894461` | Shelf with Coverage enabled |
+| NOAA BAG survey / NOAA multibeam | 11665 | 5832.5 | measured but not a major warning | `-123.523451, 38.044905` | Shelf with Coverage enabled |
+| CRM fallback / CUDEM support | 9036 | 4518.0 | possible height offset | `-121.749556, 38.21313` | Shelf or NW Gap with Gaps and Coverage enabled |
+| CUDEM support / NOAA BAG survey | 4416 | 4195.2 | possible height offset | `-123.370812, 37.886597` | Shelf or NW Gap with Gaps and Coverage enabled |
 | USGS Bay DEM / USGS CoNED focus | 7609 | 3804.5 | not measured in overlap audit | `-122.465746, 37.872578` | Gate or Bay-facing view with Bay sources and Coverage enabled |
-| NOAA BAG survey / USGS CoNED broad | 7446 | 3723.0 | measured but not a major warning | `-123.205183, 37.981992` | Shelf with Coverage enabled |
-| CUDEM support / NOAA BAG survey | 3406 | 3235.7 | possible height offset | `-123.371325, 37.886939` | Shelf or NW Gap with Gaps and Coverage enabled |
+| NOAA BAG survey / USGS CoNED broad | 6932 | 3466.0 | measured but not a major warning | `-123.205183, 37.981992` | Shelf with Coverage enabled |
 | USGS CoNED broad / USGS CoNED focus | 6339 | 3169.5 | not measured in overlap audit | `-122.579926, 37.347732` | Shelf with Coverage enabled |
 | NOAA multibeam / USGS CoNED focus | 6145 | 3072.5 | possible height offset | `-123.232873, 37.621609` | Shelf with Coverage enabled |
-| CUDEM support / USGS CoNED broad | 5256 | 2628.0 | possible height offset | `-122.140982, 38.13483` | Shelf or NW Gap with Gaps and Coverage enabled |
-| NOAA BAG survey / NOAA multibeam | 5151 | 2575.5 | measured but not a major warning | `-123.522768, 38.042512` | Shelf with Coverage enabled |
-| CUDEM support / NOAA multibeam | 2677 | 2543.15 | possible height offset | `-123.446534, 37.79462` | Shelf or NW Gap with Gaps and Coverage enabled |
-| USGS CoNED focus / USGS nearshore | 5022 | 2511.0 | not measured in overlap audit | `-122.467797, 37.487235` | Shelf with Coverage enabled |
-| NOAA BAG survey / USGS nearshore | 4128 | 2064.0 | not measured in overlap audit | `-122.637529, 37.698199` | Shelf with Coverage enabled |
+| CUDEM support / USGS CoNED broad | 5245 | 2622.5 | possible height offset | `-122.140982, 38.13483` | Shelf or NW Gap with Gaps and Coverage enabled |
+| CUDEM support / NOAA multibeam | 2689 | 2554.55 | possible height offset | `-123.446534, 37.79462` | Shelf or NW Gap with Gaps and Coverage enabled |
+| USGS CoNED focus / USGS nearshore | 4971 | 2485.5 | not measured in overlap audit | `-122.467797, 37.487235` | Shelf with Coverage enabled |
+| NOAA BAG survey / USGS nearshore | 4072 | 2036.0 | not measured in overlap audit | `-122.637529, 37.698199` | Shelf with Coverage enabled |
 | USGS Bay DEM overview / USGS CoNED broad | 3873 | 1936.5 | not measured in overlap audit | `-122.206276, 38.060634` | Shelf with Coverage enabled |
-| CRM fallback / NOAA BAG survey | 1838 | 1838.0 | mixed height differences | `-123.196294, 38.304422` | Shelf or NW Gap with Gaps and Coverage enabled |
 | CUDEM support / USGS nearshore | 3537 | 1768.5 | possible height offset | `-122.964173, 38.212788` | Shelf or NW Gap with Gaps and Coverage enabled |
 | CUDEM support / USGS Bay DEM | 3131 | 1565.5 | possible height offset | `-122.033981, 37.452701` | Shelf or NW Gap with Gaps and Coverage enabled |
-| USGS CoNED focus / USGS offshore | 3068 | 1534.0 | measured but not a major warning | `-123.20108, 37.736152` | Shelf with Coverage enabled |
+| USGS CoNED focus / USGS offshore | 3071 | 1535.5 | measured but not a major warning | `-123.20108, 37.736152` | Shelf with Coverage enabled |
 | CUDEM support / USGS Bay DEM overview | 2768 | 1384.0 | not measured in overlap audit | `-122.05415, 38.058924` | Shelf or NW Gap with Gaps and Coverage enabled |
-| USGS CoNED broad / USGS nearshore | 2429 | 1214.5 | not measured in overlap audit | `-122.976138, 38.028493` | Shelf with Coverage enabled |
+| USGS CoNED broad / USGS nearshore | 2536 | 1268.0 | not measured in overlap audit | `-122.976138, 38.028493` | Shelf with Coverage enabled |
 
 ## Target Details
 
@@ -49,20 +49,42 @@ It reads the best-available source-quality image and finds places where the winn
   - `-123.766512, 37.578186` (940 nearby edge pixels)
   - `-123.962738, 38.033622` (853 nearby edge pixels)
 
+### CRM fallback / NOAA BAG survey
+
+- Edge pixels: 11733
+- Height warning: mixed height differences
+- Suggested view: Shelf or NW Gap with Gaps and Coverage enabled
+- Targets:
+  - `-122.719746, 37.135058` (1205 nearby edge pixels)
+  - `-123.19732, 38.305448` (1015 nearby edge pixels)
+  - `-123.293382, 38.383406` (847 nearby edge pixels)
+  - `-123.378162, 38.447686` (824 nearby edge pixels)
+
 ### NOAA BAG survey / USGS CoNED focus
 
-- Edge pixels: 20582
+- Edge pixels: 20498
 - Height warning: measured but not a major warning
 - Suggested view: Shelf with Coverage enabled
 - Targets:
-  - `-123.04451, 37.894119` (1402 nearby edge pixels)
-  - `-122.963832, 37.85685` (1356 nearby edge pixels)
-  - `-122.874949, 37.815819` (1298 nearby edge pixels)
+  - `-123.04451, 37.894461` (1393 nearby edge pixels)
+  - `-122.963832, 37.85685` (1362 nearby edge pixels)
+  - `-122.87512, 37.816503` (1302 nearby edge pixels)
   - `-123.039724, 37.639047` (1150 nearby edge pixels)
+
+### NOAA BAG survey / NOAA multibeam
+
+- Edge pixels: 11665
+- Height warning: measured but not a major warning
+- Suggested view: Shelf with Coverage enabled
+- Targets:
+  - `-123.523451, 38.044905` (1324 nearby edge pixels)
+  - `-123.62259, 38.292113` (1219 nearby edge pixels)
+  - `-123.634213, 38.452473` (1061 nearby edge pixels)
+  - `-123.62259, 38.371096` (1026 nearby edge pixels)
 
 ### CRM fallback / CUDEM support
 
-- Edge pixels: 9065
+- Edge pixels: 9036
 - Height warning: possible height offset
 - Suggested view: Shelf or NW Gap with Gaps and Coverage enabled
 - Targets:
@@ -70,6 +92,17 @@ It reads the best-available source-quality image and finds places where the winn
   - `-121.749556, 38.126282` (243 nearby edge pixels)
   - `-121.749556, 38.043196` (243 nearby edge pixels)
   - `-121.749556, 37.960109` (243 nearby edge pixels)
+
+### CUDEM support / NOAA BAG survey
+
+- Edge pixels: 4416
+- Height warning: possible height offset
+- Suggested view: Shelf or NW Gap with Gaps and Coverage enabled
+- Targets:
+  - `-123.370812, 37.886597` (912 nearby edge pixels)
+  - `-123.109804, 38.233987` (673 nearby edge pixels)
+  - `-122.468652, 37.11574` (616 nearby edge pixels)
+  - `-122.729318, 37.296444` (498 nearby edge pixels)
 
 ### USGS Bay DEM / USGS CoNED focus
 
@@ -84,25 +117,14 @@ It reads the best-available source-quality image and finds places where the winn
 
 ### NOAA BAG survey / USGS CoNED broad
 
-- Edge pixels: 7446
+- Edge pixels: 6932
 - Height warning: measured but not a major warning
 - Suggested view: Shelf with Coverage enabled
 - Targets:
-  - `-123.205183, 37.981992` (953 nearby edge pixels)
-  - `-123.113223, 37.984728` (725 nearby edge pixels)
-  - `-123.042459, 37.383121` (668 nearby edge pixels)
-  - `-123.130658, 37.356964` (651 nearby edge pixels)
-
-### CUDEM support / NOAA BAG survey
-
-- Edge pixels: 3406
-- Height warning: possible height offset
-- Suggested view: Shelf or NW Gap with Gaps and Coverage enabled
-- Targets:
-  - `-123.371325, 37.886939` (906 nearby edge pixels)
-  - `-122.468652, 37.11574` (616 nearby edge pixels)
-  - `-123.387392, 38.091406` (367 nearby edge pixels)
-  - `-123.126043, 38.222703` (354 nearby edge pixels)
+  - `-123.205183, 37.981992` (956 nearby edge pixels)
+  - `-123.113907, 37.984728` (695 nearby edge pixels)
+  - `-123.043142, 37.370641` (671 nearby edge pixels)
+  - `-123.07032, 38.04388` (622 nearby edge pixels)
 
 ### USGS CoNED broad / USGS CoNED focus
 
@@ -128,7 +150,7 @@ It reads the best-available source-quality image and finds places where the winn
 
 ### CUDEM support / USGS CoNED broad
 
-- Edge pixels: 5256
+- Edge pixels: 5245
 - Height warning: possible height offset
 - Suggested view: Shelf or NW Gap with Gaps and Coverage enabled
 - Targets:
@@ -137,35 +159,13 @@ It reads the best-available source-quality image and finds places where the winn
   - `-122.140982, 37.877023` (243 nearby edge pixels)
   - `-122.795638, 38.153294` (243 nearby edge pixels)
 
-### NOAA BAG survey / NOAA multibeam
-
-- Edge pixels: 5151
-- Height warning: measured but not a major warning
-- Suggested view: Shelf with Coverage enabled
-- Targets:
-  - `-123.522768, 38.042512` (1213 nearby edge pixels)
-  - `-123.488582, 37.940962` (923 nearby edge pixels)
-  - `-123.47354, 38.136882` (747 nearby edge pixels)
-  - `-123.524819, 38.116025` (651 nearby edge pixels)
-
 ### CUDEM support / NOAA multibeam
 
-- Edge pixels: 2677
+- Edge pixels: 2689
 - Height warning: possible height offset
 - Suggested view: Shelf or NW Gap with Gaps and Coverage enabled
 - Targets:
   - `-123.446534, 37.79462` (934 nearby edge pixels)
   - `-123.402605, 37.779576` (588 nearby edge pixels)
-  - `-123.455935, 38.110554` (332 nearby edge pixels)
+  - `-123.456106, 38.110554` (337 nearby edge pixels)
   - `-123.485505, 38.037383` (307 nearby edge pixels)
-
-### USGS CoNED focus / USGS nearshore
-
-- Edge pixels: 5022
-- Height warning: not measured in overlap audit
-- Suggested view: Shelf with Coverage enabled
-- Targets:
-  - `-122.467797, 37.487235` (663 nearby edge pixels)
-  - `-122.521127, 37.552884` (638 nearby edge pixels)
-  - `-122.541638, 37.455437` (578 nearby edge pixels)
-  - `-122.476685, 37.389104` (513 nearby edge pixels)
