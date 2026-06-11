@@ -12,6 +12,8 @@ interface TileManifestEntry {
   elevationData: string;
   textures: Record<string, string>;
   tileCounts: Record<string, number>;
+  detailMinZoom?: number;
+  detailBounds?: [number, number, number, number];
 }
 
 interface TileManifest {
@@ -58,6 +60,14 @@ describe("terrain tile manifest", () => {
       expect(viewerTileset.maxZoom).toBe(entry.maxZoom);
       expect(viewerTileset.tileSize).toBe(256);
       expect(viewerTileset.textures).toEqual(entry.textures);
+    }
+  });
+
+  it("matches the detail sub-box split used by the viewer", () => {
+    for (const entry of manifest.generated) {
+      const viewerTileset = TERRAIN_TILESETS[entry.sourceId];
+      expect(viewerTileset.detailMinZoom, entry.sourceId).toBe(entry.detailMinZoom);
+      expect(viewerTileset.detailExtent, entry.sourceId).toEqual(entry.detailBounds);
     }
   });
 

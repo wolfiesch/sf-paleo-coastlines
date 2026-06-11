@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DeckGL } from "@deck.gl/react";
 import { Map } from "react-map-gl/maplibre";
 import type { MapViewState } from "deck.gl";
-import { FlyToInterpolator } from "deck.gl";
+import { FlyToInterpolator, MapView } from "deck.gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { PaleoCoastlineControls } from "./components/PaleoCoastlineControls";
@@ -30,6 +30,17 @@ import type {
   TerrainSurfaceSmoothing,
   TerrainTextureMode,
 } from "./types";
+
+// Submerged paleo terrain sits far below deck's z=0 ground plane (real meters
+// x vertical exaggeration: the shelf reaches ~-720 display meters, the abyssal
+// plain ~-24000). MapView's default farZMultiplier of 1.01 leaves only a 1%
+// depth margin below ground at pitch 0, and that margin halves with every
+// camera zoom level - past ~z10.5 the shelf (and eventually the water plane)
+// falls beyond the far plane and the view clips to bare background. 32x keeps
+// the deepest fusion bathymetry inside the frustum down to a 400px-tall
+// viewport at camera z16; the far/near ratio stays ~3 orders of magnitude,
+// well within 24-bit depth-buffer precision.
+const PALEO_MAP_VIEW = new MapView({ farZMultiplier: 32 });
 
 const START_VIEW: MapViewState = {
   longitude: -122.88,
@@ -769,6 +780,7 @@ function App() {
       data-capture-view={`${viewState.longitude},${viewState.latitude},${viewState.zoom},${viewState.pitch},${viewState.bearing}`}
     >
       <DeckGL
+        views={PALEO_MAP_VIEW}
         layers={layers}
         viewState={viewState}
         controller={!initialState.captureMode}

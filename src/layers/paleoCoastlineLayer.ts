@@ -91,6 +91,12 @@ interface TerrainTileConfig {
   maxZoom: number;
   tileSize: number;
   extent: [number, number, number, number];
+  // Tilesets whose deep zooms only exist inside a sub-box (the fusion pyramid
+  // serves z8-12 everywhere but z13+ only inside detailExtent). These values
+  // must match tileset.json/terrain_tiles_manifest.json; the manifest test
+  // enforces that.
+  detailMinZoom?: number;
+  detailExtent?: [number, number, number, number];
 }
 
 const DEPTH_CONTOUR_BAND_METERS = 30;
@@ -130,6 +136,8 @@ export const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">>
     minZoom: 8,
     maxZoom: 15,
     tileSize: 256,
+    detailMinZoom: 13,
+    detailExtent: [-123.574218749, 37.335224360306384, -122.1240234385, 38.169114134560864],
   },
   usgs_2023_sf_lidar_dem: {
     elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/elevation/{z}/{x}/{y}.png",
@@ -493,13 +501,13 @@ function stableSourceOffsetMeters(sourceId: string): number {
   return (hash % 13) * 0.18;
 }
 
-function terrainDepthBiasParameters(terrain: PaleoTerrainConfig) {
+function terrainDepthBiasParameters(terrain: PaleoTerrainConfig, unitsAdjust = 0) {
   const tier = terrainQualityTier(terrain);
   const units = tier === "broad" ? 0 : tier === "bay_mosaic" ? -24 : tier === "source_survey" ? -48 : -64;
   return {
     depthWriteEnabled: true,
     polygonOffsetFill: true,
-    polygonOffset: [0, units] as [number, number],
+    polygonOffset: [0, units + unitsAdjust] as [number, number],
   };
 }
 
@@ -1177,47 +1185,106 @@ export function createPaleoCoastlineLayers(
     })
     .map((feature) => elevatedFeature(feature, terrain, undefined, profile));
 
-  const terrainLayers = visibleTerrainStack.map((terrain) => {
+  const terrainLayers = visibleTerrainStack.flatMap((terrain): TerrainLayer[] => {
     const zLiftMeters = terrainVisualLiftMeters(terrain);
     const tileConfig = terrainTileConfigForRender(terrain, context.terrainDetail);
-    return new TerrainLayer({
-      id: `paleo-terrain-${terrain.sourceId}`,
+    const meshSubLayerProps = {
+      mesh: {
+        type: SmoothTerrainMeshLayer,
+        extensions: [terrainRevealExtension],
+        flatShading: false,
+        terrainSmoothHeights: context.terrainSurfaceSmoothing === "smooth",
+        terrainRevealBandMeters: terrainRevealBandMeters(terrain),
+        terrainRevealDepthFogStrength: terrainDepthFogStrength(terrain) * profile.waterDepthFogStrength,
+        terrainRevealEnabled: true,
+        terrainRevealReliefStrength: terrainRevealReliefStrengthForRender(terrain, context, profile),
+        terrainRevealStrength: terrainRevealStrength(terrain) * profile.revealStrengthScale,
+        terrainRevealSubmergedStrength: terrainSubmergedStrength(terrain) * profile.submergedStrengthScale,
+        terrainRevealWaterLevelZ: terrainZ(terrain, activeWaterLevel, profile, zLiftMeters),
+      },
+    };
+    const sharedProps = {
       elevationData: tileConfig?.elevationData ?? terrain.elevationData,
       texture: textureForTerrain(terrain, context.terrainTextureMode, tileConfig),
-      ...(tileConfig
-        ? {
-            extent: tileConfig.extent,
-            maxZoom: tileConfig.maxZoom,
-            minZoom: tileConfig.minZoom,
-            maxCacheSize: 72,
-            maxRequests: 12,
-            tileSize: tileConfig.tileSize,
-          }
-        : {
-            bounds: terrain.bounds,
-          }),
       elevationDecoder: elevationDecoderForTerrain(terrain, profile, zLiftMeters),
       meshMaxError: meshMaxErrorForTerrain(terrain, context.terrainDetail),
       opacity: terrainLayerOpacity(terrain, context),
       wireframe: false,
       material: terrainMaterial(terrain, profile, context.terrainTextureMode),
-      parameters: terrainDepthBiasParameters(terrain),
-      _subLayerProps: {
-        mesh: {
-          type: SmoothTerrainMeshLayer,
-          extensions: [terrainRevealExtension],
-          flatShading: false,
-          terrainSmoothHeights: context.terrainSurfaceSmoothing === "smooth",
-          terrainRevealBandMeters: terrainRevealBandMeters(terrain),
-          terrainRevealDepthFogStrength: terrainDepthFogStrength(terrain) * profile.waterDepthFogStrength,
-          terrainRevealEnabled: true,
-          terrainRevealReliefStrength: terrainRevealReliefStrengthForRender(terrain, context, profile),
-          terrainRevealStrength: terrainRevealStrength(terrain) * profile.revealStrengthScale,
-          terrainRevealSubmergedStrength: terrainSubmergedStrength(terrain) * profile.submergedStrengthScale,
-          terrainRevealWaterLevelZ: terrainZ(terrain, activeWaterLevel, profile, zLiftMeters),
+    };
+    if (!tileConfig) {
+      return [
+        new TerrainLayer({
+          id: `paleo-terrain-${terrain.sourceId}`,
+          ...sharedProps,
+          bounds: terrain.bounds,
+          parameters: terrainDepthBiasParameters(terrain),
+          _subLayerProps: meshSubLayerProps,
+        }),
+      ];
+    }
+    const tiledProps = {
+      maxCacheSize: 72,
+      maxRequests: 12,
+      tileSize: tileConfig.tileSize,
+    };
+    if (tileConfig.detailMinZoom === undefined || tileConfig.detailExtent === undefined) {
+      return [
+        new TerrainLayer({
+          id: `paleo-terrain-${terrain.sourceId}`,
+          ...sharedProps,
+          ...tiledProps,
+          extent: tileConfig.extent,
+          minZoom: tileConfig.minZoom,
+          maxZoom: tileConfig.maxZoom,
+          parameters: terrainDepthBiasParameters(terrain),
+          _subLayerProps: meshSubLayerProps,
+        }),
+      ];
+    }
+    // Tilesets with a detail sub-box split into two layers. One layer cannot
+    // serve both regions: at camera zoom 12+ it would request z13+ tiles over
+    // the whole extent, and outside the box those 404 - a direct deep link
+    // then renders black because best-available refinement only reuses
+    // ancestors already in cache. The broad twin stops at the handoff zoom and
+    // overzooms its deepest tiles beyond it, so out-of-box deep links always
+    // have terrain; the detail twin is confined to the box, so the 404s never
+    // happen at all.
+    const broadMaxZoom = tileConfig.detailMinZoom - 1;
+    // Camera zoom, not tile zoom: 256px tiles load at viewState zoom + 1, and
+    // deck rounds, so tile z13 first loads at camera 11.5. Below that the
+    // detail layer is hidden outright - without this, deck clamps sub-minZoom
+    // cameras to minZoom and floods the box with every z13 tile at once.
+    const detailVisibleMinZoom = tileConfig.detailMinZoom - 1.5;
+    return [
+      new TerrainLayer({
+        id: `paleo-terrain-${terrain.sourceId}`,
+        ...sharedProps,
+        ...tiledProps,
+        extent: tileConfig.extent,
+        minZoom: tileConfig.minZoom,
+        maxZoom: broadMaxZoom,
+        // Sit a few depth units behind the detail twin so the same-height
+        // overzoomed broad mesh never shimmers through inside the box.
+        parameters: terrainDepthBiasParameters(terrain, 8),
+        _subLayerProps: meshSubLayerProps,
+      }),
+      new TerrainLayer({
+        id: `paleo-terrain-${terrain.sourceId}-detail`,
+        ...sharedProps,
+        ...tiledProps,
+        extent: tileConfig.detailExtent,
+        minZoom: tileConfig.detailMinZoom,
+        maxZoom: tileConfig.maxZoom,
+        parameters: terrainDepthBiasParameters(terrain),
+        _subLayerProps: {
+          ...meshSubLayerProps,
+          // TerrainLayer does not forward visibleMinZoom to its TileLayer
+          // sublayer, so inject it directly.
+          tiles: { visibleMinZoom: detailVisibleMinZoom },
         },
-      },
-    });
+      }),
+    ];
   });
 
   // The plane sits at the same display Z the reveal shader uses as its

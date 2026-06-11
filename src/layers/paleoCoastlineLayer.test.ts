@@ -39,7 +39,12 @@ describe("paleo coastline terrain layers", () => {
       .map((layer) => layer.id)
       .filter((id) => id.startsWith("paleo-terrain-") && !id.startsWith("paleo-terrain-footprints-"));
 
-    expect(terrainLayerIds).toEqual(["paleo-terrain-best_available_gate_shelf_fusion"]);
+    // The fused tileset intentionally renders as two layers: broad z8-12 over
+    // the full extent plus a z13+ twin confined to the detail box.
+    expect(terrainLayerIds).toEqual([
+      "paleo-terrain-best_available_gate_shelf_fusion",
+      "paleo-terrain-best_available_gate_shelf_fusion-detail",
+    ]);
   });
 
   it("renders the water surface plane immediately after the terrain stack", () => {
