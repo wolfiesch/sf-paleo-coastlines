@@ -1188,20 +1188,33 @@ export function createPaleoCoastlineLayers(
   const terrainLayers = visibleTerrainStack.flatMap((terrain): TerrainLayer[] => {
     const zLiftMeters = terrainVisualLiftMeters(terrain);
     const tileConfig = terrainTileConfigForRender(terrain, context.terrainDetail);
+    const meshRevealProps = {
+      extensions: [terrainRevealExtension],
+      flatShading: false,
+      terrainSmoothHeights: context.terrainSurfaceSmoothing === "smooth",
+      terrainRevealBandMeters: terrainRevealBandMeters(terrain),
+      terrainRevealDepthFogStrength: terrainDepthFogStrength(terrain) * profile.waterDepthFogStrength,
+      terrainRevealEnabled: true,
+      terrainRevealReliefStrength: terrainRevealReliefStrengthForRender(terrain, context, profile),
+      terrainRevealStrength: terrainRevealStrength(terrain) * profile.revealStrengthScale,
+      terrainRevealSubmergedStrength: terrainSubmergedStrength(terrain) * profile.submergedStrengthScale,
+      terrainRevealWaterLevelZ: terrainZ(terrain, activeWaterLevel, profile, zLiftMeters),
+    };
+    // Non-tiled TerrainLayers build their mesh via getSubLayerProps({id:
+    // "mesh"}), so the full override below applies. The TILED path in deck.gl
+    // 9.3.3 honors only `type` from _subLayerProps.mesh - its renderSubLayers
+    // never merges the rest - so for tiled layers the reveal extension and its
+    // uniforms must ride on the TileLayer via _subLayerProps.tiles instead:
+    // TileLayer spreads {...this.props} into every tile's renderSubLayers
+    // props, which is exactly the object the mesh sublayer is constructed
+    // from. Putting them on `mesh` alone leaves the reveal shader silently
+    // unapplied (no module on the GPU model, no waterline response).
     const meshSubLayerProps = {
-      mesh: {
-        type: SmoothTerrainMeshLayer,
-        extensions: [terrainRevealExtension],
-        flatShading: false,
-        terrainSmoothHeights: context.terrainSurfaceSmoothing === "smooth",
-        terrainRevealBandMeters: terrainRevealBandMeters(terrain),
-        terrainRevealDepthFogStrength: terrainDepthFogStrength(terrain) * profile.waterDepthFogStrength,
-        terrainRevealEnabled: true,
-        terrainRevealReliefStrength: terrainRevealReliefStrengthForRender(terrain, context, profile),
-        terrainRevealStrength: terrainRevealStrength(terrain) * profile.revealStrengthScale,
-        terrainRevealSubmergedStrength: terrainSubmergedStrength(terrain) * profile.submergedStrengthScale,
-        terrainRevealWaterLevelZ: terrainZ(terrain, activeWaterLevel, profile, zLiftMeters),
-      },
+      mesh: { type: SmoothTerrainMeshLayer, ...meshRevealProps },
+    };
+    const tiledMeshSubLayerProps = {
+      mesh: { type: SmoothTerrainMeshLayer },
+      tiles: { ...meshRevealProps },
     };
     const sharedProps = {
       elevationData: tileConfig?.elevationData ?? terrain.elevationData,
@@ -1238,7 +1251,7 @@ export function createPaleoCoastlineLayers(
           minZoom: tileConfig.minZoom,
           maxZoom: tileConfig.maxZoom,
           parameters: terrainDepthBiasParameters(terrain),
-          _subLayerProps: meshSubLayerProps,
+          _subLayerProps: tiledMeshSubLayerProps,
         }),
       ];
     }
@@ -1267,7 +1280,7 @@ export function createPaleoCoastlineLayers(
         // Sit a few depth units behind the detail twin so the same-height
         // overzoomed broad mesh never shimmers through inside the box.
         parameters: terrainDepthBiasParameters(terrain, 8),
-        _subLayerProps: meshSubLayerProps,
+        _subLayerProps: tiledMeshSubLayerProps,
       }),
       new TerrainLayer({
         id: `paleo-terrain-${terrain.sourceId}-detail`,
@@ -1278,10 +1291,10 @@ export function createPaleoCoastlineLayers(
         maxZoom: tileConfig.maxZoom,
         parameters: terrainDepthBiasParameters(terrain),
         _subLayerProps: {
-          ...meshSubLayerProps,
+          ...tiledMeshSubLayerProps,
           // TerrainLayer does not forward visibleMinZoom to its TileLayer
-          // sublayer, so inject it directly.
-          tiles: { visibleMinZoom: detailVisibleMinZoom },
+          // sublayer, so inject it alongside the reveal props.
+          tiles: { ...meshRevealProps, visibleMinZoom: detailVisibleMinZoom },
         },
       }),
     ];
