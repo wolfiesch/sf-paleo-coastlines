@@ -407,13 +407,40 @@ BEST_AVAILABLE_BOUNDS = {
     "east": -121.5,
     "north": 38.5,
 }
-BEST_AVAILABLE_DETAIL_BOUNDS = {
-    "west": -123.55,
-    "south": 37.35,
-    "east": -122.15,
-    "north": 38.15,
-}
 BEST_AVAILABLE_DETAIL_MIN_TILE_ZOOM = 13
+# z13 slippy-tile box covering the gate-shelf design box
+# [-123.55, 37.35, -122.15, 38.15], snapped outward to whole tiles. The
+# detail canvas must end exactly on tile edges: a z13-15 tile straddling the
+# canvas boundary smears the edge column outward, because
+# scripts/generate_terrain_tiles.py clamps out-of-canvas samples. z14/z15
+# nest inside z13, so aligning z13 aligns every detail zoom.
+BEST_AVAILABLE_DETAIL_TILE_BOX = {"x": (1284, 1317), "y": (3155, 3179)}
+
+
+def _detail_tile_box_bounds() -> dict[str, float]:
+    tiles = float(2**BEST_AVAILABLE_DETAIL_MIN_TILE_ZOOM)
+    x0, x1 = BEST_AVAILABLE_DETAIL_TILE_BOX["x"]
+    y0, y1 = BEST_AVAILABLE_DETAIL_TILE_BOX["y"]
+
+    def tile_lon(x: int) -> float:
+        return x / tiles * 360.0 - 180.0
+
+    def tile_lat(y: int) -> float:
+        return math.degrees(math.atan(math.sinh(math.pi * (1.0 - 2.0 * y / tiles))))
+
+    # Bias each edge inward by a hair: the lat <-> tile-y round trip is not
+    # float-exact, and an edge landing epsilon outside a tile boundary makes
+    # the tiler emit a whole extra row of tiles beyond the canvas.
+    inset = 1e-9
+    return {
+        "west": tile_lon(x0) + inset,
+        "south": tile_lat(y1) + inset,
+        "east": tile_lon(x1) - inset,
+        "north": tile_lat(y0) - inset,
+    }
+
+
+BEST_AVAILABLE_DETAIL_BOUNDS = _detail_tile_box_bounds()
 TERRAIN_VERTICAL_EXAGGERATION = 4.0
 TERRAIN_COLOR_STOPS = [
     (-1000.0, (18, 8, 48)),
@@ -3795,12 +3822,49 @@ def best_available_fusion_ranked_records() -> list[tuple[int, int, str, Path]]:
     return ordered_sources
 
 
+_TERRAIN_VALID_DATA_CACHE: dict[Path, bool] = {}
+
+
+def terrain_wgs84_has_valid_data(path: Path) -> bool:
+    """True if the prepared WGS84 terrain grid has at least one valid pixel.
+
+    A few NOS BAG variant exports warp to all-nodata grids (their data lies
+    outside the scene box). They contribute nothing to the fusion mosaic but
+    still cost a VRT slot, a warp, and a source-quality pass. GDAL caches the
+    computed statistics in a .aux.xml sidecar, so repeat regens only pay for
+    this scan once per file version.
+    """
+    cached = _TERRAIN_VALID_DATA_CACHE.get(path)
+    if cached is not None:
+        return cached
+    info = json.loads(
+        subprocess.check_output(
+            ["gdalinfo", "-json", "-stats", str(path)],
+            stderr=subprocess.DEVNULL,
+        )
+    )
+    bands = info.get("bands") or []
+    metadata = ((bands[0].get("metadata") or {}).get("") or {}) if bands else {}
+    valid_percent = metadata.get("STATISTICS_VALID_PERCENT")
+    try:
+        # Fail open: a missing or unparseable percentage keeps the input.
+        has_data = valid_percent is None or float(valid_percent) > 0.0
+    except ValueError:
+        has_data = True
+    _TERRAIN_VALID_DATA_CACHE[path] = has_data
+    return has_data
+
+
 def best_available_fusion_input_records() -> list[tuple[str, Path]]:
-    return [
-        (source_id, path)
-        for _, _, source_id, path in best_available_fusion_ranked_records()
-        if path.exists()
-    ]
+    records: list[tuple[str, Path]] = []
+    for _, _, source_id, path in best_available_fusion_ranked_records():
+        if not path.exists():
+            continue
+        if not terrain_wgs84_has_valid_data(path):
+            print(f"Skipping all-nodata fusion input: {source_id} ({path.name})")
+            continue
+        records.append((source_id, path))
+    return records
 
 
 def best_available_fusion_inputs() -> list[Path]:
