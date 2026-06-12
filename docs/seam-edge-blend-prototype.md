@@ -32,6 +32,24 @@ The worst remaining local seam after the second pass is:
 
 That is probably the point where simple seam smoothing starts to hit diminishing returns. Further improvement will likely need source-specific vertical-offset handling, not just a wider blur.
 
+## Post-Resample Round (2026-06-12)
+
+The anti-aliased per-source VRT resampling fix moved source-category boundaries, so seams re-appeared at locations the existing target list did not cover: the post-resample audit found 14 severe targets, none of them matching a configured blend point. The list was widened by 21 points (the 14 severe plus the 7 suspicious with a 95% step of 20 m or more), bringing it to 64 targets total.
+
+| Audit level | Before this round | After this round |
+|---|---:|---:|
+| Severe | 14 | 1 |
+| Suspicious | 30 | 25 |
+| Calm | 96 | 114 |
+
+The one target still marked severe is the CRM fallback / USGS CoNED broad join at `-123.127923, 37.347048`, the southern cut edge of the CoNED broad warp:
+
+| Before median | Before 95% | After median | After 95% |
+|---:|---:|---:|---:|
+| 87.055 m | 107.667 m | 12.106 m | 16.348 m |
+
+It stays technically severe because the median threshold is 10 m, but the residual step matches a ~22 degree slope at the ~30 m source pixel there, which is plausible real continental-slope gradient. Blurring harder at that point would start erasing legitimate bathymetry, so the residual is accepted. This is the same diminishing-returns endpoint the earlier production round hit.
+
 ## Visual Check
 
 Use two screenshot types when reviewing this work:
