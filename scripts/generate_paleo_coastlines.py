@@ -11,6 +11,7 @@ from __future__ import annotations
 import gzip
 import json
 import math
+import re
 import shutil
 import subprocess
 import sys
@@ -575,6 +576,20 @@ def _detail_tile_box_bounds() -> dict[str, float]:
 
 
 BEST_AVAILABLE_DETAIL_BOUNDS = _detail_tile_box_bounds()
+B00012_QG_03_06_RAW_SONAR_PATCH = {
+    "sourceId": "b00012_qg_03_06_raw_sonar_patch",
+    "sourceLabel": "B00012 raw sonar patch, qg-03-06",
+    "path": ROOT
+    / "public"
+    / "data"
+    / "paleo-coastlines"
+    / "raw-sonar-candidates"
+    / "b00012-qg-03-06"
+    / "b00012-qg-03-06.masked-512.cog.tif",
+    "sourceName": "NOAA/NCEI B00012 raw sonar candidate grid, qg-03-06",
+    "sourceUrl": "https://www.ngdc.noaa.gov/ships/davidson/B00012_mb.html",
+    "role": "Strictly masked raw-sonar patch for weak cell qg-03-06, promoted only above broad support surfaces and below modern source surveys.",
+}
 TERRAIN_VERTICAL_EXAGGERATION = 4.0
 TERRAIN_COLOR_STOPS = [
     (-1000.0, (18, 8, 48)),
@@ -1891,6 +1906,11 @@ SOURCES = [
         for block in USGS_SF_BAY_1M_BLOCKS
     ],
     {
+        "name": B00012_QG_03_06_RAW_SONAR_PATCH["sourceName"],
+        "url": B00012_QG_03_06_RAW_SONAR_PATCH["sourceUrl"],
+        "role": B00012_QG_03_06_RAW_SONAR_PATCH["role"],
+    },
+    {
         "name": "USGS Data Series 684 DEM 4, San Francisco Bar 2 m GeoTIFF",
         "url": "https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/",
         "role": "Higher-resolution topobathymetric surface for Ocean Beach, Golden Gate, Marin Headlands, and the San Francisco Bar.",
@@ -3126,6 +3146,8 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
         return {"qualityTier": "source_survey", "renderPriority": 68, "resolutionMeters": 2}
     if source_id.startswith("usgs_sf_bay_1m") or source_id.startswith("noaa_ocm_area_a"):
         return {"qualityTier": "source_survey", "renderPriority": 70, "resolutionMeters": 1}
+    if source_id.startswith("b00012_"):
+        return {"qualityTier": "raw_sonar_patch", "renderPriority": 65, "resolutionMeters": None}
     if source_id.startswith("noaa_nos"):
         if "_1p5m" in source_id:
             return {"qualityTier": "source_survey", "renderPriority": 80, "resolutionMeters": 1.5}
@@ -3927,6 +3949,12 @@ def best_available_fusion_ranked_records() -> list[tuple[int, int, str, Path]]:
             )
             for block in NOAA_OCM_AREA_A_BLOCKS
         ],
+        (
+            65,
+            0,
+            str(B00012_QG_03_06_RAW_SONAR_PATCH["sourceId"]),
+            Path(B00012_QG_03_06_RAW_SONAR_PATCH["path"]),
+        ),
         *[
             (
                 80,
@@ -4016,6 +4044,8 @@ def source_quality_category(source_id: str) -> str:
         return "USGS CoNED focus"
     if source_id.startswith("noaa_ocm_area_a"):
         return "NOAA OCM survey"
+    if source_id.startswith("b00012_"):
+        return "Raw sonar patch"
     if source_id.startswith("noaa_nos"):
         return "NOAA BAG survey"
     if source_id.startswith("noaa_ncei"):
@@ -4040,6 +4070,7 @@ def source_quality_color(category: str) -> tuple[int, int, int]:
         "USGS CoNED broad": (92, 180, 132),
         "USGS CoNED focus": (132, 236, 148),
         "NOAA OCM survey": (42, 202, 170),
+        "Raw sonar patch": (255, 170, 80),
         "NOAA BAG survey": (74, 218, 255),
         "NOAA multibeam": (99, 160, 255),
         "USGS land LiDAR": (236, 241, 222),
@@ -4059,6 +4090,7 @@ def source_quality_categories() -> list[str]:
         "USGS CoNED broad",
         "USGS CoNED focus",
         "NOAA OCM survey",
+        "Raw sonar patch",
         "NOAA BAG survey",
         "NOAA multibeam",
         "USGS land LiDAR",
@@ -4260,8 +4292,9 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
                 str(path),
                 str(sample_path),
             ])
-            sample = Image.open(sample_path)
-            values = np.asarray(sample, dtype=np.float32)
+            with Image.open(sample_path) as sample:
+                values = np.asarray(sample, dtype=np.float32)
+            sample_path.unlink(missing_ok=True)
             if values.ndim > 2:
                 values = values[:, :, 0]
 
@@ -4356,21 +4389,54 @@ def set_fusion_vrt_source_resampling(vrt_path: Path) -> None:
     valid pixels only, verified to never blend the -9999 nodata value), and
     coarser -> "bilinear" (smooth upsampling).
     """
-    tree = parse_xml(str(vrt_path))
-    root = tree.getroot()
-    if root is None:
-        raise SystemExit(f"Fusion VRT has no root element: {vrt_path}")
-    for source in root.iter("ComplexSource"):
-        src_rect = source.find("SrcRect")
-        dst_rect = source.find("DstRect")
-        if src_rect is None or dst_rect is None:
-            continue
-        src_size = float(src_rect.get("xSize", "0"))
-        dst_size = float(dst_rect.get("xSize", "0"))
+    try:
+        tree = parse_xml(str(vrt_path))
+        root = tree.getroot()
+        if root is None:
+            raise SystemExit(f"Fusion VRT has no root element: {vrt_path}")
+        for source in root.iter("ComplexSource"):
+            src_rect = source.find("SrcRect")
+            dst_rect = source.find("DstRect")
+            if src_rect is None or dst_rect is None:
+                continue
+            src_size = float(src_rect.get("xSize", "0"))
+            dst_size = float(dst_rect.get("xSize", "0"))
+            if src_size <= 0 or dst_size <= 0:
+                continue
+            source.set("resampling", "average" if src_size > dst_size else "bilinear")
+        tree.write(vrt_path)
+        return
+    except ImportError as exc:
+        print(f"Falling back to local VRT text update because XML parser is unavailable: {exc}")
+
+    def x_size(block: str, tag_name: str) -> float:
+        tag = re.search(rf"<{tag_name}\b[^>]*\bxSize=\"([^\"]+)\"", block)
+        return float(tag.group(1)) if tag else 0.0
+
+    def set_complex_source_resampling(match: re.Match[str]) -> str:
+        block = match.group(0)
+        src_size = x_size(block, "SrcRect")
+        dst_size = x_size(block, "DstRect")
         if src_size <= 0 or dst_size <= 0:
-            continue
-        source.set("resampling", "average" if src_size > dst_size else "bilinear")
-    tree.write(vrt_path)
+            return block
+        resampling = "average" if src_size > dst_size else "bilinear"
+
+        def replace_opening(opening: re.Match[str]) -> str:
+            tag = opening.group(0)
+            if " resampling=" in tag:
+                return re.sub(r'\sresampling="[^"]*"', f' resampling="{resampling}"', tag)
+            return tag[:-1] + f' resampling="{resampling}">'
+
+        return re.sub(r"<ComplexSource\b[^>]*>", replace_opening, block, count=1)
+
+    text = vrt_path.read_text()
+    updated = re.sub(
+        r"<ComplexSource\b[^>]*>.*?</ComplexSource>",
+        set_complex_source_resampling,
+        text,
+        flags=re.DOTALL,
+    )
+    vrt_path.write_text(updated)
 
 
 def generate_best_available_terrain_asset() -> dict[str, Any]:
@@ -4746,6 +4812,8 @@ def source_label(source_id: str) -> str:
             return str(block["sourceLabel"])
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
+    if source_id == B00012_QG_03_06_RAW_SONAR_PATCH["sourceId"]:
+        return str(B00012_QG_03_06_RAW_SONAR_PATCH["sourceLabel"])
     if source_id == "best_available_gate_shelf_fusion":
         return "Best-available fused full-extent terrain"
     if source_id == "composite_high_resolution_local":

@@ -83,3 +83,26 @@ public/data/paleo-coastlines/raw-sonar-candidates/b00012-qg-03-06/b00012-qg-03-0
 This is a real candidate for improving `qg-03-06`, but do not merge it blindly.
 
 The source is older 1985 sonar, and the center value differs materially from the current terrain. EW9505 and B00016 do not provide file-level confirmation for this cell, but NOAA CRM does support the shallower center value. The next step is to decide whether B00012 plus CRM support is enough to promote a masked patch into `best_available_gate_shelf_fusion`.
+
+## Promotion
+
+Promoted on `2026-06-16` as a narrow masked raw-sonar patch in the
+`best_available_gate_shelf_fusion` source stack.
+
+The patch is ranked above broad support surfaces such as CRM, CUDEM, CoNED
+focus clips, and the NOAA OCM Area A mosaic, but below modern named source
+surveys such as USGS Bay DEM, NOAA OCM source tiles, NOAA BAG, NOAA/NCEI
+multibeam, USGS CSMP, Farallon, Rittenburg, and DS684.
+
+Plain English: B00012 can fix this weak gap, but it should not replace newer
+or more direct survey data where that better data exists.
+
+Verification after promotion:
+
+| Check | Result |
+|---|---:|
+| Fused detail terrain at weak-cell center | `-167.2041` |
+| Raw sonar patch source-quality footprint | `3,593` sampled pixels |
+| Raw sonar patch share of full source-quality map | `0.01%` |
+| Regenerated fusion terrain tiles | `70,212` tiles |
+| Focused tile-manifest test | `3 passed` |
