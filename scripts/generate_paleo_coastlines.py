@@ -93,6 +93,10 @@ BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON = TERRAIN_PUBLIC_DIR / "best_avail
 BEST_AVAILABLE_MIN_FUSION_INPUTS = 40
 BEST_AVAILABLE_SEAM_BLEND_EDGE_WINDOW_SOURCE_PIXELS = 54
 BEST_AVAILABLE_SEAM_BLEND_RADIUS_SOURCE_PIXELS = 20.0
+# The z13+ detail canvas is drawn over the full-scene z8-12 canvas. Without a
+# feathered edge, its rectangular extent is visible as a hard slash in oblique
+# views around the South Bay / Silicon Valley.
+BEST_AVAILABLE_DETAIL_EDGE_FADE_PIXELS = 192
 # Tuned at the detail canvas resolution (8192 px over 1.4 deg); the blend
 # rescales it for canvases with a different pixels-per-degree.
 BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS = 11.0
@@ -4531,6 +4535,7 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         height_filter=lambda heights, valid: apply_best_available_seam_edge_blend(
             heights, valid, BEST_AVAILABLE_DETAIL_BOUNDS
         ),
+        edge_fade_pixels=BEST_AVAILABLE_DETAIL_EDGE_FADE_PIXELS,
     )
     metadata = terrain_metadata(
         "best_available_gate_shelf_fusion",

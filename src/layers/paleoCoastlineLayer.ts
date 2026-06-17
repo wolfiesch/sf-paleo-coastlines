@@ -501,11 +501,11 @@ function stableSourceOffsetMeters(sourceId: string): number {
   return (hash % 13) * 0.18;
 }
 
-function terrainDepthBiasParameters(terrain: PaleoTerrainConfig, unitsAdjust = 0) {
+function terrainDepthBiasParameters(terrain: PaleoTerrainConfig, unitsAdjust = 0, depthWriteEnabled = true) {
   const tier = terrainQualityTier(terrain);
   const units = tier === "broad" ? 0 : tier === "bay_mosaic" ? -24 : tier === "source_survey" ? -48 : -64;
   return {
-    depthWriteEnabled: true,
+    depthWriteEnabled,
     polygonOffsetFill: true,
     polygonOffset: [0, units + unitsAdjust] as [number, number],
   };
@@ -1289,7 +1289,10 @@ export function createPaleoCoastlineLayers(
         extent: tileConfig.detailExtent,
         minZoom: tileConfig.detailMinZoom,
         maxZoom: tileConfig.maxZoom,
-        parameters: terrainDepthBiasParameters(terrain),
+        // The detail layer has feathered texture edges and sits over the broad
+        // layer. Avoid depth-writing those transparent edge pixels, otherwise
+        // they can still carve a visible rectangle into the rendered scene.
+        parameters: terrainDepthBiasParameters(terrain, 0, false),
         _subLayerProps: {
           ...tiledMeshSubLayerProps,
           // TerrainLayer does not forward visibleMinZoom to its TileLayer
