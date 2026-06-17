@@ -185,11 +185,39 @@ async function captureView(page, view, baseUrl, outDir, timeoutMs) {
     throw new Error(`${view.id}: viewport width and height must be numbers`);
   }
 
+  const networkIssues = [];
+  const noteRequestIssue = (kind, request, response = null) => {
+    const requestUrl = request.url();
+    const isTerrainData = requestUrl.includes("/data/paleo-coastlines/");
+    if (!isTerrainData) return;
+    const failure = request.failure()?.errorText ?? null;
+    if (failure === "net::ERR_ABORTED") return;
+    networkIssues.push({
+      kind,
+      status: response?.status() ?? null,
+      failure,
+      method: request.method(),
+      url: requestUrl,
+    });
+  };
+  const requestFailed = (request) => noteRequestIssue("requestfailed", request);
+  const responseReceived = (response) => {
+    if (response.status() < 400) return;
+    noteRequestIssue("http-error", response.request(), response);
+  };
+
   await page.setViewportSize({ width, height });
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
-  await page.waitForSelector('main[data-capture-ready="true"]', { timeout: timeoutMs });
-  await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
-  await page.waitForTimeout(Number(view.waitAfterReadyMs ?? 1500));
+  page.on("requestfailed", requestFailed);
+  page.on("response", responseReceived);
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+    await page.waitForSelector('main[data-capture-ready="true"]', { timeout: timeoutMs });
+    await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
+    await page.waitForTimeout(Number(view.waitAfterReadyMs ?? 1500));
+  } finally {
+    page.off("requestfailed", requestFailed);
+    page.off("response", responseReceived);
+  }
 
   const canvasState = await page.evaluate(() =>
     Array.from(document.querySelectorAll("canvas")).map((canvas) => ({
@@ -207,6 +235,7 @@ async function captureView(page, view, baseUrl, outDir, timeoutMs) {
     bytes: screenshotStats.size,
     viewport: { width, height },
     canvasState,
+    terrainNetworkIssues: networkIssues,
   };
 }
 

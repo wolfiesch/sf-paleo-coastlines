@@ -89,6 +89,7 @@ BEST_AVAILABLE_DETAIL_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_sh
 BEST_AVAILABLE_DETAIL_RELIEF_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_relief.png"
 BEST_AVAILABLE_DETAIL_COMPOSITE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_gate_shelf_composite.png"
 BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_full_extent_source_quality.png"
+BEST_AVAILABLE_TERRAIN_SOURCE_ID_TEXTURE_PNG = TERRAIN_PUBLIC_DIR / "best_available_full_extent_source_id.png"
 BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON = TERRAIN_PUBLIC_DIR / "best_available_full_extent_source_quality.json"
 BEST_AVAILABLE_MIN_FUSION_INPUTS = 40
 BEST_AVAILABLE_SEAM_BLEND_EDGE_WINDOW_SOURCE_PIXELS = 54
@@ -101,6 +102,27 @@ BEST_AVAILABLE_DETAIL_EDGE_FADE_PIXELS = 192
 # rescales it for canvases with a different pixels-per-degree.
 BEST_AVAILABLE_SEAM_BLEND_SMOOTH_SIGMA_ELEVATION_PIXELS = 11.0
 BEST_AVAILABLE_SEAM_BLEND_SIGMA_REFERENCE_PX_PER_DEG = 8192.0 / 1.4
+BEST_AVAILABLE_TEXTURE_SEAM_BLEND_RADIUS_SOURCE_PIXELS = 18.0
+BEST_AVAILABLE_TEXTURE_SEAM_BLEND_SMOOTH_SIGMA_PIXELS = 6.0
+BEST_AVAILABLE_TEXTURE_SOURCE_BLEND_SMOOTH_SIGMA_PIXELS = 12.0
+BEST_AVAILABLE_TARGETED_SOURCE_EDGE_BLENDS = [
+    {
+        "sourceIds": ["usgs_coned_sf_2m_south_bay_edge"],
+        "neighborSourceIds": [
+            "noaa_crm_vol7_3as",
+            "noaa_cudem_1_9as",
+            "usgs_coned_sf_2m",
+            "usgs_sf_bay_1m_south_navd88",
+            "usgs_csmp_offshore_sf_2m",
+        ],
+        "radiusSourcePixels": 46.0,
+        "heightSigmaSourcePixels": 15.0,
+        "heightWeight": 0.48,
+        "textureSigmaSourcePixels": 18.0,
+        "textureWeight": 0.64,
+        "reason": "South Bay CoNED focus clip boundary is visually visible as a diagonal source sheet edge.",
+    },
+]
 BEST_AVAILABLE_SEAM_BLEND_TARGETS = [
     {
         "categories": ["CUDEM support", "USGS offshore"],
@@ -2918,6 +2940,7 @@ def write_terrain_pngs_from_wgs84(
     edge_fade_pixels: int = 0,
     low_detail_alpha_floor: int = 255,
     height_filter: Callable[[np.ndarray, np.ndarray], np.ndarray] | None = None,
+    texture_filter: Callable[[np.ndarray, np.ndarray], np.ndarray] | None = None,
 ) -> None:
     source = Image.open(source_path)
     heights = np.asarray(source, dtype=np.float32)
@@ -3053,6 +3076,11 @@ def write_terrain_pngs_from_wgs84(
     composite_land = mix(composite_land, (248, 248, 240), land_detail)
     composite_land = composite_land * (0.96 + shade * 0.12)[:, :, None]
     composite = np.where(underwater[:, :, None], composite_water, composite_land)
+
+    if texture_filter is not None:
+        base = texture_filter(base, valid)
+        relief = texture_filter(relief, valid)
+        composite = texture_filter(composite, valid)
 
     texture_pixels = np.dstack((np.clip(np.rint(base), 0, 255).astype(np.uint8), alpha))
     relief_pixels = np.dstack((np.clip(np.rint(relief), 0, 255).astype(np.uint8), alpha))
@@ -3989,6 +4017,7 @@ def best_available_fusion_ranked_records() -> list[tuple[int, int, str, Path]]:
 
 
 _TERRAIN_VALID_DATA_CACHE: dict[Path, bool] = {}
+_BEST_AVAILABLE_SOURCE_ID_CODE_CACHE: dict[str, int] | None = None
 
 
 def terrain_wgs84_has_valid_data(path: Path) -> bool:
@@ -4122,6 +4151,40 @@ def source_quality_category_codes_from_texture(path: Path) -> tuple[np.ndarray, 
     return codes, category_codes
 
 
+def source_id_codes_from_texture(path: Path) -> np.ndarray:
+    if not path.exists():
+        return np.zeros((0, 0), dtype=np.uint16)
+    return np.asarray(Image.open(path), dtype=np.uint16)
+
+
+def best_available_source_id_code_map() -> dict[str, int]:
+    global _BEST_AVAILABLE_SOURCE_ID_CODE_CACHE
+    if _BEST_AVAILABLE_SOURCE_ID_CODE_CACHE is not None:
+        return _BEST_AVAILABLE_SOURCE_ID_CODE_CACHE
+
+    if BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON.exists():
+        try:
+            payload = json.loads(BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON.read_text())
+            source_winners = payload.get("sourceWinners") or []
+            source_codes = {
+                str(item["sourceId"]): int(item["sourceCode"])
+                for item in source_winners
+                if "sourceId" in item and "sourceCode" in item
+            }
+            if source_codes:
+                _BEST_AVAILABLE_SOURCE_ID_CODE_CACHE = source_codes
+                return source_codes
+        except (OSError, ValueError, TypeError, KeyError):
+            pass
+
+    source_codes = {
+        source_id: index + 1
+        for index, (source_id, _) in enumerate(best_available_fusion_input_records())
+    }
+    _BEST_AVAILABLE_SOURCE_ID_CODE_CACHE = source_codes
+    return source_codes
+
+
 def lon_lat_to_source_pixel(lon: float, lat: float, source_shape: tuple[int, int]) -> tuple[int, int]:
     height, width = source_shape
     west = float(BEST_AVAILABLE_BOUNDS["west"])
@@ -4164,6 +4227,66 @@ def source_weight_to_elevation_weight(
     return np.asarray(resized, dtype=np.float32) / 255.0
 
 
+def source_pixel_sigma_to_canvas_sigma(
+    source_pixel_sigma: float,
+    canvas_shape: tuple[int, int],
+    canvas_bounds: dict[str, float],
+) -> float:
+    source_px_per_deg = BEST_AVAILABLE_SOURCE_TEXTURE_SIZE / (
+        float(BEST_AVAILABLE_BOUNDS["east"]) - float(BEST_AVAILABLE_BOUNDS["west"])
+    )
+    canvas_px_per_deg = canvas_shape[1] / (float(canvas_bounds["east"]) - float(canvas_bounds["west"]))
+    return max(0.1, source_pixel_sigma * (canvas_px_per_deg / source_px_per_deg))
+
+
+def best_available_source_id_edge_mask(
+    source_codes: np.ndarray,
+    source_ids: list[str],
+    neighbor_source_ids: list[str] | None = None,
+) -> tuple[np.ndarray, int]:
+    source_id_codes = best_available_source_id_code_map()
+    target_codes = {source_id_codes[source_id] for source_id in source_ids if source_id in source_id_codes}
+    neighbor_codes = {
+        source_id_codes[source_id]
+        for source_id in (neighbor_source_ids or [])
+        if source_id in source_id_codes
+    }
+    mask = np.zeros(source_codes.shape, dtype=bool)
+    if not target_codes:
+        return mask, 0
+
+    target = np.isin(source_codes, list(target_codes))
+    neighbor = (
+        np.isin(source_codes, list(neighbor_codes))
+        if neighbor_codes
+        else ~target
+    )
+    valid = source_codes > 0
+    horizontal = (
+        (target[:, :-1] != target[:, 1:])
+        & (
+            (target[:, :-1] & neighbor[:, 1:])
+            | (neighbor[:, :-1] & target[:, 1:])
+        )
+        & valid[:, :-1]
+        & valid[:, 1:]
+    )
+    vertical = (
+        (target[:-1, :] != target[1:, :])
+        & (
+            (target[:-1, :] & neighbor[1:, :])
+            | (neighbor[:-1, :] & target[1:, :])
+        )
+        & valid[:-1, :]
+        & valid[1:, :]
+    )
+    mask[:, :-1] |= horizontal
+    mask[:, 1:] |= horizontal
+    mask[:-1, :] |= vertical
+    mask[1:, :] |= vertical
+    return mask, len(target_codes) if mask.any() else 0
+
+
 def best_available_seam_edge_mask(source_codes: np.ndarray, category_codes: dict[str, int]) -> tuple[np.ndarray, int]:
     mask = np.zeros(source_codes.shape, dtype=bool)
     height, width = source_codes.shape
@@ -4200,6 +4323,197 @@ def best_available_seam_edge_mask(source_codes: np.ndarray, category_codes: dict
             mask[y0:y1 + 1, x0:x1 + 1] |= local_mask
 
     return mask, selected_count
+
+
+def best_available_source_category_edge_mask(source_codes: np.ndarray) -> np.ndarray:
+    mask = np.zeros(source_codes.shape, dtype=bool)
+    horizontal = (
+        (source_codes[:, :-1] != source_codes[:, 1:])
+        & (source_codes[:, :-1] > 0)
+        & (source_codes[:, 1:] > 0)
+    )
+    vertical = (
+        (source_codes[:-1, :] != source_codes[1:, :])
+        & (source_codes[:-1, :] > 0)
+        & (source_codes[1:, :] > 0)
+    )
+    mask[:, :-1] |= horizontal
+    mask[:, 1:] |= horizontal
+    mask[:-1, :] |= vertical
+    mask[1:, :] |= vertical
+    return mask
+
+
+def best_available_source_texture_artifact_weight(
+    source_codes: np.ndarray,
+    category_codes: dict[str, int],
+) -> np.ndarray:
+    """Broadly soften categories whose survey sheet edges read as rectangles.
+
+    This is intentionally visual-only: the elevation PNG is left alone. The
+    weights are small enough to keep useful seafloor texture, while reducing
+    the pasted-sheet look in offshore audit views.
+    """
+    category_amounts = {
+        "USGS CoNED focus": 0.24,
+        "Raw sonar patch": 0.34,
+        "NOAA BAG survey": 0.22,
+        "NOAA multibeam": 0.24,
+        "USGS nearshore": 0.18,
+        "USGS offshore": 0.34,
+    }
+    weight = np.zeros(source_codes.shape, dtype=np.float32)
+    for category, amount in category_amounts.items():
+        code = category_codes.get(category)
+        if code is None:
+            continue
+        mask = source_codes == code
+        weight[mask] = np.maximum(weight[mask], amount)
+    return weight
+
+
+def valid_normalized_gaussian_rgb(rgb: np.ndarray, valid: np.ndarray, sigma: float) -> np.ndarray:
+    valid_weight = valid.astype(np.float32)
+    denom = gaussian_filter(valid_weight, sigma=sigma)
+    smoothed_channels: list[np.ndarray] = []
+    for channel in range(3):
+        numerator = gaussian_filter(rgb[:, :, channel].astype(np.float32) * valid_weight, sigma=sigma)
+        smoothed = np.divide(numerator, denom, out=rgb[:, :, channel].astype(np.float32).copy(), where=denom > 1e-6)
+        smoothed_channels.append(smoothed)
+    return np.stack(smoothed_channels, axis=-1)
+
+
+def nonzero_weight_bbox(weight: np.ndarray, padding: int = 0) -> tuple[slice, slice] | None:
+    ys, xs = np.nonzero(weight > 0)
+    if ys.size == 0 or xs.size == 0:
+        return None
+    y0 = max(int(ys.min()) - padding, 0)
+    y1 = min(int(ys.max()) + padding + 1, weight.shape[0])
+    x0 = max(int(xs.min()) - padding, 0)
+    x1 = min(int(xs.max()) + padding + 1, weight.shape[1])
+    return slice(y0, y1), slice(x0, x1)
+
+
+def targeted_source_edge_weight(
+    source_codes: np.ndarray,
+    blend: dict[str, Any],
+    weight_key: str,
+) -> tuple[np.ndarray, int]:
+    source_ids = [str(source_id) for source_id in blend.get("sourceIds", [])]
+    neighbor_source_ids = [str(source_id) for source_id in blend.get("neighborSourceIds", [])]
+    edge_mask, selected_count = best_available_source_id_edge_mask(
+        source_codes,
+        source_ids,
+        neighbor_source_ids,
+    )
+    if not edge_mask.any():
+        return np.zeros(source_codes.shape, dtype=np.float32), 0
+    radius = max(float(blend.get("radiusSourcePixels", 1.0)), 0.1)
+    amount = float(blend.get(weight_key, 1.0))
+    distance = distance_transform_edt(~edge_mask)
+    weight = np.clip(1.0 - (distance / radius), 0.0, 1.0).astype(np.float32) * amount
+    return weight, selected_count
+
+
+def apply_best_available_targeted_texture_edge_blend(
+    rgb: np.ndarray,
+    valid: np.ndarray,
+    canvas_bounds: dict[str, float] | None = None,
+) -> np.ndarray:
+    if not BEST_AVAILABLE_TERRAIN_SOURCE_ID_TEXTURE_PNG.exists():
+        return rgb
+    source_codes = source_id_codes_from_texture(BEST_AVAILABLE_TERRAIN_SOURCE_ID_TEXTURE_PNG)
+    if source_codes.size == 0:
+        return rgb
+
+    bounds = canvas_bounds if canvas_bounds is not None else BEST_AVAILABLE_BOUNDS
+    blended = rgb.astype(np.float32).copy()
+    selected_total = 0
+    for blend in BEST_AVAILABLE_TARGETED_SOURCE_EDGE_BLENDS:
+        source_weight, selected_count = targeted_source_edge_weight(source_codes, blend, "textureWeight")
+        if not np.any(source_weight > 0):
+            continue
+        selected_total += selected_count
+        canvas_weight = source_weight_to_elevation_weight(source_weight, rgb.shape[:2], bounds)
+        sigma = source_pixel_sigma_to_canvas_sigma(
+            float(blend.get("textureSigmaSourcePixels", 1.0)),
+            rgb.shape[:2],
+            bounds,
+        )
+        bbox = nonzero_weight_bbox(canvas_weight, padding=int(math.ceil(sigma * 3.0)) + 2)
+        if bbox is None:
+            continue
+        y_slice, x_slice = bbox
+        local_valid = valid[y_slice, x_slice]
+        local_weight = canvas_weight[y_slice, x_slice]
+        local_smoothed = valid_normalized_gaussian_rgb(
+            blended[y_slice, x_slice],
+            local_valid,
+            sigma,
+        )
+        local_blended = blended[y_slice, x_slice]
+        local_blended[local_valid] = (
+            local_blended[local_valid] * (1.0 - local_weight[local_valid, None])
+        ) + (
+            local_smoothed[local_valid] * local_weight[local_valid, None]
+        )
+        blended[y_slice, x_slice] = local_blended
+    if selected_total:
+        print(f"Applied targeted best-available texture source-edge blend: {selected_total} source edge(s).")
+    return blended
+
+
+def apply_best_available_texture_edge_blend(
+    rgb: np.ndarray,
+    valid: np.ndarray,
+    canvas_bounds: dict[str, float] | None = None,
+    use_exact_source_ids: bool = False,
+) -> np.ndarray:
+    if BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.exists():
+        source_codes, category_codes = source_quality_category_codes_from_texture(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG)
+    else:
+        return rgb
+
+    bounds = canvas_bounds if canvas_bounds is not None else BEST_AVAILABLE_BOUNDS
+    if source_codes.size == 0:
+        return rgb
+    source_edge_mask = best_available_source_category_edge_mask(source_codes)
+    blended = rgb.astype(np.float32).copy()
+
+    if source_edge_mask.any():
+        distance = distance_transform_edt(~source_edge_mask)
+        source_weight = np.clip(
+            1.0 - (distance / max(BEST_AVAILABLE_TEXTURE_SEAM_BLEND_RADIUS_SOURCE_PIXELS, 0.1)),
+            0.0,
+            1.0,
+        )
+        weight = source_weight_to_elevation_weight(source_weight, rgb.shape[:2], bounds)
+        if np.any(weight > 0):
+            edge_smoothed = valid_normalized_gaussian_rgb(
+                rgb,
+                valid,
+                BEST_AVAILABLE_TEXTURE_SEAM_BLEND_SMOOTH_SIGMA_PIXELS,
+            )
+            blended[valid] = (rgb[valid] * (1.0 - weight[valid, None])) + (edge_smoothed[valid] * weight[valid, None])
+
+    if category_codes:
+        artifact_source_weight = best_available_source_texture_artifact_weight(
+            source_codes,
+            category_codes,
+        )
+        if np.any(artifact_source_weight > 0):
+            artifact_weight = source_weight_to_elevation_weight(artifact_source_weight, rgb.shape[:2], bounds)
+            artifact_smoothed = valid_normalized_gaussian_rgb(
+                blended,
+                valid,
+                BEST_AVAILABLE_TEXTURE_SOURCE_BLEND_SMOOTH_SIGMA_PIXELS,
+            )
+            blended[valid] = (
+                blended[valid] * (1.0 - artifact_weight[valid, None])
+            ) + (
+                artifact_smoothed[valid] * artifact_weight[valid, None]
+            )
+    return apply_best_available_targeted_texture_edge_blend(blended, valid, bounds)
 
 
 def apply_best_available_seam_edge_blend(
@@ -4250,6 +4564,57 @@ def apply_best_available_seam_edge_blend(
         "Applied best-available seam edge blend: "
         f"{selected_count}/{len(BEST_AVAILABLE_SEAM_BLEND_TARGETS)} configured targets found."
     )
+    return blended
+
+
+def apply_best_available_targeted_height_edge_blend(
+    heights: np.ndarray,
+    valid: np.ndarray,
+    canvas_bounds: dict[str, float] | None = None,
+) -> np.ndarray:
+    if not BEST_AVAILABLE_TERRAIN_SOURCE_ID_TEXTURE_PNG.exists():
+        return heights
+    source_codes = source_id_codes_from_texture(BEST_AVAILABLE_TERRAIN_SOURCE_ID_TEXTURE_PNG)
+    if source_codes.size == 0:
+        return heights
+
+    bounds = canvas_bounds if canvas_bounds is not None else BEST_AVAILABLE_BOUNDS
+    blended = heights.copy()
+    valid_float = valid.astype(np.float32)
+    selected_total = 0
+    for blend in BEST_AVAILABLE_TARGETED_SOURCE_EDGE_BLENDS:
+        source_weight, selected_count = targeted_source_edge_weight(source_codes, blend, "heightWeight")
+        if not np.any(source_weight > 0):
+            continue
+        selected_total += selected_count
+        canvas_weight = source_weight_to_elevation_weight(source_weight, heights.shape, bounds)
+        sigma = source_pixel_sigma_to_canvas_sigma(
+            float(blend.get("heightSigmaSourcePixels", 1.0)),
+            heights.shape,
+            bounds,
+        )
+        bbox = nonzero_weight_bbox(canvas_weight, padding=int(math.ceil(sigma * 3.0)) + 2)
+        if bbox is None:
+            continue
+        y_slice, x_slice = bbox
+        local_valid = valid[y_slice, x_slice]
+        local_weight = canvas_weight[y_slice, x_slice]
+        local_valid_float = valid_float[y_slice, x_slice]
+        local_blended = blended[y_slice, x_slice]
+        weighted_sum = gaussian_filter(
+            np.where(local_valid, local_blended, 0.0).astype(np.float32) * local_valid_float,
+            sigma=sigma,
+        )
+        weight_sum = gaussian_filter(local_valid_float, sigma=sigma)
+        smoothed = np.divide(weighted_sum, weight_sum, out=local_blended.copy(), where=weight_sum > 0.0001)
+        local_blended[local_valid] = (
+            local_blended[local_valid] * (1.0 - local_weight[local_valid])
+        ) + (
+            smoothed[local_valid] * local_weight[local_valid]
+        )
+        blended[y_slice, x_slice] = local_blended
+    if selected_total:
+        print(f"Applied targeted best-available height source-edge blend: {selected_total} source edge(s).")
     return blended
 
 
@@ -4331,6 +4696,7 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
         summary[category] = count
 
     Image.fromarray(pixels, "RGBA").save(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG)
+    Image.fromarray(source_provenance, "I;16").save(BEST_AVAILABLE_TERRAIN_SOURCE_ID_TEXTURE_PNG)
     total = sum(summary.values())
 
     source_summary: list[dict[str, Any]] = []
@@ -4342,6 +4708,7 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
         kind = terrain_source_kind(source_id)
         source_summary.append({
             "sourceId": source_id,
+            "sourceCode": int(code),
             "sourceLabel": source_label(source_id),
             "category": source_quality_category(source_id),
             "pixelCount": count,
@@ -4354,6 +4721,7 @@ def write_best_available_source_quality_texture(records: list[tuple[str, Path]])
     provenance_payload = {
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "texture": "/" + str(BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG.relative_to(ROOT / "public")),
+        "sourceIdTexture": "/" + str(BEST_AVAILABLE_TERRAIN_SOURCE_ID_TEXTURE_PNG.relative_to(ROOT / "public")),
         "pixelSize": [width, height],
         "categoryPixelCounts": summary,
         "categoryPixelPercents": {
@@ -4520,8 +4888,13 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         BEST_AVAILABLE_TERRAIN_COMPOSITE_TEXTURE_PNG,
         BEST_AVAILABLE_TERRAIN_MIN_M,
         BEST_AVAILABLE_TERRAIN_MAX_M,
-        height_filter=lambda heights, valid: apply_best_available_seam_edge_blend(
-            heights, valid, BEST_AVAILABLE_BOUNDS
+        height_filter=lambda heights, valid: apply_best_available_targeted_height_edge_blend(
+            apply_best_available_seam_edge_blend(heights, valid, BEST_AVAILABLE_BOUNDS),
+            valid,
+            BEST_AVAILABLE_BOUNDS,
+        ),
+        texture_filter=lambda rgb, valid: apply_best_available_texture_edge_blend(
+            rgb, valid, BEST_AVAILABLE_BOUNDS
         ),
     )
     write_terrain_pngs_from_wgs84(
@@ -4532,8 +4905,13 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
         BEST_AVAILABLE_DETAIL_COMPOSITE_TEXTURE_PNG,
         BEST_AVAILABLE_TERRAIN_MIN_M,
         BEST_AVAILABLE_TERRAIN_MAX_M,
-        height_filter=lambda heights, valid: apply_best_available_seam_edge_blend(
-            heights, valid, BEST_AVAILABLE_DETAIL_BOUNDS
+        height_filter=lambda heights, valid: apply_best_available_targeted_height_edge_blend(
+            apply_best_available_seam_edge_blend(heights, valid, BEST_AVAILABLE_DETAIL_BOUNDS),
+            valid,
+            BEST_AVAILABLE_DETAIL_BOUNDS,
+        ),
+        texture_filter=lambda rgb, valid: apply_best_available_texture_edge_blend(
+            rgb, valid, BEST_AVAILABLE_DETAIL_BOUNDS
         ),
         edge_fade_pixels=BEST_AVAILABLE_DETAIL_EDGE_FADE_PIXELS,
     )

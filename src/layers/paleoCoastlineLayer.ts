@@ -124,6 +124,8 @@ const WATER_SURFACE_Z_NUDGE_METERS = 1.5;
 // The plane extends past the terrain edges so the surrounding flat-ocean
 // backdrop carries the same water tone instead of ending at a hard seam.
 const WATER_SURFACE_PAD_DEGREES = 1.5;
+const TERRAIN_TILE_CACHE_SIZE = 288;
+const TERRAIN_TILE_MAX_REQUESTS = 24;
 
 export const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">> = {
   best_available_gate_shelf_fusion: {
@@ -1237,8 +1239,8 @@ export function createPaleoCoastlineLayers(
       ];
     }
     const tiledProps = {
-      maxCacheSize: 72,
-      maxRequests: 12,
+      maxCacheSize: TERRAIN_TILE_CACHE_SIZE,
+      maxRequests: TERRAIN_TILE_MAX_REQUESTS,
       tileSize: tileConfig.tileSize,
     };
     if (tileConfig.detailMinZoom === undefined || tileConfig.detailExtent === undefined) {
@@ -1531,6 +1533,10 @@ export function createPaleoCoastlineLayers(
     highlightColor: [255, 255, 255, 180],
     parameters: ANNOTATION_PARAMETERS,
   });
+
+  if (context.terrainOnly) {
+    return terrainLayers;
+  }
 
   const riverLayer = new GeoJsonLayer<PaleoRiverProperties>({
     id: "paleo-rivers",

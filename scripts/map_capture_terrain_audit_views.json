@@ -22,7 +22,8 @@
       "waterSurface": true
     },
     "query": {
-      "ui": 0
+      "ui": 0,
+      "terrainOnly": 1
     }
   },
   "views": [
@@ -35,8 +36,18 @@
       "id": "audit-shelf-relief-clean",
       "view": "shelf",
       "texture": "relief",
-      "scene": "relief",
-      "water": 0
+      "scene": "relief"
+    },
+    {
+      "id": "audit-farallones-survey-clean",
+      "view": "farallones",
+      "texture": "survey"
+    },
+    {
+      "id": "audit-farallones-relief-clean",
+      "view": "farallones",
+      "texture": "relief",
+      "scene": "relief"
     },
     {
       "id": "audit-northwest-gap-survey-clean",
@@ -47,8 +58,30 @@
       "id": "audit-gate-relief-clean",
       "view": "gate",
       "texture": "relief",
+      "scene": "relief"
+    },
+    {
+      "id": "audit-south-bay-survey-clean",
+      "texture": "survey",
+      "viewState": {
+        "longitude": -122.19,
+        "latitude": 37.43,
+        "zoom": 10.1,
+        "pitch": 62,
+        "bearing": -35
+      }
+    },
+    {
+      "id": "audit-south-bay-relief-clean",
+      "texture": "relief",
       "scene": "relief",
-      "water": 0
+      "viewState": {
+        "longitude": -122.19,
+        "latitude": 37.43,
+        "zoom": 10.1,
+        "pitch": 62,
+        "bearing": -35
+      }
     }
   ]
 }

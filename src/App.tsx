@@ -108,6 +108,7 @@ const TIME_SLICE_IDS: PaleoTimeSliceId[] = ["present", "5k_years_ago", "10k_year
 const TERRAIN_DETAIL_LEVELS: TerrainDetailLevel[] = ["fast", "detailed", "survey", "ultra"];
 const TERRAIN_SURFACE_SMOOTHING_MODES: TerrainSurfaceSmoothing[] = ["smooth", "sharp"];
 const TERRAIN_TEXTURE_MODES: TerrainTextureMode[] = ["bottom", "hybrid", "survey", "source", "sonar", "relief", "color"];
+const CAMERA_IDLE_QUALITY_DELAY_MS = 450;
 const TERRAIN_SOURCE_MODES: TerrainSourceMode[] = ["best", "single", "stack"];
 const SCENE_PROFILES: SceneProfile[] = ["study", "relief", "emergence"];
 
@@ -134,6 +135,7 @@ interface UrlInitialState {
   terrainSourceMode: TerrainSourceMode;
   selectedTerrainSourceId: string | null;
   sceneProfile: SceneProfile;
+  terrainOnly: boolean;
 }
 
 function queryBoolean(params: URLSearchParams, name: string, fallback: boolean): boolean {
@@ -195,6 +197,7 @@ function readUrlInitialState(): UrlInitialState {
     terrainSourceMode: queryEnum(params, "sourceMode", TERRAIN_SOURCE_MODES, "best"),
     selectedTerrainSourceId: params.get("sourceId"),
     sceneProfile: queryEnum(params, "scene", SCENE_PROFILES, "emergence"),
+    terrainOnly: queryBoolean(params, "terrainOnly", false),
   };
 }
 
@@ -287,8 +290,10 @@ function App() {
   const [terrainSourceMode, setTerrainSourceMode] = useState<TerrainSourceMode>(initialState.terrainSourceMode);
   const [selectedTerrainSourceId, setSelectedTerrainSourceId] = useState<string | null>(initialState.selectedTerrainSourceId);
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>(initialState.sceneProfile);
+  const [isCameraMoving, setIsCameraMoving] = useState(false);
   const [isTouring, setIsTouring] = useState(false);
   const [tourCaption, setTourCaption] = useState<string | null>(null);
+  const cameraIdleTimer = useRef<number | null>(null);
   // Monotonic generation token. Each runTour() claims a new id; a stop, a new
   // run, or unmount bumps it so any in-flight loop fails closed on its next check.
   const tourRunId = useRef(0);
@@ -296,6 +301,10 @@ function App() {
   // Invalidate any in-flight tour loop if the component unmounts mid-tour.
   useEffect(() => () => {
     tourRunId.current += 1;
+    if (cameraIdleTimer.current !== null) {
+      window.clearTimeout(cameraIdleTimer.current);
+      cameraIdleTimer.current = null;
+    }
   }, []);
 
   useEffect(() => {
@@ -664,6 +673,12 @@ function App() {
       ? selectedTerrainSourceId
       : defaultTerrainSourceId(terrainSources)
   ), [selectedTerrainSourceId, terrainSources]);
+  const movingQualityEnabled = isCameraMoving && !initialState.captureMode;
+  const renderTerrainTextureMode: TerrainTextureMode = movingQualityEnabled
+    && (terrainTextureMode === "survey" || terrainTextureMode === "hybrid" || terrainTextureMode === "bottom")
+    ? "relief"
+    : terrainTextureMode;
+  const renderTerrainSurfaceSmoothing: TerrainSurfaceSmoothing = movingQualityEnabled ? "sharp" : terrainSurfaceSmoothing;
 
   const layers = useMemo(() => createPaleoCoastlineLayers(renderSlices, {
     paleoTimeSliceId: activeSliceId,
@@ -676,14 +691,15 @@ function App() {
     showWaterSurface,
     paleoWaterLevelMeters: waterLevelMeters,
     terrainDetail,
-    terrainSurfaceSmoothing,
-    terrainTextureMode,
+    terrainSurfaceSmoothing: renderTerrainSurfaceSmoothing,
+    terrainTextureMode: renderTerrainTextureMode,
     terrainSourceMode,
     selectedTerrainSourceId: effectiveTerrainSourceId,
     sceneProfile,
+    terrainOnly: initialState.terrainOnly,
     showPlaceLabels,
     currentYearsBP: yearsBeforePresent,
-  }, baySourceFootprints, paleoRivers, sourceQualityGaps, sourceSeamAudit), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showSourceSeams, showTerrainFootprints, showUncertainty, showWaterSurface, sourceQualityGaps, sourceSeamAudit, terrainDetail, terrainSourceMode, terrainSurfaceSmoothing, terrainTextureMode, waterLevelMeters, yearsBeforePresent]);
+  }, baySourceFootprints, paleoRivers, sourceQualityGaps, sourceSeamAudit), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, renderTerrainSurfaceSmoothing, renderTerrainTextureMode, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showSourceSeams, showTerrainFootprints, showUncertainty, showWaterSurface, sourceQualityGaps, sourceSeamAudit, terrainDetail, terrainSourceMode, waterLevelMeters, yearsBeforePresent]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);
@@ -785,6 +801,22 @@ function App() {
         viewState={viewState}
         controller={!initialState.captureMode}
         onViewStateChange={({ viewState: nextViewState, interactionState }) => {
+          const cameraIsInteracting = Boolean(
+            interactionState?.isDragging
+            || interactionState?.isPanning
+            || interactionState?.isRotating
+            || interactionState?.isZooming
+          );
+          if (!initialState.captureMode && cameraIsInteracting) {
+            setIsCameraMoving(true);
+            if (cameraIdleTimer.current !== null) {
+              window.clearTimeout(cameraIdleTimer.current);
+            }
+            cameraIdleTimer.current = window.setTimeout(() => {
+              setIsCameraMoving(false);
+              cameraIdleTimer.current = null;
+            }, CAMERA_IDLE_QUALITY_DELAY_MS);
+          }
           if (interactionState?.isDragging && isTouring) {
             tourRunId.current += 1; // cancel the in-flight tour loop
             setIsTouring(false);

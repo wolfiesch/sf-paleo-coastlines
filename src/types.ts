@@ -332,6 +332,7 @@ export interface PaleoRenderContext {
   terrainSourceMode: TerrainSourceMode;
   selectedTerrainSourceId: string | null;
   sceneProfile: SceneProfile;
+  terrainOnly: boolean;
   showPlaceLabels: boolean;
   currentYearsBP: number;
 }

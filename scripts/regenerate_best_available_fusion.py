@@ -66,6 +66,7 @@ def fusion_asset_paths() -> list[str]:
             paleo.BEST_AVAILABLE_DETAIL_RELIEF_TEXTURE_PNG,
             paleo.BEST_AVAILABLE_DETAIL_COMPOSITE_TEXTURE_PNG,
             paleo.BEST_AVAILABLE_TERRAIN_SOURCE_TEXTURE_PNG,
+            paleo.BEST_AVAILABLE_TERRAIN_SOURCE_ID_TEXTURE_PNG,
         )
     ]
 
