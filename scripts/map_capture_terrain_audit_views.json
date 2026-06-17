@@ -1,0 +1,54 @@
+{
+  "defaults": {
+    "viewport": {
+      "width": 1440,
+      "height": 1200
+    },
+    "water": -120,
+    "detail": "ultra",
+    "smoothing": "smooth",
+    "scene": "emergence",
+    "sourceMode": "best",
+    "sourceId": "best_available_gate_shelf_fusion",
+    "waitAfterReadyMs": 9000,
+    "overlays": {
+      "rivers": false,
+      "labels": false,
+      "uncertainty": false,
+      "coverage": false,
+      "baySources": false,
+      "gaps": false,
+      "seams": false,
+      "waterSurface": true
+    },
+    "query": {
+      "ui": 0
+    }
+  },
+  "views": [
+    {
+      "id": "audit-shelf-survey-clean",
+      "view": "shelf",
+      "texture": "survey"
+    },
+    {
+      "id": "audit-shelf-relief-clean",
+      "view": "shelf",
+      "texture": "relief",
+      "scene": "relief",
+      "water": 0
+    },
+    {
+      "id": "audit-northwest-gap-survey-clean",
+      "view": "northwest-gap",
+      "texture": "survey"
+    },
+    {
+      "id": "audit-gate-relief-clean",
+      "view": "gate",
+      "texture": "relief",
+      "scene": "relief",
+      "water": 0
+    }
+  ]
+}
