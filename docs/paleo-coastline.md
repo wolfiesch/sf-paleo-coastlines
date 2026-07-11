@@ -286,6 +286,7 @@ migration, or tectonic change since the lowstand.
 - NOAA ETOPO is coarser still, but remains a fallback global relief source if CRM access changes.
 - The script now keeps the broad NOAA contour for continuity and adds high-resolution USGS contour pieces where available. This avoids losing the full shoreline just because a detailed patch is incomplete.
 - The vertical datums differ: NOAA/NOS BAG surveys use MLLW; NOAA CUDEM, USGS/CSMP DS 781, USGS OFR 2014-1234, and USGS DS684 are NAVD88-style sources; NOAA CRM and ETOPO use broader sea-level/EGM-style references. This first pass treats the sea-level values as approximate relative heights, not as a full local tidal-datum correction.
+- A July 2026 audit found and fixed a separate preparation bug that had shifted the NOAA CUDEM and USGS 2023 LiDAR rasters by about 33 m during CRS conversion. The current pipeline preserves their NAVD88 height numbers; see `docs/cudem-lidar-vertical-reference-audit.md` for the before/after evidence and the remaining survey-specific datum limits.
 
 ## Higher-Resolution Next Step
 

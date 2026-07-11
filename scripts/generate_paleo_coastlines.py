@@ -2051,6 +2051,16 @@ def prepare_noaa_cudem_subset() -> None:
         "COMPRESS=DEFLATE",
         "-co",
         "TILED=YES",
+        # CUDEM's source tiles advertise a compound NAD83 + NAVD88 CRS. We
+        # only want to reproject the horizontal coordinates here. If GDAL is
+        # allowed to transform that compound CRS directly to plain EPSG:4326,
+        # it converts the NAVD88 height values toward ellipsoidal height and
+        # silently drops the vertical label, producing an approximately 33 m
+        # depth error in this region. Override the source CRS as horizontal
+        # WGS84 so the NAVD88 numbers remain unchanged while the raster is
+        # written in the browser's 2D coordinate system.
+        "-s_srs",
+        "EPSG:4326",
         "-t_srs",
         "EPSG:4326",
         "-te",
@@ -3402,6 +3412,13 @@ def generate_usgs_2023_sf_lidar_dem_terrain_asset() -> dict[str, Any]:
         "gdalwarp",
         "-q",
         "-overwrite",
+        # The USGS tiles use a compound NAD83(2011) / San Francisco CS13 +
+        # NAVD88 CRS. Reproject only the horizontal component: allowing GDAL
+        # to transform the compound CRS to plain EPSG:4326 changes NAVD88
+        # heights by roughly the local geoid separation and drops the vertical
+        # label, which creates a false ~33 m land-surface offset.
+        "-s_srs",
+        "EPSG:7131",
         "-t_srs",
         "EPSG:4326",
         "-ts",
@@ -3975,7 +3992,10 @@ def best_available_fusion_ranked_records() -> list[tuple[int, int, str, Path]]:
         ),
         *[
             (
-                32,
+                # CRM covers the full Farallon focus footprint, so keep the
+                # focus grid as a fallback instead of painting its rectangle
+                # over the smoother broad support surface.
+                15 if str(block["sourceId"]) == "usgs_coned_sf_2m_farallon_shelf" else 32,
                 index,
                 str(block["sourceId"]),
                 usgs_coned_sf_2m_focus_terrain_wgs84(block),

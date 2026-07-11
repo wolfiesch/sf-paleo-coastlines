@@ -22,4 +22,4 @@ pnpm paleo-coastlines:generate
 
 - This is land LiDAR, not a new offshore bathymetry survey.
 - It improves visual detail where the modern land surface exists; it does not model paleo erosion, sediment, marsh growth, or tectonic movement.
-- Treat exact waterline alignment as approximate until the whole stack gets a local vertical-datum pass.
+- The generator preserves the source tiles' NAVD88 heights while converting their horizontal coordinates; the broader stack still includes survey-specific MLLW layers whose exact waterline alignment needs separate local datum work. See `docs/cudem-lidar-vertical-reference-audit.md`.
