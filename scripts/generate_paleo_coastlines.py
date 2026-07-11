@@ -616,6 +616,24 @@ B00012_QG_03_06_RAW_SONAR_PATCH = {
     "sourceUrl": "https://www.ngdc.noaa.gov/ships/davidson/B00012_mb.html",
     "role": "Strictly masked raw-sonar patch for weak cell qg-03-06, promoted only above broad support surfaces and below modern source surveys.",
 }
+B00012_QG_05_12_RAW_SONAR_PATCH = {
+    "sourceId": "b00012_qg_05_12_raw_sonar_patch",
+    "sourceLabel": "B00012 raw sonar patch, qg-05-12",
+    "path": ROOT
+    / "public"
+    / "data"
+    / "paleo-coastlines"
+    / "raw-sonar-candidates"
+    / "b00012-qg-05-12"
+    / "b00012-qg-05-12.masked-512.cog.tif",
+    "sourceName": "NOAA/NCEI B00012 raw sonar candidate grid, qg-05-12",
+    "sourceUrl": "https://www.ngdc.noaa.gov/ships/davidson/B00012_mb.html",
+    "role": "Strictly masked raw-sonar patch for weak cell qg-05-12, promoted only above broad support surfaces and below modern source surveys.",
+}
+B00012_RAW_SONAR_PATCHES = (
+    B00012_QG_03_06_RAW_SONAR_PATCH,
+    B00012_QG_05_12_RAW_SONAR_PATCH,
+)
 TERRAIN_VERTICAL_EXAGGERATION = 4.0
 TERRAIN_COLOR_STOPS = [
     (-1000.0, (18, 8, 48)),
@@ -1935,11 +1953,14 @@ SOURCES = [
         }
         for block in USGS_SF_BAY_1M_BLOCKS
     ],
-    {
-        "name": B00012_QG_03_06_RAW_SONAR_PATCH["sourceName"],
-        "url": B00012_QG_03_06_RAW_SONAR_PATCH["sourceUrl"],
-        "role": B00012_QG_03_06_RAW_SONAR_PATCH["role"],
-    },
+    *[
+        {
+            "name": patch["sourceName"],
+            "url": patch["sourceUrl"],
+            "role": patch["role"],
+        }
+        for patch in B00012_RAW_SONAR_PATCHES
+    ],
     {
         "name": "USGS Data Series 684 DEM 4, San Francisco Bar 2 m GeoTIFF",
         "url": "https://pubs.usgs.gov/ds/684/ds684_DEM_GeoTIFF_files/",
@@ -3985,12 +4006,10 @@ def best_available_fusion_ranked_records() -> list[tuple[int, int, str, Path]]:
             )
             for block in NOAA_OCM_AREA_A_BLOCKS
         ],
-        (
-            65,
-            0,
-            str(B00012_QG_03_06_RAW_SONAR_PATCH["sourceId"]),
-            Path(B00012_QG_03_06_RAW_SONAR_PATCH["path"]),
-        ),
+        *[
+            (65, index, str(patch["sourceId"]), Path(patch["path"]))
+            for index, patch in enumerate(B00012_RAW_SONAR_PATCHES)
+        ],
         *[
             (
                 80,
@@ -5199,8 +5218,9 @@ def source_label(source_id: str) -> str:
             return str(block["sourceLabel"])
     if source_id in SOURCE_LABELS:
         return SOURCE_LABELS[source_id]
-    if source_id == B00012_QG_03_06_RAW_SONAR_PATCH["sourceId"]:
-        return str(B00012_QG_03_06_RAW_SONAR_PATCH["sourceLabel"])
+    for patch in B00012_RAW_SONAR_PATCHES:
+        if source_id == patch["sourceId"]:
+            return str(patch["sourceLabel"])
     if source_id == "best_available_gate_shelf_fusion":
         return "Best-available fused full-extent terrain"
     if source_id == "composite_high_resolution_local":

@@ -60,7 +60,7 @@ That means the preview keeps every tenth valid sonar point, builds a faster grid
 
 ## Remote Artifacts
 
-These are on the VPS, not committed to the repo:
+These paths record where the artifacts were originally produced. They are historical references, not a guarantee that the files still exist on the VPS; verify before relying on them. The 2026-07-10 follow-up found the candidate grids cleaned up and the VPS root disk full.
 
 ```text
 /home/wolfie/Projects/sf-paleo-coastlines/data/paleo-coastlines/raw-sonar-probe/na085-batch-summary.json

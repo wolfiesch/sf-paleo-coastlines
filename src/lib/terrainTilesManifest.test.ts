@@ -67,7 +67,14 @@ describe("terrain tile manifest", () => {
     for (const entry of manifest.generated) {
       const viewerTileset = TERRAIN_TILESETS[entry.sourceId];
       expect(viewerTileset.detailMinZoom, entry.sourceId).toBe(entry.detailMinZoom);
-      expect(viewerTileset.detailExtent, entry.sourceId).toEqual(entry.detailBounds);
+      if (entry.detailBounds) {
+        expect(viewerTileset.detailExtent, entry.sourceId).toBeDefined();
+        entry.detailBounds.forEach((coordinate, index) => {
+          expect(viewerTileset.detailExtent?.[index], `${entry.sourceId} coordinate ${index}`).toBeCloseTo(coordinate, 12);
+        });
+      } else {
+        expect(viewerTileset.detailExtent, entry.sourceId).toBeUndefined();
+      }
     }
   });
 
