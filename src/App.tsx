@@ -699,7 +699,7 @@ function App() {
     terrainOnly: initialState.terrainOnly,
     showPlaceLabels,
     currentYearsBP: yearsBeforePresent,
-  }, baySourceFootprints, paleoRivers, sourceQualityGaps, sourceSeamAudit), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, paleoRivers, renderSlices, renderTerrainSurfaceSmoothing, renderTerrainTextureMode, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showSourceSeams, showTerrainFootprints, showUncertainty, showWaterSurface, sourceQualityGaps, sourceSeamAudit, terrainDetail, terrainSourceMode, waterLevelMeters, yearsBeforePresent]);
+  }, baySourceFootprints, paleoRivers, sourceQualityGaps, sourceSeamAudit), [activeSliceId, baySourceFootprints, effectiveTerrainSourceId, initialState.terrainOnly, paleoRivers, renderSlices, renderTerrainSurfaceSmoothing, renderTerrainTextureMode, sceneProfile, showBaySourceFootprints, showPlaceLabels, showRivers, showSourceQualityGaps, showSourceSeams, showTerrainFootprints, showUncertainty, showWaterSurface, sourceQualityGaps, sourceSeamAudit, terrainDetail, terrainSourceMode, waterLevelMeters, yearsBeforePresent]);
 
   const handleSliceChange = useCallback((id: PaleoTimeSliceId) => {
     setIsPlaying(false);

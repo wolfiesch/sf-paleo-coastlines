@@ -21,6 +21,7 @@ const baseContext: PaleoRenderContext = {
   terrainTextureMode: "survey",
   terrainSourceMode: "best",
   selectedTerrainSourceId: "best_available_gate_shelf_fusion",
+  terrainOnly: false,
   sceneProfile: "emergence",
   showPlaceLabels: true,
   currentYearsBP: 20000,

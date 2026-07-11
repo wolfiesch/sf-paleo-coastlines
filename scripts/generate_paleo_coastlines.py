@@ -1625,7 +1625,11 @@ USGS_SF_BAY_1M_BLOCKS: list[dict[str, Any]] = [
         "zipName": "CentralSFBay_DEM_Mosaic_NAVD88_1M.zip",
         "datasetName": "CentralSFBay_DEM_Mosaic_NAVD88_1M.tif",
         "terrainStem": "usgs_sf_bay_1m_central_navd88",
-        "terrainSize": 4096,
+        # Keep twice as many source samples as the original browser export.
+        # The raw DEM is roughly 24k x 30k, so 8192 is still a downsample, but
+        # it materially improves the Bay-floor mesh while staying inside the
+        # texture size already used by the best-available terrain.
+        "terrainSize": 8192,
         "terrainMinimum": -45.0,
         "terrainMaximum": 8.0,
         "contourMinimum": -40.0,

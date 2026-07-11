@@ -40,6 +40,7 @@ DEFAULT_TILESETS = [
   TerrainTileset("usgs_coned_sf_2m_gate_shelf", 8, 15),
   TerrainTileset("usgs_coned_sf_2m_farallon_shelf", 8, 15),
   TerrainTileset("usgs_coned_sf_2m_south_bay_edge", 8, 14),
+  TerrainTileset("usgs_sf_bay_1m_central_navd88", 12, 15),
 ]
 
 

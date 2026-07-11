@@ -8,14 +8,14 @@ Plain-English purpose: separate missing-data blur from browser-display blur.
 
 | Source | Source res | Browser image | Approx browser pixel | Tiles | Likely limit | Next action |
 |---|---:|---:|---:|---|---|---|
-| USGS SF Bay 1 m DEM, central Bay NAVD88 | 1 m | 4096 x 3914 | 7.65 m | not tiled | browser image is much coarser than source | Use a smaller focused terrain image or add higher-resolution tiles for this source. |
 | USGS SF Bay DEM, north Bay NAVD88 overview fallback | 2 m | 4096 x 1183 | 17.14 m | not tiled | browser image is much coarser than source | Use a smaller focused terrain image or add higher-resolution tiles for this source. |
 | USGS SF Bay 1 m DEM, south Bay NAVD88 | 1 m | 4096 x 3529 | 11.47 m | not tiled | browser image is much coarser than source | Use a smaller focused terrain image or add higher-resolution tiles for this source. |
-| Best-available fused Golden Gate-to-Farallones terrain | 20 m | 8192 x 4681 | 19 m | z12-z15 | fusion layer is intentionally broad | Use focused overlays or source mode when judging small local details. |
-| USGS 2023 San Francisco 1 m LiDAR DEM | 1 m | 5120 x 3823 | 4.19 m | z12-z16 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
-| USGS CoNED 2 m focus clip, Farallon shelf | 2 m | 8192 x 7271 | 8.12 m | z12-z15 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
-| USGS CoNED 2 m focus clip, Golden Gate and SF Bar | 2 m | 8192 x 5476 | 8.2 m | z12-z15 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
-| USGS CoNED 2 m focus clip, south Bay edge | 2 m | 8192 x 7961 | 6.07 m | z12-z14 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
+| Best-available fused full-extent terrain | 20 m | 8192 x 4915 | 33.93 m | z8-z15 | fusion layer is intentionally broad | Use focused overlays or source mode when judging small local details. |
+| USGS 2023 San Francisco 1 m LiDAR DEM | 1 m | 5120 x 3823 | 4.19 m | z8-z16 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
+| USGS CoNED 2 m focus clip, Farallon shelf | 2 m | 8192 x 7271 | 8.12 m | z8-z15 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
+| USGS CoNED 2 m focus clip, Golden Gate and SF Bar | 2 m | 8192 x 5476 | 8.2 m | z8-z15 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
+| USGS CoNED 2 m focus clip, south Bay edge | 2 m | 8192 x 7961 | 6.07 m | z8-z14 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
+| USGS SF Bay 1 m DEM, central Bay NAVD88 | 1 m | 8192 x 7828 | 3.82 m | z12-z15 | browser image is somewhat coarser than source | Compare Sharp smoothing and single-source mode before increasing tile/image resolution. |
 
 ## How To Use This
 

@@ -139,7 +139,7 @@ export const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">>
     maxZoom: 15,
     tileSize: 256,
     detailMinZoom: 13,
-    detailExtent: [-123.574218749, 37.335224360306384, -122.1240234385, 38.169114134560864],
+    detailExtent: [-123.574218749, 37.335224360306384, -122.1240234385, 38.16911413456086],
   },
   usgs_2023_sf_lidar_dem: {
     elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_2023_sf_lidar_dem/elevation/{z}/{x}/{y}.png",
@@ -183,6 +183,17 @@ export const TERRAIN_TILESETS: Record<string, Omit<TerrainTileConfig, "extent">>
     },
     minZoom: 8,
     maxZoom: 14,
+    tileSize: 256,
+  },
+  usgs_sf_bay_1m_central_navd88: {
+    elevationData: "/data/paleo-coastlines/terrain-tiles/usgs_sf_bay_1m_central_navd88/elevation/{z}/{x}/{y}.png",
+    textures: {
+      shadedRelief: "/data/paleo-coastlines/terrain-tiles/usgs_sf_bay_1m_central_navd88/relief/{z}/{x}/{y}.png",
+      depthColor: "/data/paleo-coastlines/terrain-tiles/usgs_sf_bay_1m_central_navd88/color/{z}/{x}/{y}.png",
+      surveyComposite: "/data/paleo-coastlines/terrain-tiles/usgs_sf_bay_1m_central_navd88/composite/{z}/{x}/{y}.png",
+    },
+    minZoom: 12,
+    maxZoom: 15,
     tileSize: 256,
   },
 };
