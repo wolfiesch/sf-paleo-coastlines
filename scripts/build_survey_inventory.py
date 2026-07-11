@@ -183,6 +183,8 @@ def datum_note(source_id: str) -> str:
         return "NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment."
     if source_id.startswith("noaa_nos"):
         return "MLLW; needs tidal-datum conversion before exact sea-level alignment."
+    if source_id == "noaa_ncei_ex1505_05_75m_multibeam":
+        return "NOAA/NCEI metadata leaves the vertical datum unknown (generic MSL-depth extent); keep the measured shape, but do not apply a blanket offset from the CoNED overlap audit."
     if source_id.startswith("noaa_ncei"):
         return "Source gridded multibeam depth values; useful for measured offshore shape, but still compare overlap against BAG, CUDEM, and VDatum before exact sea-level alignment."
     if source_id.startswith("noaa_crm") or source_id.startswith("noaa_etopo"):
@@ -425,6 +427,8 @@ def source_record(module: Any, terrain: dict[str, Any], with_gdalinfo: bool) -> 
         limitations.append("broad inset; sharper than CRM but still not a substitute for local survey data")
     if source_id.startswith("noaa_nos"):
         limitations.append("MLLW vertical datum; exact paleo contour alignment needs conversion")
+    if source_id == "noaa_ncei_ex1505_05_75m_multibeam":
+        limitations.append("NOAA/NCEI metadata reports an unknown vertical datum; the CoNED overlap difference is not safe to correct as one constant shift")
     if source_id.startswith("noaa_ocm_area_a_interferometric"):
         limitations.append("broad interferometric source-survey mosaic; NOAA notes it is less accurate than multibeam in deeper water")
     elif source_id.startswith("noaa_ocm_area_a"):

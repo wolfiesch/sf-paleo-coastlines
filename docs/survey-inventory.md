@@ -17,8 +17,8 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | USGS/CSMP DS 781, 2 m Offshore of San Francisco bathymetry | USGS/CSMP DS 781 | 2 m | 315.0 | 7 | excellent local detail | NAVD88-style or source-projected DEM; verify against local datum before exact contours. |
 | USGS/CSMP DS 781, 2 m Offshore of San Gregorio bathymetry | USGS/CSMP DS 781 | 2 m | 160.4 | 7 | excellent local detail | NAVD88-style or source-projected DEM; verify against local datum before exact contours. |
 | USGS OFR 2014-1234, 10 m Upper Farallon Escarpment bathymetry | USGS OFR 2014-1234 | 10 m | 779.8 | 6 | excellent local detail | NAVD88-style or source-projected DEM; verify against local datum before exact contours. |
-| NOAA NOS H11738, 1 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | 1 m | 10903.8 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS H11738, 2 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | 2 m | 10903.8 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H11738, 1 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | 1 m | 36512.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H11738, 2 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | 2 m | 36512.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12109, 1 m BAG Golden Gate approach bathymetry | NOAA NOS BAG | 1 m | 474.4 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12109, 2 m BAG Golden Gate approach bathymetry | NOAA NOS BAG | 2 m | 474.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12110, 1 m BAG south Golden Gate approach bathymetry | NOAA NOS BAG | 1 m | 2.1 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
@@ -29,12 +29,12 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS H12112, 2 m BAG outer Golden Gate bathymetry | NOAA NOS BAG | 2 m | 245.0 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12113, 1 m BAG Lake Merced to Shelter Cove bathymetry | NOAA NOS BAG | 1 m | 186.3 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12113, 2 m BAG Lake Merced to Shelter Cove bathymetry | NOAA NOS BAG | 2 m | 230.0 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00431, 32 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00433, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00442, 32 m BAG north coast bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00444, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00447, 32 m BAG southern outer shelf bathymetry | NOAA NOS BAG | 2 m | 10897.5 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00431, 32 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | 2 m | 36502.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00433, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 36502.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00442, 32 m BAG north coast bathymetry | NOAA NOS BAG | 2 m | 36502.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00443, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 36502.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00444, 32 m BAG northwest shelf bathymetry | NOAA NOS BAG | 2 m | 36502.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00447, 32 m BAG southern outer shelf bathymetry | NOAA NOS BAG | 2 m | 36502.2 | 5 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA OCM Area A CA1B08, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 0.3 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
 | NOAA OCM Area A CA1B09, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 4.5 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
 | NOAA OCM Area A CA1B22, 1 m Central Bay source survey | NOAA OCM acoustic bathymetry | 1 m | 8.5 | 5 | high detail patch | NOAA OCM source-survey vertical reference; compare against USGS Bay DEM, CUDEM, and VDatum before exact sea-level alignment. |
@@ -52,9 +52,9 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | USGS SF Bay 1 m DEM, central Bay NAVD88 | USGS SF Bay 1 m DEM | 1 m | 736.6 | 5 | high detail patch | NAVD88; best first-fit datum among the candidate Bay DEM files, but still compare overlap against CUDEM, DS684, and MLLW BAG patches. |
 | USGS SF Bay 1 m DEM, south Bay NAVD88 | USGS SF Bay 1 m DEM | 1 m | 1499.0 | 5 | high detail patch | NAVD88; best first-fit datum among the candidate Bay DEM files, but still compare overlap against CUDEM, DS684, and MLLW BAG patches. |
 | USGS SF Bay DEM, north Bay NAVD88 overview fallback | USGS SF Bay DEM overview fallback | 2 m | 1116.6 | 5 | high detail patch | NAVD88 overview fallback from the USGS North Bay DEM package; useful for visible shape, but lower-detail than the missing full 1 m BigTIFF. |
-| Best-available fused Golden Gate-to-Farallones terrain | Derived fused terrain | 20 m | 10899.9 | 4 | high detail patch | Mixed-source visual fusion; useful for continuity, but not a single vertical datum. |
+| Best-available fused full-extent terrain | Derived fused terrain | 20 m | 36494.7 | 4 | high detail patch | Mixed-source visual fusion; useful for continuity, but not a single vertical datum. |
 | NOAA CUDEM 1/9 arc-second Bay/coast topobathymetry | NOAA CUDEM | about 3.4 m | 36502.2 | 4 | high detail patch | NOAA topobathy product; verify local vertical reference against CoNED/NAVD88 before exact contours. |
-| NOAA NOS H11739, VR BAG Drakes Bay to Bolinas bathymetry | NOAA NOS BAG | variable-resolution BAG | 10897.5 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H11739, VR BAG Drakes Bay to Bolinas bathymetry | NOAA NOS BAG | variable-resolution BAG | 36472.2 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H11965, VR BAG Farallon Islands bathymetry | NOAA NOS BAG | variable-resolution BAG | 5096.8 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H13334, VR BAG southeast Farallon bathymetry | NOAA NOS BAG | variable-resolution BAG | 3791.9 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00477, VR BAG Greater Farallones bathymetry 1 | NOAA NOS BAG | variable-resolution BAG | 1267.4 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
@@ -64,28 +64,28 @@ It is a small audit of data quality, not a replacement for the raw DEMs.
 | NOAA NOS W00478, VR BAG northwest shelf bathymetry | NOAA NOS BAG | variable-resolution BAG | 9037.5 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS W00614, VR BAG sanctuary bathymetry | NOAA NOS BAG | variable-resolution BAG | 19009.5 | 4 | high detail patch | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA CRM Vol. 7, 3 arc-second Bay-to-Farallones grid | NOAA CRM | 90 m | 36536.5 | 2 | broad support surface | Broad sea-level/geoid-style reference; useful for continuity, not local datum precision. |
-| NOAA NOS H11738, 1.5 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS H11738, 4 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H11738, 1.5 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | unknown | 36512.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS H11738, 4 m BAG Point Reyes / Drakes Bay bathymetry | NOAA NOS BAG | unknown | 36472.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA NOS H12112, 4 m BAG outer Golden Gate bathymetry | NOAA NOS BAG | unknown | 220.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00431, 16 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00431, 64 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00431, 8 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00433, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00433, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00433, 8 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00442, 16 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00442, 64 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00442, 8 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00443, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00443, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00444, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00444, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00444, 8 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00447, 128 m BAG southern outer shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00447, 16 m BAG southern outer shelf bathymetry | NOAA NOS BAG | unknown | 10897.5 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
-| NOAA NOS W00447, 64 m BAG southern outer shelf bathymetry | NOAA NOS BAG | unknown | 10903.8 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00431, 16 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00431, 64 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 36512.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00431, 8 m BAG California/Oregon coast bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00433, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00433, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 36512.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00433, 8 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00442, 16 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00442, 64 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 36512.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00442, 8 m BAG north coast bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00443, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00443, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 36512.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00444, 16 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00444, 64 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 36512.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00444, 8 m BAG northwest shelf bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00447, 128 m BAG southern outer shelf bathymetry | NOAA NOS BAG | unknown | 36512.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00447, 16 m BAG southern outer shelf bathymetry | NOAA NOS BAG | unknown | 36502.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
+| NOAA NOS W00447, 64 m BAG southern outer shelf bathymetry | NOAA NOS BAG | unknown | 36512.2 | 2 | broad support surface | MLLW; needs tidal-datum conversion before exact sea-level alignment. |
 | NOAA/NCEI EX0907, 50 m Sanctuary multibeam bathymetry | NOAA/NCEI multibeam | 50 m | 15059.9 | 2 | broad support surface | Source gridded multibeam depth values; useful for measured offshore shape, but still compare overlap against BAG, CUDEM, and VDatum before exact sea-level alignment. |
-| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | NOAA/NCEI multibeam | unknown | 173374.6 | 2 | broad support surface | Source gridded multibeam depth values; useful for measured offshore shape, but still compare overlap against BAG, CUDEM, and VDatum before exact sea-level alignment. |
+| NOAA/NCEI EX1505, 75 m southern offshore multibeam bathymetry | NOAA/NCEI multibeam | unknown | 173374.6 | 2 | broad support surface | NOAA/NCEI metadata leaves the vertical datum unknown (generic MSL-depth extent); keep the measured shape, but do not apply a blanket offset from the CoNED overlap audit. |
 
 ## Highest-Value Next Data Chases
 

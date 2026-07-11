@@ -37,7 +37,7 @@ After rebuilding the prepared rasters, fused terrain, and browser tiles, the ver
 - USGS LiDAR versus CRM: median difference `+0.804 m` over about `175 sq km`; no longer a 33 m offset.
 - The local seam audit fell to `1` severe target and `16` suspicious targets, from `24` suspicious targets before this datum pass.
 
-The audit still shows real smaller differences. In particular, NOAA/NCEI EX1505 remains roughly 7 m above CoNED in its overlap, and NOAA BAG/OCM layers still have survey-specific tidal references. Those are separate, higher-risk questions and should not be corrected with a blanket offset.
+The audit still shows real smaller differences. In particular, the broad overlap audit flags NOAA/NCEI EX1505 as roughly 7 m above CoNED, but a targeted three-way check against the nearby NOAA/NOS H13334 MLLW survey shows that this is a mixed-reference seam rather than a safe blanket correction. See `docs/ex1505-vertical-reference-audit.md`. NOAA BAG/OCM layers still have survey-specific tidal references as well.
 
 ## Rebuild path
 
