@@ -4,6 +4,16 @@ This note records a masked candidate grid made from raw `B00012` sonar for weak 
 
 Plain English: this is the first candidate in this lane that actually covers the exact weak-cell center.
 
+> **Cross-check superseded, 2026-07-27.** The comparison table below was sampled
+> before commit `e648d085` fixed a compound-CRS warp bug that had shifted the
+> prepared NOAA CUDEM raster by about 33 m. Re-sampled at the same point, CUDEM
+> now reads `-162.79 m` rather than `-197.75 m`, so it agrees with NOAA CRM
+> (`-163.18 m`) to within `0.38 m`, and this B00012 candidate (`-166.0 m`) is the
+> outlier rather than the corroborated value. The stated rationale for ranking
+> this patch above CUDEM no longer holds. The patch is still in the fusion; the
+> ranking decision is open. See `docs/raw-sonar-promotion-audit.md`, regenerated
+> by `pnpm paleo-coastlines:promotion-audit`.
+
 ## Inputs
 
 | Source file | Cropped points used |
