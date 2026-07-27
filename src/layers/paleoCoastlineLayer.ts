@@ -25,6 +25,7 @@ import type {
 } from "../types";
 import { terrainRevealExtension } from "./terrainRevealExtension";
 import { PALEO_PLACE_LABELS, type PaleoPlaceLabel } from "../lib/paleoPlaceLabels";
+import { dataUrl } from "../lib/dataUrl";
 import { SmoothTerrainMeshLayer } from "./smoothTerrainMeshLayer";
 
 interface PickedPaleoFeature {
@@ -1230,8 +1231,8 @@ export function createPaleoCoastlineLayers(
       tiles: { ...meshRevealProps },
     };
     const sharedProps = {
-      elevationData: tileConfig?.elevationData ?? terrain.elevationData,
-      texture: textureForTerrain(terrain, context.terrainTextureMode, tileConfig),
+      elevationData: dataUrl(tileConfig?.elevationData ?? terrain.elevationData),
+      texture: dataUrl(textureForTerrain(terrain, context.terrainTextureMode, tileConfig)),
       elevationDecoder: elevationDecoderForTerrain(terrain, profile, zLiftMeters),
       meshMaxError: meshMaxErrorForTerrain(terrain, context.terrainDetail),
       opacity: terrainLayerOpacity(terrain, context),

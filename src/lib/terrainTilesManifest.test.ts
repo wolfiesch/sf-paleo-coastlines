@@ -1,9 +1,10 @@
 /// <reference types="node" />
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { TERRAIN_TILESETS } from "../layers/paleoCoastlineLayer";
+import { readPaleoData } from "../test/paleoData";
 
 interface TileManifestEntry {
   sourceId: string;
@@ -46,11 +47,12 @@ function countPngTiles(root: string, minZoom: number, maxZoom: number) {
   return count;
 }
 
-describe("terrain tile manifest", () => {
-  const manifest = JSON.parse(
-    readFileSync(path.join(process.cwd(), "public/data/paleo-coastlines/terrain-tiles/terrain_tiles_manifest.json"), "utf8"),
-  ) as TileManifest;
+const manifestRaw = readPaleoData("terrain-tiles/terrain_tiles_manifest.json");
+// Parsed unconditionally: Vitest still runs a skipped suite's collector body,
+// so the empty fallback keeps collection working when the LFS tree is absent.
+const manifest: TileManifest = manifestRaw ? JSON.parse(manifestRaw) as TileManifest : { generated: [] };
 
+describe.skipIf(!manifestRaw)("terrain tile manifest", () => {
   it("matches the terrain tile URLs used by the viewer", () => {
     for (const entry of manifest.generated) {
       const viewerTileset = TERRAIN_TILESETS[entry.sourceId];

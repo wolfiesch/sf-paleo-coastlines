@@ -7,6 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { PaleoCoastlineControls } from "./components/PaleoCoastlineControls";
 import { createPaleoCoastlineLayers, getPaleoTooltip } from "./layers/paleoCoastlineLayer";
+import { dataUrl } from "./lib/dataUrl";
 import { MODERN_REFERENCE_MAP_STYLE, PALEO_MAP_STYLE } from "./lib/mapStyles";
 import { MAX_YEARS_BP, seaLevelForYearsBP } from "./lib/seaLevelCurve";
 import { TOUR_STEPS } from "./lib/tourScript";
@@ -97,12 +98,12 @@ const VIEW_PRESETS = [
   },
 ] satisfies { id: string; label: string; viewState: MapViewState }[];
 
-const BAY_SOURCE_FOOTPRINTS_URL = "/data/paleo-coastlines/usgs_sf_bay_source_footprints.geojson";
-const RIVERS_URL = "/data/paleo-coastlines/paleo_rivers.geojson";
-const SEALEVEL_STATS_URL = "/data/paleo-coastlines/sealevel_stats.json";
-const SOURCE_QUALITY_GAPS_URL = "/data/paleo-coastlines/source_quality_gaps.geojson";
-const SOURCE_QUALITY_GAPS_SUMMARY_URL = "/data/paleo-coastlines/source_quality_gaps_summary.json";
-const SOURCE_SEAM_AUDIT_URL = "/data/paleo-coastlines/source_seam_audit_targets.json";
+const BAY_SOURCE_FOOTPRINTS_URL = dataUrl("/data/paleo-coastlines/usgs_sf_bay_source_footprints.geojson");
+const RIVERS_URL = dataUrl("/data/paleo-coastlines/paleo_rivers.geojson");
+const SEALEVEL_STATS_URL = dataUrl("/data/paleo-coastlines/sealevel_stats.json");
+const SOURCE_QUALITY_GAPS_URL = dataUrl("/data/paleo-coastlines/source_quality_gaps.geojson");
+const SOURCE_QUALITY_GAPS_SUMMARY_URL = dataUrl("/data/paleo-coastlines/source_quality_gaps_summary.json");
+const SOURCE_SEAM_AUDIT_URL = dataUrl("/data/paleo-coastlines/source_seam_audit_targets.json");
 
 const TIME_SLICE_IDS: PaleoTimeSliceId[] = ["present", "5k_years_ago", "10k_years_ago", "20k_years_ago"];
 const TERRAIN_DETAIL_LEVELS: TerrainDetailLevel[] = ["fast", "detailed", "survey", "ultra"];
@@ -312,7 +313,7 @@ function App() {
 
     async function loadPaleoManifest() {
       try {
-        const response = await fetch("/data/paleo-coastlines/paleo_manifest.json");
+        const response = await fetch(dataUrl("/data/paleo-coastlines/paleo_manifest.json"));
         if (!response.ok) {
           throw new Error(`Failed to load paleo manifest: ${response.status}`);
         }
@@ -368,7 +369,7 @@ function App() {
     async function loadActiveSlice() {
       setLoadingSliceId(activeSliceId);
       try {
-        const response = await fetch(sliceToLoad.sliceDataUrl);
+        const response = await fetch(dataUrl(sliceToLoad.sliceDataUrl));
         if (!response.ok) {
           throw new Error(`Failed to load ${sliceToLoad.label}: ${response.status}`);
         }
@@ -445,7 +446,7 @@ function App() {
       try {
         const entries = await Promise.all(missingLevels.map(async (level) => {
           const levelKey = probeLevelKey(level);
-          const response = await fetch(probeIndex.levelDataUrls[levelKey]);
+          const response = await fetch(dataUrl(probeIndex.levelDataUrls[levelKey]));
           if (!response.ok) {
             throw new Error(`Failed to load waterline probe ${levelKey} m: ${response.status}`);
           }

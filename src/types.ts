@@ -308,9 +308,7 @@ export interface PaleoManifest {
     description: string;
     levelDataUrls: Record<string, string>;
   };
-  waterlineProbeUrl: string;
   metadataUrl: string;
-  legacyAllInOneUrl: string;
 }
 
 export type PaleoWaterlineProbe = NonNullable<PaleoTimeSlice["waterlineProbe"]>;

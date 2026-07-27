@@ -8,10 +8,10 @@ This project was split out from `cityscope-sf` because it is a separate research
 
 ## Run
 
-The browser-ready map data is stored in this repository with Git LFS. In plain
-English: reviewers should not need to download source data again from NOAA or
-USGS, but their Git client does need Git LFS support so the checked-out data
-files are real images/JSON instead of tiny pointer files.
+The browser-ready map data is about 3.4 GB and is stored in this repository
+with Git LFS. In plain English: reviewers should not need to download source
+data again from NOAA or USGS, but their Git client does need Git LFS support so
+the checked-out data files are real images/JSON instead of tiny pointer files.
 
 ```sh
 git lfs install
@@ -19,6 +19,31 @@ pnpm install
 git lfs pull
 pnpm dev
 ```
+
+### Running without the local data tree
+
+`git lfs pull` is a multi-gigabyte download. To skip it, point the app at a
+bucket or CDN that mirrors the `data/paleo-coastlines/...` layout:
+
+```sh
+cp .env.example .env.local
+# set VITE_DATA_BASE_URL in .env.local
+pnpm install
+pnpm dev
+```
+
+`VITE_DATA_BASE_URL` is prepended to every `/data/...` request (manifest,
+slices, waterline probes, terrain tiles, provenance overlays). Leaving it unset
+keeps the original behaviour of serving from `public/data`.
+
+A cross-origin bucket must send `Access-Control-Allow-Origin`. Add
+`Timing-Allow-Origin` too if you want transfer sizes visible in browser
+performance timings.
+
+Setting the variable also makes `vite build` skip the `public/` copy entirely,
+because that directory holds nothing but the generated data tree. That is how
+CI and a static deploy are expected to build: a few hundred kilobytes of app
+bundle, with the data served from object storage.
 
 ## Regenerate GIS Outputs
 

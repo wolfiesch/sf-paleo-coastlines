@@ -1,9 +1,13 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
+  // `public/` holds nothing but the multi-gigabyte generated data tree. When
+  // VITE_DATA_BASE_URL points the app at a bucket or CDN, copying 117k local
+  // tiles (or their LFS pointer stubs) into dist is pure waste, so skip it.
+  publicDir: loadEnv(mode, process.cwd(), 'VITE_').VITE_DATA_BASE_URL ? false : 'public',
   build: {
     // The deck.gl/luma.gl GPU stack is inherently large; warn only past a
     // realistic ceiling so the build stays clean once chunks are split out.
@@ -23,4 +27,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

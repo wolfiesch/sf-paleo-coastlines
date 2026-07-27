@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# The generated map data is ~3.4 GB in Git LFS. CI checks out pointer files
+# only (`lfs: false`) and builds with VITE_DATA_BASE_URL set, which makes Vite
+# skip the public/ copy entirely. Data-backed test suites detect the missing
+# tree and skip themselves; see src/test/paleoData.ts.
+env:
+  VITE_DATA_BASE_URL: https://data.invalid/ci-placeholder
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          lfs: false
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm exec tsc -b
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm exec vite build
+
+      - name: Assert data tree stayed out of the bundle
+        run: |
+          if [ -d dist/data ]; then
+            echo "dist/data exists; the build copied the LFS data tree." >&2
+            exit 1
+          fi

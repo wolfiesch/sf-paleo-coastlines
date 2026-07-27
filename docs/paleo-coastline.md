@@ -36,8 +36,6 @@ Generated app files:
 - `public/data/paleo-coastlines/usgs_sf_bay_source_footprints_manifest.json`
 - `public/data/paleo-coastlines/slices/*.json`
 - `public/data/paleo-coastlines/waterline-probe/*.json`
-- `public/data/paleo-coastlines/waterline_probe.json`
-- `public/data/paleo-coastlines/paleo_coastlines.json`
 - `public/data/paleo-coastlines/paleo_coastline_metadata.json`
 
 Local source/work files:
@@ -113,7 +111,7 @@ The script downloads missing source files, runs `gdal_contour`, simplifies the b
 
 The browser GeoJSON is written as compact JSON with coordinates rounded to 6 decimal places. That keeps sub-meter coordinate precision for this area while cutting a lot of unnecessary browser download size.
 
-The app now starts from `paleo_manifest.json`, then loads only the selected time slice from `slices/*.json`, plus the nearest current waterline probe from `waterline-probe/*.json`. The older all-in-one `paleo_coastlines.json` and full `waterline_probe.json` are still generated as compatibility artifacts.
+The app starts from `paleo_manifest.json`, then loads only the selected time slice from `slices/*.json`, plus the nearest current waterline probe from `waterline-probe/*.json`. The pipeline used to also emit an all-in-one `paleo_coastlines.json` (56 MB) and a full `waterline_probe.json` (48 MB) as compatibility artifacts. Nothing read them, so they were removed in July 2026; the per-slice and per-level files are the only browser inputs.
 
 The important idea is:
 

@@ -5443,7 +5443,7 @@ def build_browser_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
             ],
             str(DS684_TIF.relative_to(ROOT)),
         ],
-        "browserDataset": "public/data/paleo-coastlines/paleo_coastlines.json",
+        "browserDataset": "public/data/paleo-coastlines/paleo_manifest.json",
         "terrainAssets": [
             str(CRM_TERRAIN_ELEVATION_PNG.relative_to(ROOT)),
             str(CRM_TERRAIN_TEXTURE_PNG.relative_to(ROOT)),
@@ -5573,7 +5573,6 @@ def write_outputs(payload: list[dict[str, Any]], metadata: dict[str, Any]) -> No
     def write_compact_json(path: Path, value: Any) -> None:
         path.write_text(json.dumps(value, separators=(",", ":")) + "\n")
 
-    (PUBLIC_DIR / "paleo_coastlines.json").write_text(json.dumps(payload, separators=(",", ":")) + "\n")
     (PUBLIC_DIR / "paleo_coastline_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
     manifest_slices = []
@@ -5598,9 +5597,6 @@ def write_outputs(payload: list[dict[str, Any]], metadata: dict[str, Any]) -> No
 
     if waterline_probe is None:
         raise SystemExit("No waterline probe was generated.")
-
-    waterline_probe_path = PUBLIC_DIR / "waterline_probe.json"
-    write_compact_json(waterline_probe_path, waterline_probe)
 
     level_data_urls = {}
     probe_features = waterline_probe["contours"]["features"]
@@ -5629,15 +5625,11 @@ def write_outputs(payload: list[dict[str, Any]], metadata: dict[str, Any]) -> No
             "description": waterline_probe["description"],
             "levelDataUrls": level_data_urls,
         },
-        "waterlineProbeUrl": public_url(waterline_probe_path),
         "metadataUrl": public_url(PUBLIC_DIR / "paleo_coastline_metadata.json"),
-        "legacyAllInOneUrl": public_url(PUBLIC_DIR / "paleo_coastlines.json"),
     }
     write_compact_json(PUBLIC_DIR / "paleo_manifest.json", manifest)
 
-    print(f"Wrote {PUBLIC_DIR / 'paleo_coastlines.json'}")
     print(f"Wrote {PUBLIC_DIR / 'paleo_manifest.json'}")
-    print(f"Wrote {waterline_probe_path}")
     print(f"Wrote {PUBLIC_DIR / 'paleo_coastline_metadata.json'}")
 
 

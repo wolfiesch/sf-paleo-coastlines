@@ -9,7 +9,6 @@ terrain entry in every published JSON that embeds it:
 
 - public/data/paleo-coastlines/paleo_manifest.json
 - public/data/paleo-coastlines/slices/*.json
-- public/data/paleo-coastlines/paleo_coastlines.json (legacy all-in-one)
 - public/data/paleo-coastlines/paleo_coastline_metadata.json (terrainAssets)
 
 Tile regeneration is separate; afterwards run:
@@ -101,16 +100,6 @@ def main() -> int:
         if replace_fusion_entry(slice_payload.get("terrains", []), entry):
             write_compact(slice_path, slice_payload)
             print(f"Patched {slice_path.relative_to(ROOT)}")
-
-    legacy_path = PALEO_DIR / "paleo_coastlines.json"
-    if legacy_path.exists():
-        legacy = json.loads(legacy_path.read_text())
-        replaced = sum(
-            replace_fusion_entry(item.get("terrains", []), entry) for item in legacy
-        )
-        if replaced:
-            write_compact(legacy_path, legacy)
-            print(f"Patched {replaced} fusion entries in {legacy_path.relative_to(ROOT)}")
 
     metadata_path = PALEO_DIR / "paleo_coastline_metadata.json"
     metadata = json.loads(metadata_path.read_text())

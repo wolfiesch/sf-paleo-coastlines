@@ -1,9 +1,6 @@
-/// <reference types="node" />
-
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { PaleoRenderContext, PaleoTimeSlice } from "../types";
+import { readPaleoData } from "../test/paleoData";
 import { createPaleoCoastlineLayers } from "./paleoCoastlineLayer";
 
 const baseContext: PaleoRenderContext = {
@@ -27,13 +24,14 @@ const baseContext: PaleoRenderContext = {
   currentYearsBP: 20000,
 };
 
+const sliceRaw = readPaleoData("slices/20k_years_ago.json");
+
 function loadSlice(): PaleoTimeSlice {
-  return JSON.parse(
-    readFileSync(path.join(process.cwd(), "public/data/paleo-coastlines/slices/20k_years_ago.json"), "utf8"),
-  ) as PaleoTimeSlice;
+  if (!sliceRaw) throw new Error("Paleo slice data is unavailable; this suite should have been skipped.");
+  return JSON.parse(sliceRaw) as PaleoTimeSlice;
 }
 
-describe("paleo coastline terrain layers", () => {
+describe.skipIf(!sliceRaw)("paleo coastline terrain layers", () => {
   it("renders only the fused best-available terrain in Best source mode", () => {
     const layers = createPaleoCoastlineLayers([loadSlice()], baseContext) as { id: string }[];
     const terrainLayerIds = layers
