@@ -12,30 +12,22 @@ Start with the northwest outer shelf cells that return real local-pixel coverage
 
 | Cell | Current weak source | BAG candidates | Multibeam candidates | Local coverage finding | First thing to try |
 |---|---|---:|---:|---|---|
-| qg-03-06 `[-123.4551513, 38.0990831]` | CUDEM support (100.0% broad) | 0 | 6 | no matching local raster coverage measured | NA107, NA085, LPRS02RR |
-|  |  |  |  |  | BAG: none found; multibeam: NA107, NA085, LPRS02RR |
-| qg-05-12 `[-123.3676514, 38.0700366]` | CUDEM support (100.0% broad) | 1 | 2 | W00478_MB_VR_MLLW_interp4m: 0.0% valid in cell, 10.88% within 0.025 deg | EW9505, B00012 after confirming the BAG near miss |
-|  |  |  |  |  | BAG: W00478_MB_VR_MLLW_interp4m; multibeam: EW9505, B00012 |
-| qg-09-06 `[-123.4551513, 38.0117727]` | CUDEM support (100.0% broad) | 0 | 8 | EX0907: 0.0% valid in cell, 22.69% within 0.025 deg | NA080, NA080, EX0903 |
-|  |  |  |  |  | BAG: none found; multibeam: NA080, NA080, EX0903 |
-| qg-11-12 `[-123.3676514, 37.9827261]` | CUDEM support (100.0% broad) | 0 | 5 | no matching local raster coverage measured | MV1216, EX0903, REM-01MV |
-|  |  |  |  |  | BAG: none found; multibeam: MV1216, EX0903, REM-01MV |
-| qg-17-12 `[-123.3676514, 37.8954157]` | CUDEM support (100.0% broad) | 0 | 3 | no matching local raster coverage measured | NA107, NA078, B00017 |
-|  |  |  |  |  | BAG: none found; multibeam: NA107, NA078, B00017 |
-| qg-23-10 `[-123.396875, 37.8081052]` | CUDEM support (100.0% broad) | 0 | 8 | EX0907: 0.0% valid in cell, 26.13% within 0.025 deg | NA116, NA077, MV1405 |
-|  |  |  |  |  | BAG: none found; multibeam: NA116, NA077, MV1405 |
-| qg-41-00 `[-123.5426513, 37.5463448]` | CRM fallback (100.0% broad) | 0 | 8 | no matching local raster coverage measured | RR1803, SR1814, SKQ201716T |
-|  |  |  |  |  | BAG: none found; multibeam: RR1803, SR1814, SKQ201716T |
-| qg-41-06 `[-123.4551513, 37.5463448]` | CRM fallback (100.0% broad) | 0 | 8 | no matching local raster coverage measured | SKQ201911T, RR1803, SKQ201802T |
-|  |  |  |  |  | BAG: none found; multibeam: SKQ201911T, RR1803, SKQ201802T |
-| qg-41-12 `[-123.3676514, 37.5463448]` | CRM fallback (100.0% broad) | 0 | 8 | EX0907: 0.0% valid in cell, 34.83% within 0.025 deg | MGL2211, AT42-10, SR1917 |
-|  |  |  |  |  | BAG: none found; multibeam: MGL2211, AT42-10, SR1917 |
-| qg-47-00 `[-123.5426513, 37.4592052]` | CRM fallback (100.0% broad) | 0 | 8 | no matching local raster coverage measured | EX2307, HLY21TG, SR1917 |
-|  |  |  |  |  | BAG: none found; multibeam: EX2307, HLY21TG, SR1917 |
-| qg-47-06 `[-123.4551513, 37.4592052]` | CRM fallback (100.0% broad) | 0 | 8 | no matching local raster coverage measured | EX2307, SR1917, RR1803 |
-|  |  |  |  |  | BAG: none found; multibeam: EX2307, SR1917, RR1803 |
-| qg-47-12 `[-123.3676514, 37.4592052]` | CRM fallback (100.0% broad) | 0 | 8 | no matching local raster coverage measured | EX2307, NA109, SKQ201911T |
-|  |  |  |  |  | BAG: none found; multibeam: EX2307, NA109, SKQ201911T |
+| qg-00-17 `[-123.544367, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 6 | EX0907: 0.0% valid in cell, 17.37% within 0.025 deg | NA107, RR1711, EX0907 |
+|  |  |  |  |  | BAG: none found; multibeam: NA107, RR1711, EX0907 |
+| qg-00-23 `[-123.3881597, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 1 | no matching local raster coverage measured | NA078 |
+|  |  |  |  |  | BAG: none found; multibeam: NA078 |
+| qg-00-27 `[-123.2839076, 38.4870106]` | CRM fallback (100.0% broad) | 4 | 2 | no matching local raster coverage measured | CC2_BlockB04_pacific_star, CC2_BlockB05_pacific_star |
+|  |  |  |  |  | BAG: H11733_MB_8m_MLLW_4of4, H11733_MB_4m_MLLW_3of4, H11733_MB_2m_MLLW_2of4; multibeam: CC2_BlockB04_pacific_star, CC2_BlockB05_pacific_star |
+| qg-00-31 `[-123.1796554, 38.4870106]` | CRM fallback (100.0% broad) | 4 | 3 | no matching local raster coverage measured | CC2_BlockB03, CC2_BlockB03_pacific_star, CC2_BlockB04 |
+|  |  |  |  |  | BAG: H11733_MB_1m_MLLW_1of4, H11733_MB_2m_MLLW_2of4, H11733_MB_4m_MLLW_3of4; multibeam: CC2_BlockB03, CC2_BlockB03_pacific_star, CC2_BlockB04 |
+| qg-00-35 `[-123.0754033, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 0 | no matching local raster coverage measured | none found |
+| qg-00-39 `[-122.9713221, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 0 | no matching local raster coverage measured | none found |
+| qg-00-43 `[-122.8672409, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 0 | no matching local raster coverage measured | none found |
+| qg-00-47 `[-122.7629888, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 0 | no matching local raster coverage measured | none found |
+| qg-00-51 `[-122.6587367, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 0 | no matching local raster coverage measured | none found |
+| qg-00-55 `[-122.5548263, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 0 | no matching local raster coverage measured | none found |
+| qg-00-59 `[-122.4505742, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 0 | no matching local raster coverage measured | none found |
+| qg-00-63 `[-122.3463221, 38.4870106]` | CRM fallback (100.0% broad) | 0 | 0 | no matching local raster coverage measured | none found |
 
 ## How To Read This
 

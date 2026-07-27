@@ -11,7 +11,7 @@ Why this exists: the candidate cross-check tables were sampled before commit
 and USGS LiDAR rasters by about 33 m. A promotion rationale must not outlive
 the raster it was computed from, so this audit regenerates instead of aging.
 
-Generated at: `2026-07-27T07:58:47.747627+00:00`
+Generated at: `2026-07-27T10:13:39.084988+00:00`
 
 ## b00012-qg-03-06
 
@@ -21,8 +21,8 @@ Recorded values come from `docs/b00012-qg-03-06-candidate.md:55-58`.
 
 | Source | Recorded | Now (centre) | Drift | Cell median | Valid px | Window hash |
 |---|---:|---:|---:|---:|---:|---|
-| Current best available (full extent) | `-197.6373` | `-167.3702` | `+30.27` | `-166.4653` | 2352 | `caaaf8fac63ffa63` |
-| Current best available (gate shelf) | not recorded | `-167.2041` |  | `-166.4659` | 6888 | `294e386c7ea8388d` |
+| Current best available (full extent) | `-197.6373` | `-162.3394` | `+35.30` | `-161.6664` | 2352 | `0c8d965f4bb84115` |
+| Current best available (gate shelf) | not recorded | `-162.2895` |  | `-161.687` | 6888 | `6b2b353ff96ecab9` |
 | NOAA CUDEM 1/9 arc-second | `-197.7472` | `-162.7924` | `+34.95` | `-161.7518` | 600 | `c85e632f2149828b` |
 | NOAA CRM Vol. 7 | `-163.1757` | `-163.1757` | `+0.00` | `-163.2121` | 90 | `c2404cd15bff2261` |
 | USGS CoNED 2 m broad | not recorded | no-data | | | 0 | cell falls outside the raster extent |
@@ -40,8 +40,8 @@ Recorded values come from `docs/b00012-qg-05-12-candidate.md:33-37`.
 
 | Source | Recorded | Now (centre) | Drift | Cell median | Valid px | Window hash |
 |---|---:|---:|---:|---:|---:|---|
-| Current best available (full extent) | not recorded | `-162.7412` |  | `-163.1987` | 2352 | `544a9ec79751e9e4` |
-| Current best available (gate shelf) | not recorded | `-162.178` |  | `-162.9713` | 6888 | `ce7c207e985834c2` |
+| Current best available (full extent) | not recorded | `-158.5988` |  | `-158.9113` | 2352 | `df4d1721882e018b` |
+| Current best available (gate shelf) | not recorded | `-157.8845` |  | `-158.6051` | 6888 | `477ecc4b13b26d72` |
 | NOAA CUDEM 1/9 arc-second | `-193.14` | `-158.4017` | `+34.74` | `-159.34` | 625 | `def02921cdde8fd2` |
 | NOAA CRM Vol. 7 | `-155.9` | `-155.9008` | `-0.00` | `-162.1182` | 100 | `050f4429f309a4e2` |
 | USGS CoNED 2 m broad | not recorded | no-data | | | 0 | cell falls outside the raster extent |
@@ -56,8 +56,8 @@ Cell centre `-123.4551513, 38.0990831`, bounds `[-123.4625, 38.0919069, -123.447
 
 | Source | Recorded | Now (centre) | Drift | Cell median | Valid px | Window hash |
 |---|---:|---:|---:|---:|---:|---|
-| Current best available (full extent) | not recorded | `-167.3702` |  | `-166.4653` | 2352 | `caaaf8fac63ffa63` |
-| Current best available (gate shelf) | not recorded | `-167.2041` |  | `-166.4659` | 6888 | `294e386c7ea8388d` |
+| Current best available (full extent) | not recorded | `-162.3394` |  | `-161.6664` | 2352 | `0c8d965f4bb84115` |
+| Current best available (gate shelf) | not recorded | `-162.2895` |  | `-161.687` | 6888 | `6b2b353ff96ecab9` |
 | NOAA CUDEM 1/9 arc-second | not recorded | `-162.7924` |  | `-161.7518` | 600 | `c85e632f2149828b` |
 | NOAA CRM Vol. 7 | not recorded | `-163.1757` |  | `-163.2121` | 90 | `c2404cd15bff2261` |
 | USGS CoNED 2 m broad | not recorded | no-data | | | 0 | cell falls outside the raster extent |

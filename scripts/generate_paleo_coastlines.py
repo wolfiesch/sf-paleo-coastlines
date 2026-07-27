@@ -11,6 +11,7 @@ from __future__ import annotations
 import gzip
 import json
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -614,7 +615,7 @@ B00012_QG_03_06_RAW_SONAR_PATCH = {
     / "b00012-qg-03-06.masked-512.cog.tif",
     "sourceName": "NOAA/NCEI B00012 raw sonar candidate grid, qg-03-06",
     "sourceUrl": "https://www.ngdc.noaa.gov/ships/davidson/B00012_mb.html",
-    "role": "Strictly masked raw-sonar patch for weak cell qg-03-06, promoted only above broad support surfaces and below modern source surveys.",
+    "role": "Strictly masked raw-sonar patch for weak cell qg-03-06. Ranked above the NOAA CRM broad fallback and below NOAA CUDEM, so it contributes only where CUDEM has no data.",
 }
 B00012_QG_05_12_RAW_SONAR_PATCH = {
     "sourceId": "b00012_qg_05_12_raw_sonar_patch",
@@ -628,7 +629,7 @@ B00012_QG_05_12_RAW_SONAR_PATCH = {
     / "b00012-qg-05-12.masked-512.cog.tif",
     "sourceName": "NOAA/NCEI B00012 raw sonar candidate grid, qg-05-12",
     "sourceUrl": "https://www.ngdc.noaa.gov/ships/davidson/B00012_mb.html",
-    "role": "Strictly masked raw-sonar patch for weak cell qg-05-12, promoted only above broad support surfaces and below modern source surveys.",
+    "role": "Strictly masked raw-sonar patch for weak cell qg-05-12. Ranked above the NOAA CRM broad fallback and below NOAA CUDEM, so it contributes only where CUDEM has no data.",
 }
 B00012_RAW_SONAR_PATCHES = (
     B00012_QG_03_06_RAW_SONAR_PATCH,
@@ -3214,7 +3215,7 @@ def terrain_source_kind(source_id: str) -> dict[str, Any]:
     if source_id.startswith("usgs_sf_bay_1m") or source_id.startswith("noaa_ocm_area_a"):
         return {"qualityTier": "source_survey", "renderPriority": 70, "resolutionMeters": 1}
     if source_id.startswith("b00012_"):
-        return {"qualityTier": "raw_sonar_patch", "renderPriority": 65, "resolutionMeters": None}
+        return {"qualityTier": "raw_sonar_patch", "renderPriority": 18, "resolutionMeters": None}
     if source_id.startswith("noaa_nos"):
         if "_1p5m" in source_id:
             return {"qualityTier": "source_survey", "renderPriority": 80, "resolutionMeters": 1.5}
@@ -3985,6 +3986,19 @@ def best_available_fusion_ranked_records() -> list[tuple[int, int, str, Path]]:
     ordered_sources: list[tuple[int, int, str, Path]] = [
         (10, 0, "noaa_crm_vol7_3as", CRM_TERRAIN_WGS84),
         (20, 0, "noaa_cudem_1_9as", CUDEM_TERRAIN_WGS84),
+        # 1985 single-beam BSSS patches, strictly masked. They were originally
+        # ranked at 65, above CUDEM, on a cross-check that sampled CUDEM before
+        # the compound-CRS warp fix in e648d085 shifted it by about 35 m. Once
+        # CUDEM was corrected it agreed with CRM to 0.38 m at qg-03-06 and
+        # 2.50 m at qg-05-12, while the patches sat 2.8 m and 6.1 m away, so the
+        # corroboration argument that justified the promotion inverted. They now
+        # sit above the CRM fallback and below CUDEM: still measured evidence,
+        # but no longer overriding a modern topobathymetric surface.
+        # See docs/raw-sonar-promotion-audit.md.
+        *[
+            (18, index, str(patch["sourceId"]), Path(patch["path"]))
+            for index, patch in enumerate(B00012_RAW_SONAR_PATCHES)
+        ],
         *(
             [(30, 20, "usgs_coned_sf_2m", USGS_CONED_SF_2M_TERRAIN_WGS84)]
             if active_usgs_coned_sf_2m()
@@ -4025,10 +4039,6 @@ def best_available_fusion_ranked_records() -> list[tuple[int, int, str, Path]]:
                 noaa_ocm_area_a_terrain_wgs84(block),
             )
             for block in NOAA_OCM_AREA_A_BLOCKS
-        ],
-        *[
-            (65, index, str(patch["sourceId"]), Path(patch["path"]))
-            for index, patch in enumerate(B00012_RAW_SONAR_PATCHES)
         ],
         *[
             (
@@ -4854,6 +4864,29 @@ def set_fusion_vrt_source_resampling(vrt_path: Path) -> None:
     vrt_path.write_text(updated)
 
 
+def previously_winning_source_ids() -> set[str]:
+    """Source ids that won at least one pixel in the last recorded fusion.
+
+    Several fusion inputs are gated on raw source files being present on disk:
+    CoNED, the 2023 LiDAR, and the Bay 1 m blocks all check for their raw
+    downloads rather than their prepared WGS84 tif. When those raw files are
+    absent the gate drops the source silently, the run still clears the
+    input-count floor, and a much weaker surface overwrites the good one. The
+    last run's provenance is the cheapest way to notice.
+    """
+    if not BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON.exists():
+        return set()
+    try:
+        payload = json.loads(BEST_AVAILABLE_TERRAIN_SOURCE_PROVENANCE_JSON.read_text())
+    except (OSError, ValueError):
+        return set()
+    return {
+        str(winner["sourceId"])
+        for winner in payload.get("sourceWinners", [])
+        if winner.get("pixelCount")
+    }
+
+
 def generate_best_available_terrain_asset() -> dict[str, Any]:
     records = best_available_fusion_input_records()
     inputs = [path for _, path in records]
@@ -4865,6 +4898,14 @@ def generate_best_available_terrain_asset() -> dict[str, Any]:
             f"{len(inputs)} prepared WGS84 terrain sources; expected at least "
             f"{BEST_AVAILABLE_MIN_FUSION_INPUTS}. Run the full paleo-coastlines generator first "
             "so the browser terrain is not overwritten by a thin fallback stack."
+        )
+    lost = previously_winning_source_ids() - {source_id for source_id, _ in records}
+    if lost and not os.environ.get("PALEO_ALLOW_SOURCE_LOSS"):
+        raise SystemExit(
+            f"Best-available terrain fusion would drop {len(lost)} source(s) that won "
+            f"pixels in the last run: {', '.join(sorted(lost))}. These are gated on raw "
+            "source files, so check data/paleo-coastlines/raw before rebuilding. "
+            "Set PALEO_ALLOW_SOURCE_LOSS=1 to accept the loss deliberately."
         )
 
     def build_fusion_vrt(vrt_path: Path, bounds: dict[str, float]) -> None:

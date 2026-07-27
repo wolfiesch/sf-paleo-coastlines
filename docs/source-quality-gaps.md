@@ -8,7 +8,7 @@ It answers a practical question: where is the 3D terrain already backed by measu
 
 | Source family | Share of visible fused surface | Plain-English meaning |
 |---|---:|---|
-| Broad fallback/support | 58.48% | Useful for continuity, but not where the best detail lives. |
+| Broad fallback/support | 58.5% | Useful for continuity, but not where the best detail lives. |
 | CoNED foundation | 15.29% | Strong 2 m land-plus-seafloor base; good, but not as visually rich as survey/backscatter patches. |
 | Measured detail | 26.21% | The best current visual/scientific detail: BAG, OCM, NOAA multibeam, USGS Bay DEM, LiDAR, CSMP, and offshore survey patches. |
 
@@ -16,8 +16,8 @@ It answers a practical question: where is the 3D terrain already backed by measu
 
 | Cell type | Cell count | Approx area sq km | What to do next |
 |---|---:|---:|---|
-| Critical broad-data gap | 3159 | 20724.22 | Chase new bathymetry first. |
-| Broad support gap | 202 | 1321.71 | Replace broad support where survey/CoNED exists. |
+| Critical broad-data gap | 3161 | 20737.3 | Chase new bathymetry first. |
+| Broad support gap | 200 | 1308.63 | Replace broad support where survey/CoNED exists. |
 | Good CoNED foundation, low measured detail | 748 | 4903.29 | Look for survey texture or scientific overlays. |
 | Mixed foundation | 24 | 156.76 | Inspect case by case. |
 | Measured local detail | 108 | 707.42 | Keep, then datum-check. |
@@ -27,11 +27,11 @@ It answers a practical question: where is the 3D terrain already backed by measu
 
 | Zone | Broad fallback | CoNED base | Measured detail | Gap score | What it means | Next action |
 |---|---:|---:|---:|---:|---|---|
-| Northwest outer shelf | 31.41% | 8.94% | 58.53% | 35.21 | This is the broadest visible fallback area near the far-west/northwest part of the current fused scene. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |
+| Northwest outer shelf | 32.53% | 8.94% | 58.53% | 35.79 | This is the broadest visible fallback area near the far-west/northwest part of the current fused scene. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |
 | Southern outer shelf | 15.51% | 38.97% | 45.52% | 28.54 | This captures the lower-left offshore portion of the current scene and helps avoid only optimizing the Golden Gate. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |
 | North Bay edge | 0.0% | 76.58% | 23.42% | 27.17 | This helps separate true measured Bay detail from broad support on the northern side of the scene. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
 | Farallon-to-Golden-Gate corridor | 0.0% | 70.53% | 29.47% | 24.65 | This is the visual path between the old outer coast and today's Golden Gate. | CoNED is already a strong 2 m base; the next leap is measured survey texture, sonar/backscatter, or datum-checked local DEM overlays. |
-| Farallon Islands and shelf | 0.11% | 64.01% | 35.88% | 21.71 | This is where the 20k shoreline story gets most interesting, because islands and submerged shelf highs emerge as sea level drops. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
+| Farallon Islands and shelf | 0.11% | 64.01% | 35.88% | 21.71 | This is where the 20k shoreline story gets most interesting, because islands and submerged shelf highs emerge as sea level drops. | Mixed source area; inspect the source-quality overlay before prioritizing another download. |
 | South Bay edge | 0.0% | 60.04% | 39.96% | 21.02 | This area has large shallow modern-bay surfaces where extra survey data can visibly change the exposed-waterline story. | Good focused CoNED coverage; look for overlapping survey products only if we want more texture and scientific context. |
 | Central Bay floor | 0.0% | 48.33% | 51.67% | 16.04 | This is where Bay-floor survey detail can make the modern-bay interior look much less smooth. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |
 | Golden Gate and San Francisco Bar | 0.0% | 34.02% | 65.98% | 11.02 | This is the key constriction where old drainage, bathymetry, and the modern bay entrance meet. | Keep this as visual evidence; improve exact paleo claims by checking vertical datum and patch-edge blending. |

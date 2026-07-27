@@ -12,30 +12,30 @@ It samples the final fused elevation PNG around each source seam target. In plai
 
 | Local result | Target count |
 |---|---:|
-| severe local height step | 1 |
-| suspicious local height step | 16 |
-| locally calm | 121 |
-| no local seam edges found | 6 |
+| severe local height step | 0 |
+| suspicious local height step | 7 |
+| locally calm | 32 |
+| no local seam edges found | 19 |
 
 ## Worst Local Targets
 
 | Categories | Lon/lat | Local result | Median step | 95% step | Edge pairs | Existing overlap warning | Suggested view |
 |---|---|---|---:|---:|---:|---|---|
-| CRM fallback / USGS CoNED broad | `-123.127923, 37.347048` | severe local height step | 12.106 m | 16.348 m | 69 | mixed height differences | Shelf or NW Gap with Gaps and Coverage enabled |
-| NOAA multibeam / USGS CoNED focus | `-123.244154, 37.70538` | suspicious local height step | 4.298 m | 21.982 m | 263 | possible height offset | Shelf with Coverage enabled |
-| CUDEM support / USGS offshore | `-123.370299, 37.812742` | suspicious local height step | 8.356 m | 17.052 m | 133 | possible height offset | Shelf or NW Gap with Gaps and Coverage enabled |
-| USGS CoNED focus / USGS offshore | `-123.149802, 37.693412` | suspicious local height step | 5.466 m | 15.617 m | 229 | measured but not a major warning | Shelf with Coverage enabled |
-| CUDEM support / USGS offshore | `-123.309107, 37.782995` | suspicious local height step | 6.185 m | 15.425 m | 232 | possible height offset | Shelf or NW Gap with Gaps and Coverage enabled |
-| USGS CoNED focus / USGS offshore | `-123.118009, 37.655801` | suspicious local height step | 5.836 m | 15.004 m | 352 | measured but not a major warning | Shelf with Coverage enabled |
-| NOAA multibeam / USGS offshore | `-123.266717, 37.757009` | suspicious local height step | 5.603 m | 13.791 m | 109 | measured but not a major warning | Shelf with Coverage enabled |
-| USGS CoNED focus / USGS offshore | `-123.20108, 37.736152` | suspicious local height step | 5.244 m | 12.898 m | 422 | measured but not a major warning | Shelf with Coverage enabled |
-| NOAA multibeam / USGS offshore | `-123.423629, 37.847447` | suspicious local height step | 5.75 m | 11.751 m | 198 | measured but not a major warning | Shelf with Coverage enabled |
-| NOAA OCM survey / USGS CoNED broad | `-122.231232, 38.065933` | suspicious local height step | 6.029 m | 11.15 m | 2 | not measured in overlap audit | Gate or Bay-facing view with Bay sources and Coverage enabled |
-| USGS CoNED focus / USGS land LiDAR | `-122.478395, 37.829667` | suspicious local height step | 4.24 m | 11.055 m | 27 | not measured in overlap audit | Gate with Coverage enabled |
+| CUDEM support / USGS offshore | `-123.370299, 37.812742` | suspicious local height step | 8.356 m | 17.052 m | 133 | measured but not a major warning | Shelf or NW Gap with Gaps and Coverage enabled |
+| NOAA multibeam / USGS offshore | `-123.266717, 37.757009` | suspicious local height step | 5.603 m | 13.791 m | 109 | not measured in overlap audit | Shelf with Coverage enabled |
+| CUDEM support / USGS offshore | `-123.300903, 37.780944` | suspicious local height step | 5.077 m | 13.393 m | 204 | measured but not a major warning | Shelf or NW Gap with Gaps and Coverage enabled |
+| NOAA multibeam / USGS offshore | `-123.423629, 37.847447` | suspicious local height step | 5.75 m | 11.751 m | 198 | not measured in overlap audit | Shelf with Coverage enabled |
 | NOAA BAG survey / NOAA multibeam | `-123.523451, 38.044905` | suspicious local height step | 5.84 m | 10.922 m | 210 | measured but not a major warning | Shelf with Coverage enabled |
-| NOAA multibeam / USGS offshore | `-123.409613, 37.833599` | suspicious local height step | 6.002 m | 10.275 m | 118 | measured but not a major warning | Shelf with Coverage enabled |
-| NOAA OCM survey / USGS land LiDAR | `-122.474634, 37.810349` | suspicious local height step | 4.341 m | 8.805 m | 7 | not measured in overlap audit | Gate with Coverage enabled |
-| USGS Bay DEM / USGS CoNED broad | `-122.290373, 37.792227` | suspicious local height step | 5.436 m | 7.48 m | 164 | not measured in overlap audit | Gate or Bay-facing view with Bay sources and Coverage enabled |
-| CRM fallback / USGS CoNED broad | `-123.293724, 37.356793` | suspicious local height step | 5.444 m | 7.016 m | 97 | mixed height differences | Shelf or NW Gap with Gaps and Coverage enabled |
-| NOAA OCM survey / USGS nearshore | `-122.474805, 37.810691` | suspicious local height step | 4.319 m | 4.375 m | 3 | not measured in overlap audit | Gate or Bay-facing view with Bay sources and Coverage enabled |
-| USGS Bay DEM overview / USGS CoNED broad | `-122.206276, 38.060634` | locally calm | 3.37 m | 14.721 m | 196 | not measured in overlap audit | Shelf with Coverage enabled |
+| NOAA multibeam / USGS offshore | `-123.409613, 37.833599` | suspicious local height step | 6.002 m | 10.275 m | 118 | not measured in overlap audit | Shelf with Coverage enabled |
+| NOAA OCM survey / USGS nearshore | `-122.475147, 37.811204` | suspicious local height step | 4.319 m | 4.375 m | 3 | not measured in overlap audit | Gate or Bay-facing view with Bay sources and Coverage enabled |
+| CUDEM support / NOAA multibeam | `-123.446534, 37.79462` | locally calm | 2.927 m | 7.829 m | 355 | measured but not a major warning | Shelf or NW Gap with Gaps and Coverage enabled |
+| NOAA multibeam / USGS offshore | `-123.413032, 37.862662` | locally calm | 3.705 m | 7.472 m | 122 | not measured in overlap audit | Shelf with Coverage enabled |
+| CRM fallback / NOAA multibeam | `-123.788391, 37.6876` | locally calm | 0.123 m | 7.088 m | 693 | mixed height differences | Shelf or NW Gap with Gaps and Coverage enabled |
+| CRM fallback / NOAA multibeam | `-123.776767, 37.639389` | locally calm | 0.378 m | 6.625 m | 997 | mixed height differences | Shelf or NW Gap with Gaps and Coverage enabled |
+| CUDEM support / NOAA multibeam | `-123.402605, 37.779576` | locally calm | 1.669 m | 6.427 m | 109 | measured but not a major warning | Shelf or NW Gap with Gaps and Coverage enabled |
+| CUDEM support / USGS nearshore | `-122.964173, 38.212788` | locally calm | 0.359 m | 4.171 m | 295 | not measured in overlap audit | Shelf or NW Gap with Gaps and Coverage enabled |
+| CRM fallback / NOAA BAG survey | `-122.719746, 37.135058` | locally calm | 0.0 m | 3.622 m | 241 | mixed height differences | Shelf or NW Gap with Gaps and Coverage enabled |
+| CRM fallback / CUDEM support | `-121.749556, 38.126282` | locally calm | 1.079 m | 2.646 m | 69 | measured but not a major warning | Shelf or NW Gap with Gaps and Coverage enabled |
+| CRM fallback / NOAA multibeam | `-123.766512, 37.578186` | locally calm | 0.226 m | 2.572 m | 946 | mixed height differences | Shelf or NW Gap with Gaps and Coverage enabled |
+| CRM fallback / USGS nearshore | `-122.980241, 38.255528` | locally calm | 0.359 m | 2.041 m | 103 | not measured in overlap audit | Shelf or NW Gap with Gaps and Coverage enabled |
+| CUDEM support / NOAA multibeam | `-123.456106, 38.110554` | locally calm | 1.448 m | 1.869 m | 83 | measured but not a major warning | Shelf or NW Gap with Gaps and Coverage enabled |
