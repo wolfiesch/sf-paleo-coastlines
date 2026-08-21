@@ -22,6 +22,8 @@ jobs:
           lfs: false
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - uses: actions/setup-node@v5
         with:
