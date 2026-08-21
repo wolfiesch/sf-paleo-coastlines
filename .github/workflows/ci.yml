@@ -5,10 +5,10 @@ on:
     branches: [master]
   pull_request:
 
-# The generated map data is ~3.4 GB in Git LFS. CI checks out pointer files
-# only (`lfs: false`) and builds with VITE_DATA_BASE_URL set, which makes Vite
-# skip the public/ copy entirely. Data-backed test suites detect the missing
-# tree and skip themselves; see src/test/paleoData.ts.
+# The generated map data (~3.4 GB) is not stored in this repository. CI builds
+# with VITE_DATA_BASE_URL set, which makes Vite skip the public/ copy entirely.
+# Data-backed test suites detect the missing tree and skip themselves; see
+# src/test/paleoData.ts.
 env:
   VITE_DATA_BASE_URL: https://data.invalid/ci-placeholder
 

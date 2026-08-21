@@ -8,21 +8,22 @@ This project was split out from `cityscope-sf` because it is a separate research
 
 ## Run
 
-The browser-ready map data is about 3.4 GB and is stored in this repository
-with Git LFS. In plain English: reviewers should not need to download source
-data again from NOAA or USGS, but their Git client does need Git LFS support so
-the checked-out data files are real images/JSON instead of tiny pointer files.
+The browser-ready map data is about 3.4 GB and is intentionally not stored in
+this repository (it outgrew Git LFS). Restore a local copy from your storage
+mirror with the sync script, then start the dev server:
 
 ```sh
-git lfs install
 pnpm install
-git lfs pull
+scripts/sync-data-from-storage.sh
 pnpm dev
 ```
 
+The script reads its source from `SF_PALEO_STORAGE_HOST` and
+`SF_PALEO_STORAGE_PATH` (rsync-over-SSH) so any mirror works.
+
 ### Running without the local data tree
 
-`git lfs pull` is a multi-gigabyte download. To skip it, point the app at a
+Syncing the dataset is a multi-gigabyte transfer. To skip it, point the app at a
 bucket or CDN that mirrors the `data/paleo-coastlines/...` layout:
 
 ```sh
