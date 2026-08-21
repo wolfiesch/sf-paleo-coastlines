@@ -44,3 +44,6 @@ tmp/
 
 # Internal agent planning notes
 docs/superpowers/
+
+# Large dataset lives on external storage; restore with scripts/sync-data-from-storage.sh
+public/data/paleo-coastlines/
