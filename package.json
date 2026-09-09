@@ -36,7 +36,7 @@
     "@deck.gl/react": "^9.2.11",
     "deck.gl": "^9.2.11",
     "lucide-react": "^0.577.0",
-    "maplibre-gl": "^5.19.0",
+    "maplibre-gl": "^6.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-map-gl": "^8.1.0"
